@@ -5,7 +5,6 @@ unsigned char sin_idx;
 
 #include "tab.h"
 #include "s.h"
-
 const unsigned char *bufp;
 
 void fbcopy(const unsigned char * src)
