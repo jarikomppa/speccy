@@ -51,3 +51,15 @@ Link time and appmake have some constants that will probably require tweaking fr
 - "--data-loc 0xc000" - Offset of mutable variables. This shouldn't overlap with anything else or bad things will happen. Move as needed.
 
 After compilation you will most likely want to look at crt0.map, as it shows how big everything is and what the offsets are set to, so you can spot issues like --data-loc being wrong.
+
+## Musing on audio
+
+The speccy has a piezo speaker that is controlled through high bit of port 254. It's entirely bit-banged. The speccy has one interrupt that triggers at 50hz and can't be changed. 
+
+Sooo.. how does one do audio then?
+
+By busy looping.
+
+Sooo... background audio is out?
+
+Pretty much. After pondering about this I checked a bunch of speccy gameplay videos on youtube and realized that all of the background audio is pretty choppy, meaning that they play a little bit of audio each frame but spend most of the time with the speaker silent. Kinda like arpeggio with most of the arpeggiated notes silent.
