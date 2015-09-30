@@ -1,131 +1,16 @@
-#pragma preproc_asm -
 #include <string.h>
 
 unsigned char fbcopy_idx;
 unsigned char sin_idx;
 
-#include "tab.h"
-#include "s.h"
 const unsigned char *bufp;
 unsigned char *data_ptr;
 unsigned char *screen_ptr;
 
-// xxxsmbbb
-// where b = border color, m is mic, s is speaker
-void port254(const unsigned char color) __z88dk_fastcall
-{
-    color; // color is in l
-    // Direct border color setting
-    __asm
-        ld a,l
-        out (254),a
-    __endasm;    
-}
-
-// practically waits for retrace
-void do_halt()
-{
-    __asm
-        halt
-    __endasm;
-}
-
-// draw a single 8x8 character (x in 8 pixel steps, y in 1 pixel steps)
-void drawchar(unsigned char c, unsigned char x, unsigned char y)
-{
-    data_ptr = (unsigned char*)(15616-32*8+c*8);
-    screen_ptr = (unsigned char*)yofs[y]+x;
-    __asm
-        ld bc,(_screen_ptr)
-        ld hl,(_data_ptr)
-        ld a,(hl)
-    	ld (bc),a
-    	inc hl
-    	inc b
-        ld a,(hl)
-    	ld (bc),a
-    	inc hl
-    	inc b
-        ld a,(hl)
-    	ld (bc),a
-    	inc hl
-    	inc b
-        ld a,(hl)
-    	ld (bc),a
-    	inc hl
-    	inc b
-        ld a,(hl)
-    	ld (bc),a
-    	inc hl
-    	inc b
-        ld a,(hl)
-    	ld (bc),a
-    	inc hl
-    	inc b
-        ld a,(hl)
-    	ld (bc),a
-    	inc hl
-    	inc b
-        ld a,(hl)
-    	ld (bc),a
-    __endasm;
-}
-
-// draw string, x in 8 pixel steps, y in 1 pixel steps
-void drawstring(unsigned char *t, unsigned char x, unsigned char y)
-{
-    screen_ptr = (unsigned char*)yofs[y]+x;
-    while (*t)
-    {
-        data_ptr = (unsigned char*)(15616-32*8+*t*8);
-        __asm
-            ld bc,(_screen_ptr)
-	        ld hl,(_data_ptr)
-	        ld a,(hl)
-        	ld (bc),a
-        	inc hl
-        	inc b
-	        ld a,(hl)
-        	ld (bc),a
-        	inc hl
-        	inc b
-	        ld a,(hl)
-        	ld (bc),a
-        	inc hl
-        	inc b
-	        ld a,(hl)
-        	ld (bc),a
-        	inc hl
-        	inc b
-	        ld a,(hl)
-        	ld (bc),a
-        	inc hl
-        	inc b
-	        ld a,(hl)
-        	ld (bc),a
-        	inc hl
-        	inc b
-	        ld a,(hl)
-        	ld (bc),a
-        	inc hl
-        	inc b
-	        ld a,(hl)
-        	ld (bc),a
-        __endasm;
-        x++;        
-        screen_ptr++;
-        t++;
-    }
-}
-
-// copy N scanlines from linear memory to video memory
-void fbcopy(const unsigned char * src, unsigned char start, unsigned char end)
-{
-    for (fbcopy_idx = start; fbcopy_idx < end; fbcopy_idx++, src+=32)
-    {   
-        memcpy((void*)yofs[fbcopy_idx], src, 32);
-    }
-}
+#include "data.c"
+#include "hwif.c"
+#include "textout.c"
+#include "fbcopy.c"
 
 // experimental: make some noise
 void playtone(unsigned char delay)
@@ -136,10 +21,32 @@ void playtone(unsigned char delay)
     d = delay;
     port254(0);
     while (d--);
+    d = delay;
+    port254(0xff);
+    while (d--);
+    port254(0);
 }
 
+unsigned short seed = 0xACE1u;
+
+unsigned char rand()
+{
+    seed = (seed * 7621) + 1;
+    return seed;
+}
+
+unsigned char tone = 0;
+unsigned char keeptone = 0;
+  
 void main()
 {       
+    unsigned short i;
+    for (i = 0; i < 256; i++)
+    {
+        unsigned char v = i * 13;
+        if (v >= 192) v -= 192;        
+        fbcopy_i_idxtab[i] = v;
+    }
     sin_idx = 0;
     while(1)
     {
@@ -147,13 +54,26 @@ void main()
         bufp = s_png;
         bufp += sinofs[sin_idx];
         do_halt(); // halt waits for interrupt - or vertical retrace
-    // delay loop to move the border into the frame (for profiling)
-    for (fbcopy_idx = 0; fbcopy_idx < 145; fbcopy_idx++) port254(0);
-    port254(2);
-    drawstring("Hello Worldie!", 0, 8);
-    port254(1);
-    // can do about 64 scanlines in a frame (with nothing else)
-    fbcopy(bufp, 64, 110);
-    port254(0);
+
+        // delay loop to move the border into the frame (for profiling)     
+        //for (fbcopy_idx = 0; fbcopy_idx < 145; fbcopy_idx++) port254(0);
+    
+        port254(1);
+        // can do about 64 scanlines in a frame (with nothing else)
+        //fbcopy(bufp, 64, 110);
+        // Let's do interlaced copy instead =)
+        fbcopy_i(bufp, 23);
+        port254(2);
+        drawstring("http://iki.fi/sol", 8, 160);
+        port254(0);
+        
+        // random jazz generator:
+        if (!keeptone)
+        {
+            tone = rand();
+            keeptone = 5;
+        }
+        keeptone--;
+        playtone(tone);
     }    
 }
