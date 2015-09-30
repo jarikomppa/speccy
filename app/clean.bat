@@ -1,0 +1,1 @@
+del *.ihx *.lk *.lst *.map *.noi *.rel *.sym *.asm *.bak
