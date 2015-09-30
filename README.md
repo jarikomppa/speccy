@@ -50,7 +50,7 @@ The screen bitmap memory isn't linear. The addresses map to (see above links for
 
 H                       | L
 ----------------------- | -----------------------
-0_ 1_ 0_ Y7 Y6 Y2 Y1 Y0 | Y5 Y4 Y3 X4 X3 X2 X1 X0
+0 1 0 Y7 Y6 Y2 Y1 Y0 | Y5 Y4 Y3 X4 X3 X2 X1 X0
 
 Each scanline is stored linearily. The Y coordinate is split so that printing single glyphs would be faster - just increment H by one and you're on the next scanline. That only works up to 8 scanlines though. I have no idea whatsoever why they would split the rest of the bits the way they did, but there you go.
 
@@ -60,9 +60,9 @@ Easiest way to deal with this is with a scanline start lookup table, but you cou
 
 Color data is stored linearly, where each byte overlays a 8x8 block of bitmap data.
 
-7 | 6 | 5 | 4 | 3 | 2 | 1 | 0
-- | - | - | - | - | - | - | -
-F | B | P2| P1| P0| I2| I1| I0
+Bits: | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0
+----- | - | - | - | - | - | - | - | -
+Data: | F | B | P2| P1| P0| I2| I1| I0
 
 Where:
 - F is for FLASH, swaps the PAPER and INK every 32 frames.
