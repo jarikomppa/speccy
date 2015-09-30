@@ -14,10 +14,73 @@ Note that I'm doing this on windows, but what I've got together here may be help
 
 In speccy emulator, be sure to set hardware->fast tape loader on unless you want to die prematurely of old age.
 
-## Handy pages
+## Handy pages and stuff
 
 - http://wordpress.animatez.co.uk/computers/zx-spectrum/memory-map/
 - http://wordpress.animatez.co.uk/computers/zx-spectrum/screen-memory-layout/
+- http://www.z80.info/z80-op.txt
+
+- rom character set is at 0x3d00 - 0x3ff and contain 8 bytes per glyph, starting from ascii 32 (space)
+- system variable "frame counter" is a 3 byte variable at address 0x5c78, 0x5c79, 0x5c80 ((IY+$3E), (IY+$3F), (IY+$40))
+- i/o port 254 controls border color (bottom bits 0,1,2) and speaker (bit 4)
+
+### Memory map
+
+Start | End  | Area
+----- | ---- | --------
+0000  | 3fff | ROM
+4000  | 57ff | Screen bitmap memory
+5800  | 5aff | Screen color memory
+5b00  | 5bff | Printer buffer
+5c00  | 5cbf | System variables
+5cc0  | 5cca | Reserved
+5ccb  | ff57 | Available memory
+ff59  | ffff | Reserved
+
+So we have about 40k of usable RAM normally. It should be possible to use from 5b00 to ffff though (~41k).
+
+Memory below 0x8000 is "slow" because the video hardware has priority to it; fast(er) routines and data should
+be in the upper portion.
+
+### Bitmap data
+
+There's 32*8=256 x 192 pixels on the screen.
+
+The screen bitmap memory isn't linear. The addresses map to (see above links for prettier graph):
+
+H                       | L
+----------------------- | -----------------------
+0_ 1_ 0_ Y7 Y6 Y2 Y1 Y0 | Y5 Y4 Y3 X4 X3 X2 X1 X0
+
+Each scanline is stored linearily. The Y coordinate is split so that printing single glyphs would be faster - just increment H by one and you're on the next scanline. That only works up to 8 scanlines though. I have no idea whatsoever why they would split the rest of the bits the way they did, but there you go.
+
+Easiest way to deal with this is with a scanline start lookup table, but you could do the swizzling with code too.
+
+### Color data
+
+Color data is stored linearly, where each byte overlays a 8x8 block of bitmap data.
+
+7 | 6 | 5 | 4 | 3 | 2 | 1 | 0
+- | - | - | - | - | - | - | -
+F | B | P2| P1| P0| I2| I1| I0
+
+Where:
+- F is for FLASH, swaps the PAPER and INK every 32 frames.
+- B is for BRIGHT, changes both PAPER and INK.
+- P2 to P0 is PAPER color (bitmap 0)
+- I2 to I0 is INK color (bitmap 1)
+
+Color number | Bright 0 | Bright 1 | Color name
+------------ | -------- | -------- | ----------
+0            | 0x000000 | 0x000000 | Black
+1            | 0x0000CD | 0x0000FF | Blue
+2            | 0xCD0000 | 0xFF0000 | Red
+3            | 0xCD00CD | 0xFF00FF | Magenta
+4            | 0x00CD00 | 0x00FF00 | Green
+5            | 0x00CDCD | 0x00FFFF | Cyan
+6            | 0xCDCD00 | 0xFFFF00 | Yellow
+7            | 0xCDCDCD | 0xFFFFFF | White
+
 
 ## Tools
 
