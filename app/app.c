@@ -11,6 +11,7 @@ unsigned char *screen_ptr;
 #include "hwif.c"
 #include "textout.c"
 #include "fbcopy.c"
+#include "scroller.c"
 
 // experimental: make some noise
 void playtone(unsigned char delay)
@@ -26,6 +27,9 @@ void playtone(unsigned char delay)
     while (d--);
     port254(0);
 }
+
+
+
 
 unsigned short seed = 0xACE1u;
 
@@ -44,7 +48,8 @@ void main()
     for (i = 0; i < 256; i++)
     {
         unsigned char v = i * 13;
-        if (v >= 192) v -= 192;        
+        if (v >= 192) v -= 192;
+        if (v >= 160 && v <= 168) v -= 100;
         fbcopy_i_idxtab[i] = v;
     }
     sin_idx = 0;
@@ -56,17 +61,21 @@ void main()
         do_halt(); // halt waits for interrupt - or vertical retrace
 
         // delay loop to move the border into the frame (for profiling)     
-        //for (fbcopy_idx = 0; fbcopy_idx < 145; fbcopy_idx++) port254(0);
+        for (fbcopy_idx = 0; fbcopy_idx < 145; fbcopy_idx++) port254(0);
     
+        port254(2);
+        //drawstring("http://iki.fi/sol", 8, 160);
+        scroller(160);
         port254(1);
+        //drawstring("http://iki.fi/sol", 8, 160);
+        //port254(0);
+
         // can do about 64 scanlines in a frame (with nothing else)
         //fbcopy(bufp, 64, 110);
         // Let's do interlaced copy instead =)
-        fbcopy_i(bufp, 23);
-        port254(2);
-        drawstring("http://iki.fi/sol", 8, 160);
+        fbcopy_i(bufp, 13);
         port254(0);
-        
+        /*
         // random jazz generator:
         if (!keeptone)
         {
@@ -75,5 +84,6 @@ void main()
         }
         keeptone--;
         playtone(tone);
+        */
     }    
 }

@@ -1,5 +1,5 @@
 
-const unsigned char scrolltext[] = ". .. ...   . .. Hello world, let's do this thing..  ";
+const unsigned char scrolltext[] = ". .. ...   . .. Hello world, let's do this thing..   ...  http://iki.fi/sol ... blah blah.. BLAH BLAH ... ";
 unsigned char scrolltext_idx = 0;
 unsigned char scrollcycle = 0;
 unsigned char nextdata;
