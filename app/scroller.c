@@ -14,7 +14,7 @@ void scroller(unsigned char y, unsigned char nextglyph)
         nextdata = *data_ptr;
         data_ptr++;
         nextdata = (nextdata >> scrollcycle) & 3;
-        for (fbcopy_idx = 0; fbcopy_idx < 4; fbcopy_idx++)
+        for (fbcopy_idx = 0; fbcopy_idx < 1; fbcopy_idx++)
         {
             // a bc de hl
             __asm
@@ -46,6 +46,214 @@ void scroller(unsigned char y, unsigned char nextglyph)
                 ld (bc), a
                 ld l, e
                 dec bc
+                
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+                
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+                
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+                
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+                
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+                
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+                
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+                
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+                
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+                
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+                
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+                
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+                
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+                
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+                
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+                
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
 
                 ld a,(bc)
                 rlca
@@ -122,8 +330,106 @@ void scroller(unsigned char y, unsigned char nextglyph)
                 and a, #0xfc
                 or a,l
                 ld (bc), a
-                ld hl, #_nextdata
-                ld (hl), e
+                ld l, e
+                dec bc
+
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+
+                ld a,(bc)
+                rlca
+                rlca
+                ld d, a
+                and a, #0x03
+                ld e, a
+                ld a, d
+                and a, #0xfc
+                or a,l
+                ld (bc), a
+                ld l, e
+                dec bc
+
+                ld a,(bc)
+                rlca
+                rlca
+                and a, #0xfc
+                or a,l
+                ld (bc), a
 
             __endasm;
             /*
@@ -131,8 +437,9 @@ void scroller(unsigned char y, unsigned char nextglyph)
             *screen_ptr = (*screen_ptr << 1) | nextdata;
             nextdata = carry;
             */
-            screen_ptr-=8;
-        }
+            screen_ptr -= 32;
+        }        
+        
         y++;
     }
     scrollcycle--;
