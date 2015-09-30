@@ -5,9 +5,18 @@ unsigned char scrollcycle = 0;
 unsigned char nextdata;
 unsigned char vloop;
 
-void scroller(unsigned char y, unsigned char nextglyph)
+void scroller(unsigned char y)
 {   
-    data_ptr = (unsigned char*)(15616 - 32 * 8 + nextglyph * 8);
+    if (scrollcycle == 0)
+    {
+        scrolltext_idx++;
+        scrollcycle = 7;
+        if (scrolltext[scrolltext_idx] == 0)
+            scrolltext_idx = 0;
+    }    
+    
+    data_ptr = (unsigned char*)(15616 - 32 * 8 + scrolltext[scrolltext_idx] * 8);
+
     for (vloop = 0; vloop < 8; vloop++)
     {
         screen_ptr = (unsigned char*)(yofs[y] + 31);
