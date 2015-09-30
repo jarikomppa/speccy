@@ -60,9 +60,7 @@ Easiest way to deal with this is with a scanline start lookup table, but you cou
 
 Color data is stored linearly, where each byte overlays a 8x8 block of bitmap data.
 
-Bits: | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0
------ | - | - | - | - | - | - | - | -
-Data: | F | B | P2| P1| P0| I2| I1| I0
+F B P2 P1 P0 I2 I1 I0
 
 Where:
 - F is for FLASH, swaps the PAPER and INK every 32 frames.
