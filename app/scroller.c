@@ -13,432 +13,81 @@ void scroller(unsigned char y, unsigned char nextglyph)
         screen_ptr = (unsigned char*)(yofs[y] + 31);
         nextdata = *data_ptr;
         data_ptr++;
+        // shift by variable - causes variable timing
         nextdata = (nextdata >> scrollcycle) & 3;
-        for (fbcopy_idx = 0; fbcopy_idx < 1; fbcopy_idx++)
-        {
-            // a bc de hl
-            __asm
-                ld bc, (_screen_ptr)
-                ld hl, #_nextdata
-                
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,(hl)
-                ld (bc), a
-                ld l, e
-                dec bc
-                
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
-                
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
-                
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
-                
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
-                
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
-                
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
-                
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
-                
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
-                
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
-                
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
-                
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
-                
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
-                
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
-                
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
-                
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
-                
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
-                
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
+        // a bc de hl
+        __asm
+//            push bc
+//            push hl
+            push de
+            ld bc, (_screen_ptr)
+            ld hl, (_nextdata)
 
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
+#define REPBLOCK \
+            ld a,(bc) \
+            rlca \
+            rlca \
+            ld d, a \
+            and a, #0x03 \
+            ld e, a \
+            ld a, d \
+            and a, #0xfc \
+            or a,l \
+            ld (bc), a \
+            ld l, e \
+            dec bc 
+            
+            REPBLOCK
+            REPBLOCK
+            REPBLOCK
+            REPBLOCK
 
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
+            REPBLOCK
+            REPBLOCK
+            REPBLOCK
+            REPBLOCK
 
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
-                
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
+            REPBLOCK
+            REPBLOCK
+            REPBLOCK
+            REPBLOCK
 
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
+            REPBLOCK
+            REPBLOCK
+            REPBLOCK
+            REPBLOCK
 
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
+            REPBLOCK
+            REPBLOCK
+            REPBLOCK
+            REPBLOCK
 
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
+            REPBLOCK
+            REPBLOCK
+            REPBLOCK
+            REPBLOCK
 
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
+            REPBLOCK
+            REPBLOCK
+            REPBLOCK
+            REPBLOCK
 
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
+            REPBLOCK
+            REPBLOCK
+            REPBLOCK
+#undef REPBLOCK            
+            
+            ld a,(bc)
+            rlca
+            rlca
+            and a, #0xfc
+            or a,l
+            ld (bc), a
+            pop de
+//            pop hl
+//            pop bc
 
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
-
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
-
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
-
-                ld a,(bc)
-                rlca
-                rlca
-                ld d, a
-                and a, #0x03
-                ld e, a
-                ld a, d
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-                ld l, e
-                dec bc
-
-                ld a,(bc)
-                rlca
-                rlca
-                and a, #0xfc
-                or a,l
-                ld (bc), a
-
-            __endasm;
-            /*
-            unsigned char carry = *screen_ptr >> 7;
-            *screen_ptr = (*screen_ptr << 1) | nextdata;
-            nextdata = carry;
-            */
-            screen_ptr -= 32;
-        }        
+        __endasm;
         
         y++;
     }
