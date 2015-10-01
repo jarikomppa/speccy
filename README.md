@@ -19,6 +19,9 @@ In speccy emulator, be sure to set hardware->fast tape loader on unless you want
 - http://wordpress.animatez.co.uk/computers/zx-spectrum/memory-map/
 - http://wordpress.animatez.co.uk/computers/zx-spectrum/screen-memory-layout/
 - http://www.z80.info/z80-op.txt
+- http://randomflux.info/1bit/viewtopic.php?id=21
+
+Notes..
 
 - rom character set is at 0x3d00 - 0x3ff and contain 8 bytes per glyph, starting from ascii 32 (space)
 - system variable "frame counter" is a 3 byte variable at address 0x5c78, 0x5c79, 0x5c80 ((IY+$3E), (IY+$3F), (IY+$40))
