@@ -14,6 +14,11 @@ unsigned char port254tonebit;
 #include "fbcopy.c"
 #include "scroller.c"
 
+const unsigned char musicdata[] = {
+#include "tune.h"
+0,0
+};
+
 /*
 // experimental: make some noise
 void playtone8(unsigned char delay)
@@ -110,7 +115,7 @@ unsigned short rand()
 
 unsigned short tone = 0;
 unsigned char keeptone = 0;
-  
+unsigned short songidx;  
 void main()
 {           
     unsigned short i;
@@ -123,26 +128,38 @@ void main()
         fbcopy_i_idxtab[i] = v;
     }
     sin_idx = 0;
+    songidx = 1;
     
     while(1)
     {
-        sin_idx++;
+        //sin_idx++;
         bufp = s_png;
-        bufp += sinofs[sin_idx];
+        //bufp += sinofs[sin_idx];
+        bufp += musicdata[songidx] * 32 * 2;
         do_halt(); // halt waits for interrupt - or vertical retrace
         // delay loop to move the border into the frame (for profiling)     
-        for (fbcopy_idx = 0; fbcopy_idx < 110; fbcopy_idx++) port254(0);
+//        for (fbcopy_idx = 0; fbcopy_idx < 110; fbcopy_idx++) port254(0);
         // random jazz generator:
         playtone(tone);
+        if (keeptone < 3) tone = 0;
+        /*
+        playtone(tone);
+        playtone(tone);
+        playtone(tone);
+        */
         if (!keeptone)
         {
 /*            tone ^= 0x80;
             if ((tone & 0x80) == 0)
                 tone = (tone + 1) & 63;
                 */
-            tone = (sin_idx & 63) + 8;//(rand() & 127);
-            tone = tonetab[tone];
-            keeptone = 10;//(rand() & 7) + 1;
+            tone = tonetab[musicdata[songidx++]];
+            keeptone = musicdata[songidx++];
+            if (keeptone == 0)
+            {
+                songidx = 0;
+                keeptone = 1;
+            }
         }
         keeptone--;
         port254(2);
