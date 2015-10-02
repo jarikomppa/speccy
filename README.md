@@ -19,6 +19,7 @@ In speccy emulator, be sure to set hardware->fast tape loader on unless you want
 - http://wordpress.animatez.co.uk/computers/zx-spectrum/memory-map/
 - http://wordpress.animatez.co.uk/computers/zx-spectrum/screen-memory-layout/
 - http://www.z80.info/z80-op.txt
+- http://www.z80.info/z80code.txt
 - http://randomflux.info/1bit/viewtopic.php?id=21
 
 Notes..

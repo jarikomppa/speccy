@@ -6,6 +6,8 @@ void port254(const unsigned char color) __z88dk_fastcall
     // Direct border color setting
     __asm
         ld a,l
+        ld hl, #_port254tonebit
+        or a, (hl)
         out (254),a
     __endasm;    
 }
