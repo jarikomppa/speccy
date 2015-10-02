@@ -19,50 +19,6 @@ const unsigned char musicdata[] = {
 0,0
 };
 
-/*
-// experimental: make some noise
-void playtone8(unsigned char delay)
-{  
-    port254tonebit |= 5;
-        
-    __asm
-    ld hl, (_port254tonebit) // port254
-    ld e, l 
-	ld	hl, #2+0
-	add	hl, sp
-	ld	d, (hl) // delay
-	ld	b, #0xff // audio cycles
-loop:
-	ld a, e
-
-	dec d
-	
-	jr	Z, delayends
-    // waste time to make delay-end loop as long as
-    // not-delay-end loop. (Should count cycles.. maybe one day)
-    nop
-    nop    
-    nop
-    jp out254
-delayends:
-	ld	d, (hl)
-	xor	a, #0x10
-	ld	e,a
-out254:
-	out (254), a
-	dec	b
-	jr	NZ, loop
-
-    ld a, e
-    ld (_port254tonebit), a
-    
-    __endasm;    
-    
-    port254tonebit &= ~5;
-    port254(0);    
-}
-*/
-
 // experimental: make some noise
 void playtone(unsigned short delay) __z88dk_fastcall
 {  
@@ -113,7 +69,9 @@ unsigned short rand()
     return seed;
 }
 
-unsigned short tone = 0;
+unsigned short tone1 = 0;
+unsigned short tone2 = 0;
+unsigned char nexttone = 0;
 unsigned char keeptone = 0;
 unsigned short songidx;  
 void main()
@@ -132,28 +90,26 @@ void main()
     
     while(1)
     {
-        //sin_idx++;
+        sin_idx++;
         bufp = s_png;
-        //bufp += sinofs[sin_idx];
-        bufp += musicdata[songidx] * 32 * 2;
+        bufp += sinofs[sin_idx];        
         do_halt(); // halt waits for interrupt - or vertical retrace
+
         // delay loop to move the border into the frame (for profiling)     
 //        for (fbcopy_idx = 0; fbcopy_idx < 110; fbcopy_idx++) port254(0);
-        // random jazz generator:
-        playtone(tone);
-        if (keeptone < 3) tone = 0;
-        /*
-        playtone(tone);
-        playtone(tone);
-        playtone(tone);
-        */
+
+        //if (sin_idx & 1)
+            playtone(tone1);
+        //else
+        //    playtone(tone2);
+
         if (!keeptone)
         {
-/*            tone ^= 0x80;
-            if ((tone & 0x80) == 0)
-                tone = (tone + 1) & 63;
-                */
-            tone = tonetab[musicdata[songidx++]];
+            //if (nexttone)
+            //    tone2 = tonetab[musicdata[songidx++]];
+            //else
+                tone1 = tonetab[musicdata[songidx++]];
+            nexttone = !nexttone;
             keeptone = musicdata[songidx++];
             if (keeptone == 0)
             {
@@ -163,12 +119,8 @@ void main()
         }
         keeptone--;
         port254(2);
-        //drawstring("http://iki.fi/sol", 8, 160);
         scroller(160);
         port254(1);
-        //drawstring("http://iki.fi/sol", 8, 160);
-        //port254(0);
-
         // can do about 64 scanlines in a frame (with nothing else)
         //fbcopy(bufp, 64, 110);
         // Let's do interlaced copy instead =)
