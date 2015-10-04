@@ -69,14 +69,101 @@ unsigned short rand()
     return seed;
 }
 
+unsigned char *s_png = (unsigned char *)(0xffff - 32 * 192 * 2); //[32*192*2];
+
 unsigned short tone1 = 0;
 unsigned short tone2 = 0;
 unsigned char nexttone = 0;
 unsigned char keeptone = 0;
-unsigned short songidx;  
+unsigned short songidx;
+
+void cp(unsigned char *dst, unsigned short len, unsigned char *src)
+{
+    /*
+    while (len)
+    {
+        *dst = *src;
+        dst++;
+        src++;
+        len--;
+    }
+    */
+    
+    __asm
+	ld	hl, #2
+	add	hl, sp
+	ld	e, (hl)
+	inc	hl
+	ld	d, (hl)
+	inc hl
+	ld	c, (hl)
+	inc	hl
+	ld	b, (hl)
+	inc hl	
+	ld	a, (hl)
+	inc	hl
+	ld	h, (hl)
+	ld	l, a
+	ldir
+    __endasm;
+    
+}
+
+void lzf_unpack(unsigned char *src, unsigned short len, unsigned char *dst)
+{
+    unsigned short idx = 0;
+    while (idx < len)
+    {
+        unsigned char op = src[idx];
+        unsigned short runlen = op >> 5;
+        port254(runlen);
+        idx++;
+        if (runlen == 0)
+        {
+            // literals
+            runlen = (op & 31) + 1;
+            
+            cp(dst,runlen, src+idx);
+            dst += runlen;
+            idx += runlen;                      
+        }
+        else
+        {
+            // run
+            unsigned short ofs = ((op & 31) << 8) | src[idx];
+            unsigned char * runsrc;
+            idx++;
+            if (runlen == 7)
+            {
+                // long run
+                runlen = src[idx] + 7;
+                idx++;
+            }
+            runlen += 2;
+            runsrc = dst - ofs - 1;
+            cp(dst, runlen, runsrc);
+            dst += runlen;
+        }            
+    }
+}
+
+#define COLOR(BLINK, BRIGHT, PAPER, INK) (((BLINK) << 7) | ((BRIGHT) << 6) | ((PAPER) << 3) | (INK))
+
+void decrunch()
+{
+    memset(0x4000, 0, 32*192);
+    memset(0x5800, COLOR(0,1,0,2), 32*24);
+    drawstring("Unpacking..", 0, 0);
+    lzf_unpack(png_lzf, png_lzf_len, s_png);
+    memset(0x4000, 0, 32*192);
+    memset(0x5800, COLOR(0,0,7,0), 32*24);
+}
+
 void main()
 {           
     unsigned short i;
+    s_png = (unsigned char *)(0xffff - 32 * 192 * 2);
+    decrunch();
     port254tonebit = 0;
     for (i = 0; i < 256; i++)
     {
