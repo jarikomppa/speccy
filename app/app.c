@@ -19,47 +19,7 @@ const unsigned char musicdata[] = {
 0,0
 };
 
-// experimental: make some noise
-void playtone(unsigned short delay) __z88dk_fastcall
-{  
-    delay;  // delay in hl
-    port254tonebit |= 5;
-        
-    // A BC DE HL
-    __asm
-    
-    ld a, (_port254tonebit) // port254
-	ld de, #0
-	ex de, hl
-	ld b, #0xff 
-	ld c, #16
-	
-	// de - increment value
-	// b  - audio cycles
-	// c  - value 16
-	// a - port 254 data
-	// hl - accumulator
-loop:
-
-	add hl, de
-	jr	C, delayends
-    jp out254 
-delayends:	
-	xor	a, c // 4 clocks
-out254:   
-	out (254), a
-	dec	b
-	jr	NZ, loop
-
-    ld (_port254tonebit), a    
-    
-    __endasm;    
-    
-    port254tonebit &= ~5;
-    port254(0);    
-}
-
-
+extern void playtone(unsigned short delay) __z88dk_fastcall;
 
 unsigned short seed = 0xACE1u;
 
@@ -79,16 +39,8 @@ unsigned short songidx;
 
 void cp(unsigned char *dst, unsigned short len, unsigned char *src)
 {
-    /*
-    while (len)
-    {
-        *dst = *src;
-        dst++;
-        src++;
-        len--;
-    }
-    */
-    
+       dst; len; src;
+    // de   bc   hl
     __asm
 	ld	hl, #2
 	add	hl, sp
@@ -109,54 +61,18 @@ void cp(unsigned char *dst, unsigned short len, unsigned char *src)
     
 }
 
-void lzf_unpack(unsigned char *src, unsigned short len, unsigned char *dst)
-{
-    unsigned short idx = 0;
-    while (idx < len)
-    {
-        unsigned char op = src[idx];
-        unsigned short runlen = op >> 5;
-        port254(runlen);
-        idx++;
-        if (runlen == 0)
-        {
-            // literals
-            runlen = (op & 31) + 1;
-            
-            cp(dst,runlen, src+idx);
-            dst += runlen;
-            idx += runlen;                      
-        }
-        else
-        {
-            // run
-            unsigned short ofs = ((op & 31) << 8) | src[idx];
-            unsigned char * runsrc;
-            idx++;
-            if (runlen == 7)
-            {
-                // long run
-                runlen = src[idx] + 7;
-                idx++;
-            }
-            runlen += 2;
-            runsrc = dst - ofs - 1;
-            cp(dst, runlen, runsrc);
-            dst += runlen;
-        }            
-    }
-}
+extern void lzf_unpack(unsigned char *src, unsigned short len, unsigned char *dst);
 
 #define COLOR(BLINK, BRIGHT, PAPER, INK) (((BLINK) << 7) | ((BRIGHT) << 6) | ((PAPER) << 3) | (INK))
 
 void decrunch()
 {
-    memset(0x4000, 0, 32*192);
-    memset(0x5800, COLOR(0,1,0,2), 32*24);
+    memset((void*)0x4000, 0, 32*192);
+    memset((void*)0x5800, COLOR(0,1,0,2), 32*24);
     drawstring("Unpacking..", 0, 0);
     lzf_unpack(png_lzf, png_lzf_len, s_png);
-    memset(0x4000, 0, 32*192);
-    memset(0x5800, COLOR(0,0,7,0), 32*24);
+    memset((void*)0x4000, 0, 32*192);
+    memset((void*)0x5800, COLOR(0,0,7,0), 32*24);
 }
 
 void main()
@@ -185,10 +101,13 @@ void main()
         // delay loop to move the border into the frame (for profiling)     
 //        for (fbcopy_idx = 0; fbcopy_idx < 110; fbcopy_idx++) port254(0);
 
+        port254tonebit |= 5;
         //if (sin_idx & 1)
             playtone(tone1);
         //else
         //    playtone(tone2);
+        port254tonebit &= ~5;
+        port254(0);    
 
         if (!keeptone)
         {
