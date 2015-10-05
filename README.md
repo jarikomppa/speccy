@@ -9,7 +9,6 @@ Note that I'm doing this on windows, but what I've got together here may be help
 
 - z88dk toolchain - http://www.z88dk.org
 - SDCC toolchain - http://sdcc.sourceforge.net/
-- cygwin or mingw, something with objcopy (or some other way to convert ihx to raw binary)
 - a zx spectrum emulator, I like speccy - http://fms.komkon.org/Speccy/
 
 In speccy emulator, be sure to set hardware->fast tape loader on unless you want to die prematurely of old age.
@@ -101,9 +100,9 @@ The app directory contains a few files that will most likely not work as is on y
 
 m.bat in particular has a bunch of things you will want to know about;
 
-1. Compile crt0.s to object file
+1. Compile crt0.s and other assembly files to object files
 2. Compile app.c to object file
-3. Link to intel hex (ihx) file
+3. Link objects into a intel hex (ihx) file
 4. Convert ihx to raw binary
 5. Use z88dk's appmake to turn binary to a .tap file
 6. Run the result in emulator
