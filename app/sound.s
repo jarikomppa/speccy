@@ -1,3 +1,8 @@
+;; Part of Jari Komppa's zx spectrum suite
+;; https://github.com/jarikomppa/speccy
+;; released under the unlicense, see http://unlicense.org 
+;; (practically public domain)
+
 ;   void playtone(unsigned short delay) __z88dk_fastcall;
     .module sound
 

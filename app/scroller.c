@@ -1,3 +1,9 @@
+/*
+ * Part of Jari Komppa's zx spectrum suite
+ * https://github.com/jarikomppa/speccy
+ * released under the unlicense, see http://unlicense.org 
+ * (practically public domain)
+*/
 
 const unsigned char scrolltext[] = ". .. ...   . .. Hello world, let's do this thing..   ...  http://iki.fi/sol ... blah blah.. BLAH BLAH ... ";
 unsigned char scrolltext_idx = 0;

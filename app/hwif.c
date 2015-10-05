@@ -1,3 +1,10 @@
+/*
+ * Part of Jari Komppa's zx spectrum suite
+ * https://github.com/jarikomppa/speccy
+ * released under the unlicense, see http://unlicense.org 
+ * (practically public domain)
+*/
+
 // xxxsmbbb
 // where b = border color, m is mic, s is speaker
 void port254(const unsigned char color) __z88dk_fastcall

@@ -1,3 +1,9 @@
+/*
+ * Part of Jari Komppa's zx spectrum suite
+ * https://github.com/jarikomppa/speccy
+ * released under the unlicense, see http://unlicense.org 
+ * (practically public domain)
+*/
 
 // copy N scanlines from linear memory to video memory
 void fbcopy(const unsigned char * src, unsigned char start, unsigned char end)

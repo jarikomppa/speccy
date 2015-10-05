@@ -1,3 +1,10 @@
+/*
+ * Part of Jari Komppa's zx spectrum suite
+ * https://github.com/jarikomppa/speccy
+ * released under the unlicense, see http://unlicense.org 
+ * (practically public domain)
+*/
+
 /* MIDI spec details on
  * http://www.borg.com/~jglatt/tech/miditech.htm
  *

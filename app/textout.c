@@ -1,3 +1,9 @@
+/*
+ * Part of Jari Komppa's zx spectrum suite
+ * https://github.com/jarikomppa/speccy
+ * released under the unlicense, see http://unlicense.org 
+ * (practically public domain)
+*/
 
 // draw a single 8x8 character (x in 8 pixel steps, y in 1 pixel steps)
 void drawchar(unsigned char c, unsigned char x, unsigned char y)
