@@ -52,9 +52,9 @@ _lzf_unpack::
 	ld	bc,#0 ;idx
 next_data:
 	ld	a,c
-	sub	a, 6 (ix)
+	sub	a, 6 (ix) ; len
 	ld	a,b
-	sbc	a, 7 (ix)
+	sbc	a, 7 (ix) ; len
 	jr	NC, done_island
 	ld	l,4 (ix)
 	ld	h,5 (ix)

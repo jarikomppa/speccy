@@ -36,7 +36,7 @@ unsigned short rand()
     return seed;
 }
 
-unsigned char *s_png = (unsigned char *)(0xffff - 32 * 192 * 2); //[32*192*2];
+//unsigned char *s_png = (unsigned char *)(0xffff - 32 * 192 * 2); //[32*192*2];
 
 unsigned short tone1 = 0;
 unsigned short tone2 = 0;
@@ -72,7 +72,7 @@ extern void lzf_unpack(unsigned char *src, unsigned short len, unsigned char *ds
 
 #define COLOR(BLINK, BRIGHT, PAPER, INK) (((BLINK) << 7) | ((BRIGHT) << 6) | ((PAPER) << 3) | (INK))
 
-void decrunch()
+/*void decrunch()
 {
     memset((void*)0x4000, 0, 32*192);
     memset((void*)0x5800, COLOR(0,1,0,2), 32*24);
@@ -81,12 +81,13 @@ void decrunch()
     memset((void*)0x4000, 0, 32*192);
     memset((void*)0x5800, COLOR(0,0,7,0), 32*24);
 }
+*/
 
 void main()
 {           
     unsigned short i;
-    s_png = (unsigned char *)(0xffff - 32 * 192 * 2);
-    decrunch();
+    //s_png = (unsigned char *)(0xffff - 32 * 192 * 2);
+    //decrunch();
     port254tonebit = 0;
     for (i = 0; i < 256; i++)
     {
