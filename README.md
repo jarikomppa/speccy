@@ -85,8 +85,16 @@ Color number | Bright 0 | Bright 1 | Color name
 
 ## Tools
 
-- mktab.cpp - generate video memory offset table and a sine wave table
+- bin2h.cpp - raw binary to c header file converter
+- ihx2bin.cpp - intel hex file to raw binary converter (needed by m.bat in app directory)
+- lzfpack.cpp - compressor for lzf format
+- lzfunpack.cpp - decompressor for lzf format
+- midi2h.cpp - tool that massages midi files into a format used by the experimental music routines, outputs c header file
+- png2bin.cpp - PNG file to bitmap raw binary converter (doesn't deal with color)
 - png2c.cpp - load up a .png file and output its monochrome bitmap as a .h file
+- sinetab.cpp - tool that generates the sine table used by the effect in app.c
+- tonetab.cpp - tool that generates frequency adder table used by the experimental music routines
+- yofstab.cpp - tool that generates y offset table used by many routines in app.c
 
 ## App
 
@@ -103,7 +111,7 @@ m.bat in particular has a bunch of things you will want to know about;
 1. Compile crt0.s and other assembly files to object files
 2. Compile app.c to object file
 3. Link objects into a intel hex (ihx) file
-4. Convert ihx to raw binary
+4. Convert ihx to raw binary using ihx2bin in tools directory
 5. Use z88dk's appmake to turn binary to a .tap file
 6. Run the result in emulator
 
