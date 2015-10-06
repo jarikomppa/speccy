@@ -95,6 +95,7 @@ Color number | Bright 0 | Bright 1 | Color name
 - sinetab.cpp - tool that generates the sine table used by the effect in app.c
 - tonetab.cpp - tool that generates frequency adder table used by the experimental music routines
 - yofstab.cpp - tool that generates y offset table used by many routines in app.c
+- bootpack.cpp - tool that patches bootloader to work with a compressed image
 
 ## App
 
@@ -124,6 +125,15 @@ Link time and appmake have some constants that will probably require tweaking fr
 
 After compilation you will most likely want to look at crt0.map, as it shows how big everything is and what the offsets are set to, so you can spot issues like --data-loc being wrong.
 
+## Bootloader
+
+With the bootloader, the application is stored in a compressed form on tape, reducing the load times.
+
+When the bootloader is in use, the image is loaded to the end of the memory. The bootloader first copies itself to the video memory and
+continues running there. It decompresses the image to the desired base address and then jumps to it.
+
+By default, the bootloader also sets the graphics attribute memory to zero to hide the garbage on the screen, and blinks the borders to see that progress is being made. The decompression is such a fast phase of the loading (1 second of unpacking, 1+ minutes of loading) that it may be desirable to disable one or both of these features - see commandline options for bootpack.exe for details.
+
 ## Musing on audio
 
 The speccy has a piezo speaker that is controlled through high bit of port 254. It's entirely bit-banged. The speccy has one interrupt that triggers at 50hz and can't be changed. 
@@ -135,3 +145,5 @@ By busy looping.
 Sooo... background audio is out?
 
 Pretty much. After pondering about this I checked a bunch of speccy gameplay videos on youtube and realized that all of the background audio is pretty choppy, meaning that they play a little bit of audio each frame but spend most of the time with the speaker silent. Kinda like arpeggio with most of the arpeggiated notes silent.
+
+As a result, the audio routine now takes a fixed amount of frame time and outputs the desired frequency as many times as possible during that fixed time. The result kinda works. There's still room for improvement (even without taking more frame time) though.
