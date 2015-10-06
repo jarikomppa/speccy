@@ -24,8 +24,8 @@
 int max_addr = 0xffff;
 //int bootloader_addr = 0x4000;
 int image_addr = 0x6000;
-int no_border = 1;
-int no_clear = 1;
+int no_border = 0;
+int no_clear = 0;
 int debugprint = 0;
 
 int checkpatch16(unsigned char *data, int ofs, int expected)
