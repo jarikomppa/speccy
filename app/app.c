@@ -23,10 +23,13 @@ unsigned char port254tonebit;
 
 const unsigned char musicdata[] = {
 #include "tune.h"
-0,0
+20,0,0,0,0,0
 };
 
 extern void playtone(unsigned short delay) __z88dk_fastcall;
+
+unsigned short tone1adder;
+unsigned short tone2adder;
 
 unsigned short seed = 0xACE1u;
 
@@ -38,8 +41,6 @@ unsigned short rand()
 
 //unsigned char *s_png = (unsigned char *)(0xffff - 32 * 192 * 2); //[32*192*2];
 
-unsigned short tone1 = 0;
-unsigned short tone2 = 0;
 unsigned char nexttone = 0;
 unsigned char keeptone = 0;
 unsigned short songidx;
@@ -97,7 +98,7 @@ void main()
         fbcopy_i_idxtab[i] = v;
     }
     sin_idx = 0;
-    songidx = 1;
+    songidx = 0;
     
     while(1)
     {
@@ -110,21 +111,35 @@ void main()
 //        for (fbcopy_idx = 0; fbcopy_idx < 110; fbcopy_idx++) port254(0);
 
         port254tonebit |= 5;
-        //if (sin_idx & 1)
-            playtone(tone1);
-        //else
-        //    playtone(tone2);
+        if (sin_idx & 1)
+        {
+            if (tone1adder)
+                playtone(tone1adder);            
+            else
+                playtone(tone2adder);            
+        }
+        else
+        {
+            if (tone2adder)
+                playtone(tone2adder);            
+            else
+                playtone(tone1adder);                            
+        }
+        
         port254tonebit &= ~5;
         port254(0);    
 
         if (!keeptone)
         {
-            //if (nexttone)
-            //    tone2 = tonetab[musicdata[songidx++]];
-            //else
-                tone1 = tonetab[musicdata[songidx++]];
-            nexttone = !nexttone;
+            unsigned char note;
+            unsigned char channel;
             keeptone = musicdata[songidx++];
+            note = musicdata[songidx++];
+            channel = musicdata[songidx++];
+            if (channel == 0)
+                tone1adder = tonetab[note];
+            else
+                tone2adder = tonetab[note];
             if (keeptone == 0)
             {
                 songidx = 0;

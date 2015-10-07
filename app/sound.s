@@ -12,19 +12,24 @@ _playtone::
 	ex de, hl
 	ld b, #0xff 
 	ld c, #16
+	ld ix, #0
 	
 	; de - increment value
 	; b  - audio cycles
 	; c  - value 16
 	; a - port 254 data
 	; hl - accumulator
+	ld hl, #0
+	add hl, sp
 loop:
 
-	add hl, de
-	jr	C, delayends
+	add ix, de
+	jp	C, delayends
     jp out254 
 delayends:	
 	xor	a, c ; 4 clocks
+	ld sp, hl
+	
 out254:   
 	out (254), a
 	dec	b

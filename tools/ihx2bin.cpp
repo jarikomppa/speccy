@@ -16,7 +16,7 @@ int main(int parc, char ** pars)
         printf("Usage: %s infile outfile\n", pars[0]);
         exit(0);
     }
-    FILE * f = fopen(pars[1], "r");
+    FILE * f = fopen(pars[1], "rb");
     if (!f)
     {
         printf("\"%s\" not found\n", pars[1]);
@@ -36,15 +36,22 @@ int main(int parc, char ** pars)
     memset(data, 0, 0x10000);
     int start = 0x10000;
     int end = 0;
-    
+    int line = 0;
     int idx = 0;
     while (src[idx])
     {
+        line++;
         int sum = 0;
         char tmp[8];
         if (src[idx] != ':')
         {
-            printf("Parse error?\n");
+            printf("Parse error near line %d? (previous chars:\"%c%c%c%c%c%c\")\n", line,
+                (idx<5)?'?':(src[idx-5]<32)?'?':src[idx-5],
+                (idx<4)?'?':(src[idx-4]<32)?'?':src[idx-4],
+                (idx<3)?'?':(src[idx-3]<32)?'?':src[idx-3],
+                (idx<2)?'?':(src[idx-2]<32)?'?':src[idx-2],
+                (idx<1)?'?':(src[idx-1]<32)?'?':src[idx-1],
+                (idx<0)?'?':(src[idx-0]<32)?'?':src[idx-0]);
             exit(0);
         }
         idx++;

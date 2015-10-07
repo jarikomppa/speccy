@@ -15,10 +15,21 @@
 
 #define TICK_CALC_HZ_VALUE 50
 
+struct channeltype
+{
+    int note;
+};
+
+#define CHANNELS 2
+channeltype channel[CHANNELS];
+int nextchannel = 0;
+int hold = 0;
+
 struct notetype
 {
 	int tick; 
 	int note;
+	int channel;
 };
 
 // For simplicity, let's say a song must have at most 64k events
@@ -427,15 +438,55 @@ int parsemidi(char * filename)
 				case 0x90: // note on
 					{
 						int data2 = fgetc(f);
-						printf("Note on: channel %d, Oct %d Note %s Velocity %d\n",command & 0xf, (data1/12)-1,note[data1%12], data2);
+						printf("Note on: channel %d, Oct %d Note %s Velocity %d%s\n",command & 0xf, (data1/12)-1,note[data1%12], data2,
+						data1 >= 12*8?" (out of range)":"");
 
-						if (data2 && data1 < 12*8)
+                        printf("%d -> %d %d\n", data1, channel[0].note, channel[1].note);
+					    int c, haveit = 0, notechan = 0;
+					    
+					    for (c = 0; c < CHANNELS; c++)
+					    {
+					        if (channel[c].note == data1)
+					        {
+					            haveit = 1;
+					            notechan = c;
+					        }
+					    }
+                        
+						if (!haveit && data2 && data1 < 12*8)
 						{
+						    int c, haveit = 0;
+						    for (c = 0; c < CHANNELS; c++)
+						    {
+						        if (channel[c].note == 0)
+						        {
+						            nextchannel = c;
+						        }
+						        if (channel[c].note == data1)
+						        {
+						            haveit = 1;
+						        }
+						    }
+						    
 							song[currentnote].note = data1;
 							//volume = data2;
 							song[currentnote].tick = (int)((((float)time * (float)uspertick)/1000000.0f)*TICK_CALC_HZ_VALUE);
+							song[currentnote].channel = nextchannel;
 							currentnote++;
+							channel[nextchannel].note = data1;
+							nextchannel = (nextchannel + 1) % CHANNELS;
 						}
+						
+						if (hold == 0 && haveit && data2 == 0)
+						{						    
+					        song[currentnote].note = 0;
+					        //volume = data2;
+					        song[currentnote].tick = (int)((((float)time * (float)uspertick)/1000000.0f)*TICK_CALC_HZ_VALUE);
+					        song[currentnote].channel = notechan;
+					        currentnote++;
+					        channel[notechan].note = 0;
+						}
+						
 					}
 					break;
 				case 0xa0: // Note aftertouch
@@ -447,7 +498,9 @@ int parsemidi(char * filename)
 				case 0xb0: // Controller
 					{
 						int data2 = fgetc(f);
-						printf("Controller: channel %d, Controller %s Value %d\n",command & 0xf, controller[data1], data2);
+						printf("Controller: channel %d, Controller (%d) %s Value %d\n",command & 0xf, data1, controller[data1], data2);
+						if (data1 == 64) hold = data2;
+						
 					}
 					break;
 				case 0xc0: // program change
@@ -590,17 +643,24 @@ void generate_header()
 	for (i = 0; i < currentnote; i++)
 	{		
 		unsigned short s = 0;
-		if (i > 0)
+		if (i == currentnote - 1)
 		{
-			s = song[sort[i]].tick - song[sort[i-1]].tick;
+		    s = 10;
+		}
+		else
+		{
+			s = song[sort[i+1]].tick - song[sort[i]].tick;
 		}
 		if (s > 0xff)
-			printf("Too long delay\n");
-		fprintf(f,"0x%02X, 0x%02X, ", s + 1, song[sort[i]].note + note_offset);
+		{
+			printf("Too long delay, setting to 0x20\n");
+			s = 0x20 - 1;
+	    }
+		fprintf(f,"0x%02X, 0x%02X, 0x%02X,   ", s + 1, (song[sort[i]].note + note_offset > 0)?song[sort[i]].note + note_offset:0, song[sort[i]].channel);
 
-		if (min_note > song[sort[i]].note)
+		if (song[sort[i]].note != 0 && min_note > song[sort[i]].note)
 			min_note = song[sort[i]].note;
-		if (max_note < song[sort[i]].note)
+		if (song[sort[i]].note != 0 && max_note < song[sort[i]].note)
 			max_note = song[sort[i]].note;
 
 		if (((i+1)&3) == 0) 
@@ -620,6 +680,12 @@ int main(int parc, char ** pars)
 	}
 	if (parc > 2)
 		note_offset = atoi(pars[2]);
+
+    int i;
+    for (i = 0; i < CHANNELS; i++)
+    {
+        channel[i].note = 0;
+    }
 	
 	parsemidi(pars[1]);
 
