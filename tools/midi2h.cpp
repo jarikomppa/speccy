@@ -17,7 +17,13 @@
 
 struct channeltype
 {
+    channeltype()
+    {
+        note = 0;
+        inputchannel = -1;
+    }
     int note;
+    int inputchannel;
 };
 
 #define MAX_CHANNELS 4
@@ -27,12 +33,32 @@ int nextchannel = 0;
 int hold = 0;
 int noteoffs = 1;
 int channelmask = 0xffff;
+int note_offset = 0;
+
+struct inputchanneltype
+{
+    inputchanneltype()
+    {
+        notecount = 0;
+        noteoffcount = 0;
+        min_note = 0xff;
+        max_note = 0;
+    }
+    int notecount;
+    int noteoffcount;
+    int min_note;
+    int max_note;
+};
+
+inputchanneltype inputchannel[16];
 
 struct notetype
 {
 	int tick; 
 	int note;
-	int channel;
+	int inputchannel;
+	int volume;
+	
 };
 
 // For simplicity, let's say a song must have at most 64k events
@@ -429,90 +455,80 @@ int parsemidi(char * filename)
 					command = data1;
 					data1 = fgetc(f);
 				}
-
+				int chan = command & 0xf;
+				int chan_masked = ((1 << chan) & channelmask) != 0;
 				switch (command & 0xf0)
 				{
 				case 0x80: // note off
 					{
 						int data2 = fgetc(f);
-						int chan = command & 0xf;
-						int chan_masked = ((1 << chan) & channelmask) != 0;
-						printf("Note off: channel %d (%d), Oct %d Note %s Velocity %d\n",chan, chan_masked, (data1/12)-1,note[data1%12], data2);
-					    int c, haveit = 0, notechan = 0;
-					    
-					    for (c = 0; c < channels; c++)
-					    {
-					        if (channel[c].note == data1)
-					        {
-					            haveit = 1;
-					            notechan = c;
-					        }
-					    }
-						if (chan_masked && noteoffs && hold == 0 && haveit)
-						{						    
-					        song[currentnote].note = 0;
-					        //volume = data2;
-					        song[currentnote].tick = (int)((((float)time * (float)uspertick)/1000000.0f)*TICK_CALC_HZ_VALUE);
-					        song[currentnote].channel = notechan;
-					        currentnote++;
-					        channel[notechan].note = 0;
+						if (!chan_masked)
+						{
+						    printf("(masked)\n");
 						}
+						else
+						{
+    						int chan = command & 0xf;
+    						int chan_masked = ((1 << chan) & channelmask) != 0;
+    						printf("Note off: channel %d (%d), Oct %d Note %s Velocity %d\n",chan, chan_masked, (data1/12)-1,note[data1%12], data2);
+    				        song[currentnote].volume = 0;
+    				        song[currentnote].note = data1;
+    				        //volume = data2;
+    				        song[currentnote].tick = (int)((((float)time * (float)uspertick)/1000000.0f)*TICK_CALC_HZ_VALUE);
+    				        song[currentnote].inputchannel = chan;
+    				        currentnote++;
+    				        inputchannel[chan].noteoffcount++;
+    				    }
 					}
 					break;
 				case 0x90: // note on
 					{
 						int data2 = fgetc(f);
-						int chan = command & 0xf;
-						int chan_masked = ((1 << chan) & channelmask) != 0;
-						printf("Note on: channel %d (%d), Oct %d Note %s Velocity %d%s\n",chan, chan_masked, (data1/12)-1,note[data1%12], data2, data1 >= 12*8?" (out of range)":"");
-						
-
-                        printf("%d -> %d %d %d %d\n", data1, channel[0].note, channel[1].note, channel[2].note, channel[3].note);
-					    int c, haveit = 0, notechan = 0;
-					    
-					    for (c = 0; c < channels; c++)
-					    {
-					        if (channel[c].note == data1)
-					        {
-					            haveit = 1;
-					            notechan = c;
-					        }
-					    }
-                        
-						if (chan_masked && !haveit && data2 && data1 < 12*8)
+						if (!chan_masked)
 						{
-						    int c, haveit = 0;
-						    for (c = channels-1; c > 0; c--)
-						    {
-						        if (channel[c].note == 0)
-						        {
-						            nextchannel = c;
-						        }
-						        if (channel[c].note == data1)
-						        {
-						            haveit = 1;
-						        }
-						    }
-						    
-							song[currentnote].note = data1;
-							//volume = data2;
-							song[currentnote].tick = (int)((((float)time * (float)uspertick)/1000000.0f)*TICK_CALC_HZ_VALUE);
-							song[currentnote].channel = nextchannel;
-							currentnote++;
-							channel[nextchannel].note = data1;
-							nextchannel = (nextchannel + 1) % channels;
+						    printf("(masked)\n");
 						}
-						
-						if (chan_masked && noteoffs && hold == 0 && haveit && data2 == 0)
-						{						    
-					        song[currentnote].note = 0;
-					        //volume = data2;
-					        song[currentnote].tick = (int)((((float)time * (float)uspertick)/1000000.0f)*TICK_CALC_HZ_VALUE);
-					        song[currentnote].channel = notechan;
-					        currentnote++;
-					        channel[notechan].note = 0;
-						}
-						
+						else
+						{
+    						int chan = command & 0xf;
+    						int chan_masked = ((1 << chan) & channelmask) != 0;
+    						data1 += note_offset;
+    						if (data1 < 0)
+    						{
+    						    data1 = 0;
+    						    data2 = 0;
+    						}
+    						if (data1 > 255)
+    						{
+    						    data1 = 0;
+    						    data2 = 0;
+    						}
+    						
+    						if (data1 == 0 && data2 == 0)
+    						{
+    						    printf("(out of range)\n");
+    						}
+    						else
+    						{
+    						    
+        						printf("Note on: channel %d (%d), Oct %d Note %s Velocity %d%s\n",chan, chan_masked, (data1/12)-1,note[data1%12], data2, data1 >= 12*8?" (out of range)":"");
+        						                    
+        						song[currentnote].note = data1;
+        						song[currentnote].volume = data2;
+        						song[currentnote].tick = (int)((((float)time * (float)uspertick)/1000000.0f)*TICK_CALC_HZ_VALUE);
+        						song[currentnote].inputchannel = chan;
+        						currentnote++;
+        						if (data2)
+        				            inputchannel[chan].notecount++;
+        				        else
+        				            inputchannel[chan].noteoffcount++;
+        				            
+        				        if (inputchannel[chan].min_note > data1)
+        				            inputchannel[chan].min_note = data1;
+        				        if (inputchannel[chan].max_note < data1)
+        				            inputchannel[chan].max_note = data1;						
+        				    }
+        				}
 					}
 					break;
 				case 0xa0: // Note aftertouch
@@ -633,7 +649,6 @@ int parsemidi(char * filename)
 	return 0;
 }
 
-int note_offset = -24;
 void generate_header()
 {
 	int tick = 0;
@@ -662,12 +677,24 @@ void generate_header()
 			}
 		}
 	}
+	
+	for (i = 0; i < 16; i++)
+	{
+	    if (inputchannel[i].notecount)
+	    printf("Channel %2d (%5d): %4d notes, %4d noteoffs, %d-%d (%d)\n",
+	        i, 1<<i, inputchannel[i].notecount, inputchannel[i].noteoffcount, inputchannel[i].min_note, inputchannel[i].max_note, inputchannel[i].max_note-inputchannel[i].min_note);
+	}
 
 	int min_note = 0xff;
 	int max_note = 0;
+	int max_channel = 0;
+	int output_notes = 0;
+	int next_channel = 0;
+	int used_channel = 0;
 	FILE * f = fopen("tune.h","w");	
 	for (i = 0; i < currentnote; i++)
 	{		
+    	int did_output = 0;
 		unsigned short s = 0;
 		if (i == currentnote - 1)
 		{
@@ -679,20 +706,61 @@ void generate_header()
 		}
 		if (s > 0xff)
 		{
-			printf("Too long delay, setting to 0x20\n");
+			//printf("Too long delay, setting to 0x20\n");
 			s = 0x20 - 1;
 	    }
-		fprintf(f,"0x%02X, 0x%02X, 0x%02X,   ", s + 1, (song[sort[i]].note + note_offset > 0)?song[sort[i]].note + note_offset:0, song[sort[i]].channel);
-
+	    
+	    int c, gotit = -1;
+	    for (c = 0; c < MAX_CHANNELS; c++)
+	    {
+	        if (channel[c].note == song[sort[i]].note && 	            
+	            channel[c].inputchannel == song[sort[i]].inputchannel && 
+	            song[sort[i]].note != 0)
+	        {
+	            gotit = c;
+	        }
+	    }
+	    
+        if (noteoffs && gotit != -1 && song[sort[i]].volume == 0)
+	    {
+		    fprintf(f,"0x%02X, 0x%02X, 0x%02X,  // ", s + 1, 0, gotit);
+            fprintf(f,"%02x %02x %02x %02x", channel[0].note, channel[1].note, channel[2].note, channel[3].note);
+            fprintf(f,"  %02x off\n", song[sort[i]].note);
+            output_notes++;
+            channel[gotit].note = 0;
+            did_output = 1;
+        }
+        if (gotit == -1 && song[sort[i]].volume != 0 && song[sort[i]].note != 0)
+        {
+            for (c = MAX_CHANNELS-1; c >= 0; c--)
+            {
+                if (channel[c].note == 0)
+                    next_channel = c;
+            }
+ 
+           
+		    fprintf(f,"0x%02X, 0x%02X, 0x%02X,  // ", s + 1, song[sort[i]].note, next_channel);
+            fprintf(f,"%02x %02x %02x %02x\n", channel[0].note, channel[1].note, channel[2].note, channel[3].note);
+		    used_channel = next_channel;
+		    channel[used_channel].note = song[sort[i]].note;
+		    channel[used_channel].inputchannel = song[sort[i]].inputchannel;
+		    
+		    next_channel = (next_channel + 1) % channels;
+            output_notes++;
+            did_output = 1;
+        }
+        
 		if (song[sort[i]].note != 0 && min_note > song[sort[i]].note)
 			min_note = song[sort[i]].note;
 		if (song[sort[i]].note != 0 && max_note < song[sort[i]].note)
 			max_note = song[sort[i]].note;
+	    if (used_channel > max_channel)
+	        max_channel = used_channel;
 
-		if (((i+1)&3) == 0) 
-			fprintf(f,"\n");
+		//if (did_output && ((output_notes)&3) == 0) 
+//			fprintf(f,"\n");
 	}
-	printf("min note:%d - max note:%d (note range %d)\n", min_note, max_note, max_note-min_note);
+	printf("%d notes output, min note:%d - max note:%d (note range %d) max arp %d\n", output_notes, min_note, max_note, max_note-min_note, max_channel+1);
     delete[] sort;
 	fclose(f);
 }
@@ -702,7 +770,7 @@ int main(int parc, char ** pars)
 	if (parc < 2)
 	{
 		printf("Usage: midi2h midifilename [note offset] [channels] [noteoff enable] [channel mask]\n"
-		"note offset default is -24\n"
+		"note offset default is 0\n"
 		"channel count default is 2, max 4\n"
 		"noteoff enable default is 1\n"
 		"channel mask (channels to export), default is 0xffff\n");
@@ -716,14 +784,10 @@ int main(int parc, char ** pars)
 		noteoffs = atoi(pars[4]);
 	if (parc > 5)
 		channelmask = atoi(pars[5]);
-
-    int i;
-    for (i = 0; i < MAX_CHANNELS; i++)
-    {
-        channel[i].note = 0;
-    }
 	
 	parsemidi(pars[1]);
+	
+	printf("-- Parse done\n");
 
 	generate_header();
 	return 0;
