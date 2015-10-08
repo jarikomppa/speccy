@@ -20,10 +20,13 @@ struct channeltype
     int note;
 };
 
-#define CHANNELS 2
-channeltype channel[CHANNELS];
+#define MAX_CHANNELS 4
+channeltype channel[MAX_CHANNELS];
+int channels = 2;
 int nextchannel = 0;
 int hold = 0;
+int noteoffs = 1;
+int channelmask = 0xffff;
 
 struct notetype
 {
@@ -432,19 +435,42 @@ int parsemidi(char * filename)
 				case 0x80: // note off
 					{
 						int data2 = fgetc(f);
-						printf("Note off: channel %d, Oct %d Note %s Velocity %d\n",command & 0xf, (data1/12)-1,note[data1%12], data2);
+						int chan = command & 0xf;
+						int chan_masked = ((1 << chan) & channelmask) != 0;
+						printf("Note off: channel %d (%d), Oct %d Note %s Velocity %d\n",chan, chan_masked, (data1/12)-1,note[data1%12], data2);
+					    int c, haveit = 0, notechan = 0;
+					    
+					    for (c = 0; c < channels; c++)
+					    {
+					        if (channel[c].note == data1)
+					        {
+					            haveit = 1;
+					            notechan = c;
+					        }
+					    }
+						if (chan_masked && noteoffs && hold == 0 && haveit)
+						{						    
+					        song[currentnote].note = 0;
+					        //volume = data2;
+					        song[currentnote].tick = (int)((((float)time * (float)uspertick)/1000000.0f)*TICK_CALC_HZ_VALUE);
+					        song[currentnote].channel = notechan;
+					        currentnote++;
+					        channel[notechan].note = 0;
+						}
 					}
 					break;
 				case 0x90: // note on
 					{
 						int data2 = fgetc(f);
-						printf("Note on: channel %d, Oct %d Note %s Velocity %d%s\n",command & 0xf, (data1/12)-1,note[data1%12], data2,
-						data1 >= 12*8?" (out of range)":"");
+						int chan = command & 0xf;
+						int chan_masked = ((1 << chan) & channelmask) != 0;
+						printf("Note on: channel %d (%d), Oct %d Note %s Velocity %d%s\n",chan, chan_masked, (data1/12)-1,note[data1%12], data2, data1 >= 12*8?" (out of range)":"");
+						
 
-                        printf("%d -> %d %d\n", data1, channel[0].note, channel[1].note);
+                        printf("%d -> %d %d %d %d\n", data1, channel[0].note, channel[1].note, channel[2].note, channel[3].note);
 					    int c, haveit = 0, notechan = 0;
 					    
-					    for (c = 0; c < CHANNELS; c++)
+					    for (c = 0; c < channels; c++)
 					    {
 					        if (channel[c].note == data1)
 					        {
@@ -453,10 +479,10 @@ int parsemidi(char * filename)
 					        }
 					    }
                         
-						if (!haveit && data2 && data1 < 12*8)
+						if (chan_masked && !haveit && data2 && data1 < 12*8)
 						{
 						    int c, haveit = 0;
-						    for (c = 0; c < CHANNELS; c++)
+						    for (c = channels-1; c > 0; c--)
 						    {
 						        if (channel[c].note == 0)
 						        {
@@ -474,10 +500,10 @@ int parsemidi(char * filename)
 							song[currentnote].channel = nextchannel;
 							currentnote++;
 							channel[nextchannel].note = data1;
-							nextchannel = (nextchannel + 1) % CHANNELS;
+							nextchannel = (nextchannel + 1) % channels;
 						}
 						
-						if (hold == 0 && haveit && data2 == 0)
+						if (chan_masked && noteoffs && hold == 0 && haveit && data2 == 0)
 						{						    
 					        song[currentnote].note = 0;
 					        //volume = data2;
@@ -675,14 +701,24 @@ int main(int parc, char ** pars)
 {
 	if (parc < 2)
 	{
-		printf("Usage: midi2h midifilename [note offset, default -24]\n");
+		printf("Usage: midi2h midifilename [note offset] [channels] [noteoff enable] [channel mask]\n"
+		"note offset default is -24\n"
+		"channel count default is 2, max 4\n"
+		"noteoff enable default is 1\n"
+		"channel mask (channels to export), default is 0xffff\n");
 		return -1;
 	}
 	if (parc > 2)
 		note_offset = atoi(pars[2]);
+	if (parc > 3)
+		channels = atoi(pars[3]);
+	if (parc > 4)
+		noteoffs = atoi(pars[4]);
+	if (parc > 5)
+		channelmask = atoi(pars[5]);
 
     int i;
-    for (i = 0; i < CHANNELS; i++)
+    for (i = 0; i < MAX_CHANNELS; i++)
     {
         channel[i].note = 0;
     }
