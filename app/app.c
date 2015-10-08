@@ -28,8 +28,8 @@ const unsigned char musicdata[] = {
 
 extern void playtone(unsigned short delay) __z88dk_fastcall;
 
-unsigned short tone1adder;
-unsigned short tone2adder;
+#define MAX_CHANNEL 4
+unsigned short toneadder[MAX_CHANNEL];
 
 unsigned short seed = 0xACE1u;
 
@@ -84,9 +84,16 @@ extern void lzf_unpack(unsigned char *src, unsigned short len, unsigned char *ds
 }
 */
 
+unsigned char arpy;
+
 void main()
 {           
     unsigned short i;
+    toneadder[0] = 0;
+    toneadder[1] = 0;
+    toneadder[2] = 0;
+    toneadder[3] = 0;
+    arpy = 0;
     //s_png = (unsigned char *)(0xffff - 32 * 192 * 2);
     //decrunch();
     port254tonebit = 0;
@@ -109,22 +116,32 @@ void main()
 
         // delay loop to move the border into the frame (for profiling)     
 //        for (fbcopy_idx = 0; fbcopy_idx < 110; fbcopy_idx++) port254(0);
+        
+        arpy++;
+        if (arpy == MAX_CHANNEL)
+            arpy = 0;
+        if (toneadder[arpy] == 0)
+        {
+            arpy++;
+            if (arpy == MAX_CHANNEL)
+                arpy = 0;
+        }
+        if (toneadder[arpy] == 0)
+        {
+            arpy++;
+            if (arpy == MAX_CHANNEL)
+                arpy = 0;
+        }
+        if (toneadder[arpy] == 0)
+        {
+            arpy++;
+            if (arpy == MAX_CHANNEL)
+                arpy = 0;
+        }
+
 
         port254tonebit |= 5;
-        if (sin_idx & 1)
-        {
-            if (tone1adder)
-                playtone(tone1adder);            
-            else
-                playtone(tone2adder);            
-        }
-        else
-        {
-            if (tone2adder)
-                playtone(tone2adder);            
-            else
-                playtone(tone1adder);                            
-        }
+        playtone(toneadder[arpy]);
         
         port254tonebit &= ~5;
         port254(0);    
@@ -136,10 +153,8 @@ void main()
             keeptone = musicdata[songidx++];
             note = musicdata[songidx++];
             channel = musicdata[songidx++];
-            if (channel == 0)
-                tone1adder = tonetab[note];
-            else
-                tone2adder = tonetab[note];
+            toneadder[channel] = tonetab[note];
+                
             if (keeptone == 0)
             {
                 songidx = 0;
