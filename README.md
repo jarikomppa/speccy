@@ -24,8 +24,16 @@ In speccy emulator, be sure to set hardware->fast tape loader on unless you want
 Notes..
 
 - rom character set is at 0x3d00 - 0x3ff and contain 8 bytes per glyph, starting from ascii 32 (space)
-- system variable "frame counter" is a 3 byte variable at address 0x5c78, 0x5c79, 0x5c80 ((IY+$3E), (IY+$3F), (IY+$40))
 - i/o port 254 controls border color (bottom bits 0,1,2) and speaker (bit 4)
+- scanline is 224 clocks
+- after frame interrupt, 64 scanlines before first pixel
+- 192 scanlines of pixels
+- 56 scanlines before retrace
+- 69888 clocks per frame
+- border is 48 pixels wide
+- one scanline: 128 clocks pixels, 24 clocks right border, 48 clocks retrace, 24 clocks left border
+- different machines may vary by one clock
+- contended memory and contended io-port 254 make the above values largely useless
 
 ### Memory map
 
@@ -66,7 +74,7 @@ Color data is stored linearly, where each byte overlays a 8x8 block of bitmap da
 F B P2 P1 P0 I2 I1 I0
 
 Where:
-- F is for FLASH, swaps the PAPER and INK every 32 frames.
+- F is for FLASH, swaps the PAPER and INK every 16 frames.
 - B is for BRIGHT, changes both PAPER and INK.
 - P2 to P0 is PAPER color (bitmap 0)
 - I2 to I0 is INK color (bitmap 1)
