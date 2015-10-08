@@ -10,7 +10,6 @@
 unsigned char fbcopy_idx;
 unsigned char sin_idx;
 
-const unsigned char *bufp;
 unsigned char *data_ptr;
 unsigned char *screen_ptr;
 unsigned char port254tonebit;
@@ -45,7 +44,7 @@ unsigned char nexttone = 0;
 unsigned char keeptone = 0;
 unsigned short songidx;
 
-void cp(unsigned char *dst, unsigned short len, unsigned char *src)
+void cp(unsigned char *dst, unsigned short len, unsigned char *src) 
 {
        dst; len; src;
     // de   bc   hl
@@ -104,14 +103,14 @@ void main()
         if (v >= 160 && v <= 168) v -= 100;
         fbcopy_i_idxtab[i] = v;
     }
+    for (i = 0; i < 512; i++)
+        fbcopy_i_lintab[i] = (unsigned short)&s_png + i * 32;
     sin_idx = 0;
     songidx = 0;
     
     while(1)
     {
         sin_idx++;
-        bufp = s_png;
-        bufp += sinofs[sin_idx];        
         do_halt(); // halt waits for interrupt - or vertical retrace
 
         // delay loop to move the border into the frame (for profiling)     
@@ -168,7 +167,7 @@ void main()
         // can do about 64 scanlines in a frame (with nothing else)
         //fbcopy(bufp, 64, 110);
         // Let's do interlaced copy instead =)
-        fbcopy_i(bufp, 13);
+        fbcopy_i(sinofs[sin_idx], 13);
         port254(0);                                     
     }    
 }

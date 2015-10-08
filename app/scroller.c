@@ -30,7 +30,7 @@ void scroller(unsigned char y)
         data_ptr++;
         // shift by variable - causes variable timing
         nextdata = (nextdata >> scrollcycle) & 3;
-        // a bc de hl
+        // a bc de hl ix iy
         __asm
 //            push bc
 //            push hl
@@ -38,16 +38,23 @@ void scroller(unsigned char y)
             ld bc, (_screen_ptr)
             ld hl, (_nextdata)
 
+; a - worhorse
+; bc - screen ptr
+; d - temp
+; e - leftovers to next round
+; l - leftovers from previous round
+; h - value 0x03 
+            ld h, #0x03
 #define REPBLOCK \
             ld a,(bc) \
             rlca \
             rlca \
             ld d, a \
-            and a, #0x03 \
+            and a, h; #0x03 \
             ld e, a \
             ld a, d \
             and a, #0xfc \
-            or a,l \
+            or a, l \
             ld (bc), a \
             ld l, e \
             dec bc 

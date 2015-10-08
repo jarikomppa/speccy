@@ -20,7 +20,7 @@ int main(int parc, char ** pars)
     fprintf(f, "const unsigned short sinofs[256] = {\n");
     for (i = 0; i < 256; i++)
     {
-        fprintf(f, "%4d%s", (int)floor(((sin(i * 2 * M_PI / 256.0f)+1)/2) * 192) * 32, (i==255)?"":",");
+        fprintf(f, "%4d%s", (int)floor(((sin(i * 2 * M_PI / 256.0f)+1)/2) * 192), (i==255)?"":",");
         if (i % 16 == 15)
             fprintf(f, "\n");
     }
