@@ -34,6 +34,7 @@ int hold = 0;
 int noteoffs = 1;
 int channelmask = 0xffff;
 int note_offset = 0;
+int min_vol = 1;
 
 struct inputchanneltype
 {
@@ -518,7 +519,7 @@ int parsemidi(char * filename)
         						song[currentnote].tick = (int)((((float)time * (float)uspertick)/1000000.0f)*TICK_CALC_HZ_VALUE);
         						song[currentnote].inputchannel = chan;
         						currentnote++;
-        						if (data2)
+        						if (data2 >= min_vol)
         				            inputchannel[chan].notecount++;
         				        else
         				            inputchannel[chan].noteoffcount++;
@@ -721,7 +722,7 @@ void generate_header()
 	        }
 	    }
 	    
-        if (noteoffs && gotit != -1 && song[sort[i]].volume == 0)
+        if (noteoffs && gotit != -1 && song[sort[i]].volume < min_vol)
 	    {
 		    fprintf(f,"0x%02X, 0x%02X, 0x%02X,  // ", s + 1, 0, gotit);
             fprintf(f,"%02x %02x %02x %02x", channel[0].note, channel[1].note, channel[2].note, channel[3].note);
@@ -730,7 +731,7 @@ void generate_header()
             channel[gotit].note = 0;
             did_output = 1;
         }
-        if (gotit == -1 && song[sort[i]].volume != 0 && song[sort[i]].note != 0)
+        if (gotit == -1 && song[sort[i]].volume >= min_vol && song[sort[i]].note != 0)
         {
             for (c = MAX_CHANNELS-1; c >= 0; c--)
             {
@@ -769,11 +770,12 @@ int main(int parc, char ** pars)
 {
 	if (parc < 2)
 	{
-		printf("Usage: midi2h midifilename [note offset] [channels] [noteoff enable] [channel mask]\n"
+		printf("Usage: midi2h midifilename [note offset] [channels] [noteoff enable] [channel mask] [min vol]\n"
 		"note offset default is 0\n"
 		"channel count default is 2, max 4\n"
 		"noteoff enable default is 1\n"
-		"channel mask (channels to export), default is 0xffff\n");
+		"channel mask (channels to export), default is 0xffff\n"
+		"min volume for note to be considered note on, default 1\n");
 		return -1;
 	}
 	if (parc > 2)
@@ -784,6 +786,8 @@ int main(int parc, char ** pars)
 		noteoffs = atoi(pars[4]);
 	if (parc > 5)
 		channelmask = atoi(pars[5]);
+	if (parc > 6)
+		min_vol = atoi(pars[6]);
 	
 	parsemidi(pars[1]);
 	
