@@ -8,7 +8,7 @@
 
 		.area _HEADER(ABS)
 	
-		di				; no rom anymore
+		;di				; no rom anymore
 
 		ld (#store_sp),sp		; store SP
 		ld sp,#_stack

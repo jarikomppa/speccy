@@ -4,7 +4,8 @@
 
 		.area _HEADER(ABS)
 
-        di 
+        ;di
+        nop
 	
         ld sp, #0x4400 ; put stack into video memory
         
