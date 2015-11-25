@@ -65,7 +65,7 @@ int main(int parc, char ** pars)
 
     FILE * f = fopen(pars[2],"w");
 
-    fprintf(f, "unsigned char s_png[%d] = {\n", (x * y * 2) / 8);
+    fprintf(f, "const unsigned char bubble[(%d + 1) * %d * 2 * 8] = {\n", x/8, y);
     int shift;
     for (shift = 0; shift < 8; shift++)
     {
@@ -74,9 +74,9 @@ int main(int parc, char ** pars)
         {
             for (j = 0; j < (x/8)+1; j++)
             {
-                fprintbin(f, (spritedata[i] >> shift) >> (8 * (3 - j)));
-                fprintf(f, ", ");            
                 fprintbin(f, ~((spritemask[i]) >> shift) >> (8 * (3 - j)));
+                fprintf(f, ", ");            
+                fprintbin(f, (spritedata[i] >> shift) >> (8 * (3 - j)));
                 fprintf(f, ", ");            
             }
             fprintf(f,"\n");
