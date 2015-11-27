@@ -249,16 +249,17 @@ void drawsprite(char *aData, short aX, short aY)
     aData; aX; aY;
      
     __asm
-        push ix
-    	ld	ix,#0
-    	add	ix,sp
-    
+        push ix    
         push iy
         push hl
         push bc
         push de
+
+    	ld	ix,#0
+    	add	ix,sp
         
-        ld a, 6 (ix) ; aX
+        
+        ld a, 14 (ix) ; aX
         and a, #7
         ld c, a
         ld b, #0
@@ -276,22 +277,23 @@ void drawsprite(char *aData, short aX, short aY)
         push hl
         pop bc
 
-        ld d, 9 (ix) ; aY
-        ld e, 8 (ix) 
+        ld d, 17 (ix) ; aY
+        ld e, 16 (ix) 
         ld hl, #(_yofs)
         add hl, de      
         add hl, de      
         push hl
         pop iy
         
-        ld h, 5 (ix) ; aData
-        ld l, 4 (ix)
+        ld h, 13 (ix) ; aData
+        ld l, 12 (ix)
         add hl, bc ; inside-byte shift added
         
         ex de,hl
-        ld h, 7 (ix) ; aX
-        ld l, 6 (ix)
-        // divide aX by 8
+        ld h, 15 (ix) ; aX
+        ld l, 14 (ix)
+        
+        ; divide aX by 8
         srl h
         rr l
         srl h
@@ -304,116 +306,92 @@ void drawsprite(char *aData, short aX, short aY)
         ld sp, hl
               
 #define HPASS       \
-        pop hl      \
-        ld a, (de)  \
-        and l       \
-        or h        \
-        ld (de),a   \
-        inc de      \
+        pop de      \
+        ld a, (hl)  \
+        and e       \
+        or d        \
+        ld (hl),a   \
+        inc hl      \
                     \
-        pop hl      \
-        ld a, (de)  \
-        and l       \
-        or h        \
-        ld (de),a   \
-        inc de      \
+        pop de      \
+        ld a, (hl)  \
+        and e       \
+        or d        \
+        ld (hl),a   \
+        inc hl      \
                     \
-        pop hl      \
-        ld a, (de)  \
-        and l       \
-        or h        \
-        ld (de),a   
+        pop de      \
+        ld a, (hl)  \
+        and e       \
+        or d        \
+        ld (hl),a   
 
         ld l, 0 (iy)
         ld h, 1 (iy)
         add hl, bc
-        ex de,hl
         HPASS
         ld l, 2 (iy)
         ld h, 3 (iy)
         add hl, bc
-        ex de,hl
         HPASS
         ld l, 4 (iy)
         ld h, 5 (iy)
         add hl, bc
-        ex de,hl
         HPASS
         ld l, 6 (iy)
         ld h, 7 (iy)
         add hl, bc
-        ex de,hl
         HPASS
         ld l, 8 (iy)
         ld h, 9 (iy)
         add hl, bc
-        ex de,hl
         HPASS
         ld l, 10 (iy)
         ld h, 11 (iy)
         add hl, bc
-        ex de,hl
         HPASS
         ld l, 12 (iy)
         ld h, 13 (iy)
         add hl, bc
-        ex de,hl
         HPASS
         ld l, 14 (iy)
         ld h, 15 (iy)
         add hl, bc
-        ex de,hl
         HPASS
         ld l, 16 (iy)
         ld h, 17 (iy)
         add hl, bc
-        ex de,hl
         HPASS
         ld l, 18 (iy)
         ld h, 19 (iy)
         add hl, bc
-        ex de,hl
         HPASS
         ld l, 20 (iy)
         ld h, 21 (iy)
         add hl, bc
-        ex de,hl
         HPASS
         ld l, 22 (iy)
         ld h, 23 (iy)
         add hl, bc
-        ex de,hl
         HPASS
         ld l, 24 (iy)
         ld h, 25 (iy)
         add hl, bc
-        ex de,hl
         HPASS
         ld l, 26 (iy)
         ld h, 27 (iy)
         add hl, bc
-        ex de,hl
         HPASS
         ld l, 28 (iy)
         ld h, 29 (iy)
         add hl, bc
-        ex de,hl
         HPASS
         ld l, 30 (iy)
         ld h, 31 (iy)
         add hl, bc
-        ex de,hl
         HPASS
 #undef HPASS
         ld sp, ix
-        dec sp
-        dec sp
-        dec sp
-        dec sp
-        dec sp
-        dec sp
-        dec sp
-        dec sp
 
         pop de
         pop bc
