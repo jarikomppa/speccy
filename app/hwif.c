@@ -23,6 +23,7 @@ void port254(const unsigned char color) __z88dk_fastcall
 void do_halt()
 {
     __asm
+        ei
         halt
     __endasm;
 }
