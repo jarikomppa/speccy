@@ -75,3 +75,17 @@ void fbcopy_i(unsigned short linofs, unsigned char lines)
         fbcopy_i_idx++;
     }    
 }
+
+void initfbcopy()
+{
+    unsigned short i;
+    for (i = 0; i < 256; i++)
+    {
+        unsigned char v = i * 13;
+        if (v >= 192) v -= 192;
+        if (v >= 160 && v <= 168) v -= 100;
+        fbcopy_i_idxtab[i] = v;
+    }
+    for (i = 0; i < 512; i++)
+        fbcopy_i_lintab[i] = (unsigned short)&s_png + i * 32;
+}

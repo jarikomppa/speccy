@@ -243,6 +243,7 @@ void drawsprite(char *aData, short aX, short aY)
 }
 */
 
+
 void drawsprite(char *aData, short aX, short aY)
 {    
     aData; aX; aY;
@@ -422,6 +423,7 @@ void drawsprite(char *aData, short aX, short aY)
     __endasm;   
 }
 
+
 void clearsprite(short aX, short aY)
 {    
     unsigned char y;
@@ -438,13 +440,15 @@ void clearsprite(short aX, short aY)
     }    
 }
 
-#include "..\tools\bubble.c"
 /*
+#include "..\tools\bubble.c"
+
 void drawsprite(char *aData, short aX, short aY)
 {
     drawsprite_bubble(aX, aY);
 }
 */
+
 
 //unsigned char oldx, oldy;
 
@@ -536,6 +540,5 @@ void spritetest()
     drawsprite(bubble, (sinofs[(framecounter + framecounter+x) & 0xff] & 255) + 16, (sinofs[(framecounter+y) & 0xff] & 127)+24); x += 10; y -= 10;port254(2);
     drawsprite(bubble, (sinofs[(framecounter + framecounter+x) & 0xff] & 255) + 16, (sinofs[(framecounter+y) & 0xff] & 127)+24); x += 10; y -= 10;port254(0);
     drawsprite(bubble, (sinofs[(framecounter + framecounter+x) & 0xff] & 255) + 16, (sinofs[(framecounter+y) & 0xff] & 127)+24); x += 10; y -= 10;port254(2);
-    drawsprite(bubble, (sinofs[(framecounter + framecounter+x) & 0xff] & 255) + 16, (sinofs[(framecounter+y) & 0xff] & 127)+24);port254(0);
     
 }
