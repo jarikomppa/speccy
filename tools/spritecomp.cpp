@@ -154,24 +154,25 @@ void drawsprite(short aX, short aY)
         fprintf(f,        
     "__asm\n"
     "    push ix\n"
-    " 	ld	ix,#0\n"
-    "	add	ix,sp\n"
+    "    push iy\n"
+    "    push hl\n"
+    "    push bc\n"
+    "    push de\n"
     "\n"
-    "   push iy\n"
-    "   push hl\n"
-    "   push bc\n"
-    "   push de\n"
+    " 	 ld	ix,#0 ; set up ix to point at stack\n"
+    "	 add ix,sp\n"
     "\n"
-    "    ld d, 7 (ix) ; aY\n"
-    "    ld e, 6 (ix) \n"
+    "    ld d, 15 (ix) ; aY\n"
+    "    ld e, 14 (ix) \n"
     "    ld hl, #(_yofs)\n"
     "    add hl, de\n"
     "    add hl, de\n"      
     "    push hl\n"
     "    pop iy\n"
     "\n"
-    "    ld h, 5 (ix) ; aX\n"
-    "    ld l, 4 (ix)\n"
+    "    ld h, 13 (ix) ; aX\n"
+    "    ld l, 12 (ix)\n"
+    "\n"
     "    ; divide aX by 8\n"
     "    srl h\n"
     "    rr l\n"
@@ -181,36 +182,44 @@ void drawsprite(short aX, short aY)
     "    rr l\n"
     "    push hl\n"
     "    pop bc\n"
-    "\n");
+    "\n"
+    "    ld sp, iy ; set stack to point at yofs table\n"
+    "\n; Setup done");
              
         for (i = 0; i < y; i++)
         {
             fprintf(f,
             "\n"
-            "    ld l, %d (iy)\n"
-            "    ld h, %d (iy)\n"
-            "    add hl, bc\n", i*2, i*2 + 1);
+            "    pop hl ; load y offset\n"
+            //"    ld l, %d (iy) ; load y offset\n"
+            //"    ld h, %d (iy)\n"
+            "    add hl, bc ; add x-offset\n");//, i*2, i*2 + 1);
             for (j = 0; j < (x/8)+1; j++)
             {
                 int andval = (~((spritemask[i]) >> shift) >> (8 * (3 - j))) & 0xff;
                 int orval = ((spritedata[i] >> shift) >> (8 * (3 - j))) & 0xff;
                 if (andval == 0)
                 {
-                    fprintf(f,"    ld (hl), #%d ; 100%% mask shortcut\n", orval);
+                    fprintf(f,"    ld (hl), #%d ; shortcut: background completely masked\n", orval);
+                }
+                else
+                if (andval != 255)
+                {
+                                     fprintf(f,"    ld a, (hl)\n");
+                                     fprintf(f,"    and #%d\n", andval);
+                    if (orval)       fprintf(f,"    or #%d\n", orval); else fprintf(f,"; skip or:ing since value was 0\n");
+                                     fprintf(f,"    ld (hl), a\n");
                 }
                 else
                 {
-                    if (andval!=255) fprintf(f,"    ld a, (hl)\n"); //else fprintf(f,"; skip - andval=255\n");
-                    if (andval!=255) fprintf(f,"    and #%d\n", andval); //else fprintf(f,"; skip - andval=255\n");
-                    if (orval)       fprintf(f,"    or #%d\n", orval); //else fprintf(f,"; skip - orval=0\n");
-                    if (andval!=255) fprintf(f,"    ld (hl), a\n");  //else fprintf(f,"; skip - andval=255\n");
+                    fprintf(f,"; skip, background completely visible\n");
                 }
                 // find out if this span has more live masks
                 // (this could be done in a less heavy-handed way, but, meh)
                 int k, n = 0;
                 for (k = j+1; k < (x/8)+1; k++)
                 {
-                    int andval = (~((spritemask[k]) >> shift) >> (8 * (3 - k))) & 0xff;
+                    int andval = (~((spritemask[i]) >> shift) >> (8 * (3 - k))) & 0xff;
                     if (andval != 255)
                         {
                         n = 1;
@@ -222,6 +231,7 @@ void drawsprite(short aX, short aY)
         }
         fprintf(f,
         "\n"
+        "    ld sp, ix ; Restore stack pointer\n"
         "    pop de\n"
         "    pop bc\n"
         "    pop hl\n"
