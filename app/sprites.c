@@ -430,15 +430,108 @@ void drawsprite(char *aData, short aX, short aY)
 
 //unsigned char oldx, oldy;
 
+void clearscrn(unsigned short val) __z88dk_callee
+{
+    val;
+    __asm
+    pop bc ; return address
+    pop hl ; src
+    push bc ; put return address back
+    push ix
+    ld ix, #0
+    add ix, sp
+    ld sp, #0x5800
+    ld h, l
+    
+    #define HSPAN \
+    push hl \
+    push hl \
+    push hl \
+    push hl \
+    push hl \
+    push hl \
+    push hl \
+    push hl \
+    push hl \
+    push hl \
+    push hl \
+    push hl \
+    push hl \
+    push hl \
+    push hl \
+    push hl
+    
+    #define HSPANx8 \
+    HSPAN \
+    HSPAN \
+    HSPAN \
+    HSPAN \
+    HSPAN \
+    HSPAN \
+    HSPAN \
+    HSPAN 
+    
+    HSPANx8
+    HSPANx8
+    HSPANx8
+    HSPANx8
+    HSPANx8
+    HSPANx8
+    HSPANx8
+    HSPANx8
+    HSPANx8
+    HSPANx8
+
+    HSPANx8
+    HSPANx8
+    HSPANx8
+    HSPANx8
+    HSPANx8
+    HSPANx8
+    HSPANx8
+    HSPANx8
+    HSPANx8
+    HSPANx8
+
+    HSPANx8
+    HSPANx8
+    HSPANx8
+    HSPANx8
+    
+    #undef HSPANx8
+    #undef HSPAN
+    
+    ld sp, ix
+    pop ix
+    __endasm;
+}
+
+unsigned short xadder = 0;
+unsigned short yadder = 0;
+unsigned char oldx;
+unsigned char oldy;
+
 void spritetest()
 {
-    unsigned char x = sinofs[(framecounter + framecounter) & 0xff] & 127;
-    unsigned char y = sinofs[framecounter & 0xff] & 127;
-    //clearsprite(oldx,oldy);
-    //clearsprite(oldy,oldx);
-    //clearsprite(127-oldx, 127-oldy);
-    //oldx = x;    oldy = y;
-    x = 0; y = 0;
+    unsigned char x = (sinofs[(xadder / 256) & 0xff] & 255);
+    unsigned char y = (sinofs[(yadder / 256) & 0xff] & 127);
+    xadder += 512+3;
+    yadder += 256+5;
+/*
+    port254(4);
+    clearsprite(oldx, oldy+32);
+    clearsprite(~oldx&0xff, oldy+32);
+    clearsprite(oldx, (~oldy&0x7f)+32);
+    clearsprite(~oldx&0xff, (~oldy&0x7f)+32);
+    */
+    port254(2);
+    drawsprite(bubble, x, y+8);
+    drawsprite(bubble, ~x&0xff, y+8);
+    drawsprite(bubble, x, (~y&0x7f)+8);
+    drawsprite(bubble, ~x&0xff, (~y&0x7f)+8);
+    oldx = x;
+    oldy = y;
+
 /*    drawsprite_bubble(0,0);
     drawsprite_bubble(1,0);
     drawsprite_bubble(2,0);
@@ -499,12 +592,16 @@ void spritetest()
     drawsprite(bubble, 48, 16);    
 */
 
-    
+
+
+/*    
+    x = 0; y = 0;
     drawsprite(bubble, (sinofs[(framecounter + framecounter+x) & 0xff] & 255) + 16, (sinofs[(framecounter+y) & 0xff] & 127)+24); x += 10; y -= 10; port254(2);    
     drawsprite(bubble, (sinofs[(framecounter + framecounter+x) & 0xff] & 255) + 16, (sinofs[(framecounter+y) & 0xff] & 127)+24); x += 10; y -= 10; port254(0);
     drawsprite(bubble, (sinofs[(framecounter + framecounter+x) & 0xff] & 255) + 16, (sinofs[(framecounter+y) & 0xff] & 127)+24); x += 10; y -= 10; port254(2);
     drawsprite(bubble, (sinofs[(framecounter + framecounter+x) & 0xff] & 255) + 16, (sinofs[(framecounter+y) & 0xff] & 127)+24); x += 10; y -= 10;port254(0);
-
+*/    
+/*
     drawsprite(bubble, (sinofs[(framecounter + framecounter+x) & 0xff] & 255) + 16, (sinofs[(framecounter+y) & 0xff] & 127)+24); x += 10; y -= 10; port254(2);
     drawsprite(bubble, (sinofs[(framecounter + framecounter+x) & 0xff] & 255) + 16, (sinofs[(framecounter+y) & 0xff] & 127)+24); x += 10; y -= 10;port254(0);
     drawsprite(bubble, (sinofs[(framecounter + framecounter+x) & 0xff] & 255) + 16, (sinofs[(framecounter+y) & 0xff] & 127)+24); x += 10; y -= 10;port254(2);
@@ -514,9 +611,5 @@ void spritetest()
     drawsprite(bubble, (sinofs[(framecounter + framecounter+x) & 0xff] & 255) + 16, (sinofs[(framecounter+y) & 0xff] & 127)+24); x += 10; y -= 10;port254(0);
     drawsprite(bubble, (sinofs[(framecounter + framecounter+x) & 0xff] & 255) + 16, (sinofs[(framecounter+y) & 0xff] & 127)+24); x += 10; y -= 10;port254(2);
     drawsprite(bubble, (sinofs[(framecounter + framecounter+x) & 0xff] & 255) + 16, (sinofs[(framecounter+y) & 0xff] & 127)+24); x += 10; y -= 10;port254(0);
-
-    drawsprite(bubble, (sinofs[(framecounter + framecounter+x) & 0xff] & 255) + 16, (sinofs[(framecounter+y) & 0xff] & 127)+24); x += 10; y -= 10;port254(2);
-    drawsprite(bubble, (sinofs[(framecounter + framecounter+x) & 0xff] & 255) + 16, (sinofs[(framecounter+y) & 0xff] & 127)+24); x += 10; y -= 10;port254(0);
-    drawsprite(bubble, (sinofs[(framecounter + framecounter+x) & 0xff] & 255) + 16, (sinofs[(framecounter+y) & 0xff] & 127)+24); x += 10; y -= 10;port254(2);
-    
+  */  
 }
