@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../loadscrn/boot.bin.h"
 
 class Tapper
 {
@@ -69,18 +70,33 @@ class Tapper
 };
 
 Tapper header, payload;
+int picfile_len = 0;
+char *picfile_name = 0;
+int execaddr = 0;
+char progname[11];
 
 void gen_basic()
 {
-    /*
-    10 CLEAR 32767 : RANDOMIZE USR 23759 : POKE 23739,111 : LOAD ""CODE : RANDOMIZE USR 32768    
-    */
+/*
+10 CLEAR 32767 : RANDOMIZE USR 23759 : POKE 23739,111 : LOAD ""CODE : RANDOMIZE USR 32768    
+
+CLEAR 32767    
+0xfd, 0x33, 0x32, 0x37, 0x36, 0x37, 0x0e, 0x00, 0x00, 0xff, 0x7f, 0x00, 0x0d, 
+RANDOMIZE USR 23759
+0xf9, 0xc0, 0x32, 0x33, 0x37, 0x35, 0x39, 0x0e, 0x00, 0x00, 0xcf, 0x5c, 0x00, 0x0d, 
+POKE 23739,111
+0xf4, 0x32, 0x33, 0x37, 0x33, 0x39, 0x0e, 0x00, 0x00, 0xbb, 0x5c, 0x00, 0x2c, 0x31, 0x31, 0x31, 0x0e, 0x00, 0x00, 0x6f, 0x00, 0x00, 0x0d, 
+LOAD""CODE
+0xef, 0x22, 0x22, 0xaf, 0x0d, 
+RANDOMIZE USR 32768
+0xf9, 0xc0, 0x33, 0x32, 0x37, 0x36, 0x38, 0x0e, 0x00, 0x00, 0x00, 0x80, 0x00, 0x0d, 
+*/
     payload.putdata(0x00);
     payload.putdata(0x0a); // line number 10
     payload.putdata(69); // bytes on line (69)
     payload.putdata(0x00); // 0?
     payload.putdata(0xfd); // CLEAR
-    payload.putdataintlit(32767);
+    payload.putdataintlit(execaddr-1);
     payload.putdata(':');
     payload.putdata(0xf9); // RANDOMIZE
     payload.putdata(0xc0); // USR
@@ -98,80 +114,22 @@ void gen_basic()
     payload.putdata(':');
     payload.putdata(0xf9); // RANDOMIZE
     payload.putdata(0xc0); // USR
-    payload.putdataintlit(32768);
+    payload.putdataintlit(execaddr);
     payload.putdata(0x0d); // enter
-
-/*
-CLEAR 32767    
-0xfd, 0x33, 0x32, 0x37, 0x36, 0x37, 0x0e, 0x00, 0x00, 0xff, 0x7f, 0x00, 0x0d, 
-RANDOMIZE USR 23759
-0xf9, 0xc0, 0x32, 0x33, 0x37, 0x35, 0x39, 0x0e, 0x00, 0x00, 0xcf, 0x5c, 0x00, 0x0d, 
-POKE 23739,111
-0xf4, 0x32, 0x33, 0x37, 0x33, 0x39, 0x0e, 0x00, 0x00, 0xbb, 0x5c, 0x00, 0x2c, 0x31, 0x31, 0x31, 0x0e, 0x00, 0x00, 0x6f, 0x00, 0x00, 0x0d, 
-LOAD""CODE
-0xef, 0x22, 0x22, 0xaf, 0x0d, 
-RANDOMIZE USR 32768
-0xf9, 0xc0, 0x33, 0x32, 0x37, 0x36, 0x38, 0x0e, 0x00, 0x00, 0x00, 0x80, 0x00, 0x0d, 
-*/
-    
-    
-/*    
-    payload.putdata(0x00);
-    payload.putdata(0x0a); // line number 10
-    payload.putdata(0x0b); // bytes on line (11)
-    payload.putdata(0x00); // 0?
-    payload.putdata(0xf9); // RANDOMIZE
-    payload.putdata(0xc0); // USR
-    payload.putdata(0xb0); // VAL
-    payload.putdatastr("\"23806\""); // TODO: put correct value - 23769 based on 10 chars of basic, so 23759+basic size
-    payload.putdata(0x0d);
-    
-    
-    payload.putdata(0x00);
-    payload.putdata(0x14); // line number 20
-    payload.putdata(0x1a); // bytes on line
-    payload.putdata(0x00); // 0?
-    payload.putdata(0xfd); // CLEAR
-    payload.putdata(0xb0); // VAL
-    payload.putdatastr("\"32767\":"); // TODO: put correct value (note: -1);
-    payload.putdata(0xef); // LOAD
-    payload.putdata('"');
-    payload.putdata('"');
-    payload.putdata(0xaf); // CODE
-    payload.putdata(':');
-    payload.putdata(0xf9); // RANDOMIZE
-    payload.putdata(0xc0); // USR
-    payload.putdata(0xb0); // VAL
-    payload.putdatastr("\"32768\""); // TODO: put correct value
-    payload.putdata(0x0d);
-    
-
-    payload.putdata(0x00);
-    payload.putdata(0x1e); // line number 30
-    payload.putdata(0x02); // bytes on line (2)
-    payload.putdata(0x00); // 0?
-    payload.putdata(0xea); // REM //
-    payload.putdata(0x0d);
-*/
 }
 
 void append_boot()
 {
-    FILE * f = fopen("boot.bin", "rb");
-    fseek(f, 0, SEEK_END);
-    int len = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    while (len)
-    {
-        payload.putdata(getc(f));
-        len--;
-    }
-    fclose(f);
+    boot_bin[6] = (picfile_len >> 0) & 0xff;
+    boot_bin[7] = (picfile_len >> 8) & 0xff;
+    int i;
+    for (i = 0; i < boot_bin_len; i++)
+        payload.putdata(boot_bin[i]);
 }
 
 void append_pic()
-{
-    FILE * f = fopen("loading.scr.lzf", "rb");
+{    
+    FILE * f = fopen(picfile_name, "rb");
     fseek(f, 0, SEEK_END);
     int len = ftell(f);
     fseek(f, 0, SEEK_SET);
@@ -184,11 +142,16 @@ void append_pic()
 }
 
 
-void save_tap()
+void save_tap(char *aFilename)
 {
-    FILE * f = fopen("out.tap", "wb");
+    FILE * f = fopen(aFilename, "wb");
+    if (!f)
+    {
+        printf("Can't open \"%s\" for writing.\n", aFilename);
+        return;
+    }
     header.putdata((unsigned char)0);
-    header.putdatastr("test      "); // 10 chars exact
+    header.putdatastr(progname); // 10 chars exact
     header.putdataint(payload.ofs-1);
     header.putdataint(10); // autorun row
     header.putdataint(payload.ofs-1);
@@ -196,15 +159,52 @@ void save_tap()
     header.write(f);
     payload.write(f);
     fclose(f);
+    printf("\"%s\" written.\n", aFilename);
 }
 
 int main(int parc, char **pars)
 {   
+    if (parc < 5)
+    {
+        printf(
+        "Usage:\n"
+        "%s progname execaddr packedpicfilename outfilename\n"
+        "where:\n"
+        "progname must be up to 10 char long name (\"Loading: 1234567890\")\n"
+        "execaddr must be the address to RANDOMIZE USR after load\n"
+        "packedpicfilename must be filename for a .scr that's been lzf-compressed\n"
+        "outfilename must be the name of the generated .tap file, overwritten without asking.\n"
+        "\n", pars[0]);
+    }
+    int i;
+    for (i = 0; i < 10; i++)
+        progname[i] = ' ';
+    progname[10] = 0;
+    for (i = 0; i < 10 && pars[1][i]; i++)
+        progname[i] = pars[1][i];
+    printf("Progname set to \"%s\"\n", progname);
+    execaddr = strtol(pars[2], 0, 10);
+    printf("Exec address set to %d (0x%x)\n", execaddr, execaddr);
+    picfile_name = pars[3];
+    FILE * f = fopen(picfile_name, "rb");
+    if (!f)
+    {
+        printf("Compressed picture file \"%s\" not found\n", picfile_name);
+        return 0;
+    }
+    fseek(f, 0, SEEK_END);
+    picfile_len = ftell(f);
+    fclose(f);
+    printf("Compressed picture file \"%s\" of length %d found.\n", picfile_name, picfile_len);
+    if (picfile_len == 6912)
+    {
+        printf("Warning: Picture file suspiciously exactly as big as uncompressed ones, did you LZF compress it?\n");
+    }
     header.putdata((unsigned char)0x00);
     payload.putdata((unsigned char)0xff);
     gen_basic();
     append_boot();
     append_pic();
-    save_tap();
+    save_tap(pars[4]);
     return 0;
 }
