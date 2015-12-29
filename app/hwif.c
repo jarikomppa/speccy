@@ -25,5 +25,6 @@ void do_halt()
     __asm
         ei
         halt
+        di
     __endasm;
 }
