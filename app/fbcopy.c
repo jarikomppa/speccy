@@ -10,11 +10,12 @@ void cp32(unsigned char *dst, const unsigned char *src)  __z88dk_callee
        dst; src;
     // de  hl
     __asm
-    pop bc
-    pop de
-    pop hl
-    push bc
+    pop bc ; return address
+    pop de ; dst
+    pop hl ; src
+    push bc ; put return address back
     
+	ldi ; 32x [de++]=[hl++], bc--
 	ldi
 	ldi
 	ldi
@@ -46,10 +47,9 @@ void cp32(unsigned char *dst, const unsigned char *src)  __z88dk_callee
 	ldi
 	ldi
 	ldi
-	ldi
-    __endasm;
-    
+    __endasm;    
 }
+
 
 // copy N scanlines from linear memory to video memory
 void fbcopy(const unsigned char * src, unsigned char start, unsigned char end)
