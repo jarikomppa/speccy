@@ -168,13 +168,16 @@ int main(int parc, char **pars)
     {
         printf(
         "Usage:\n"
-        "%s progname execaddr packedpicfilename outfilename\n"
+        "\n"
+        "%s PROGNAME EXECADDR PACKEDPICNAME OUTFILENAME\n"
+        "\n"
         "where:\n"
-        "progname must be up to 10 char long name (\"Loading: 1234567890\")\n"
-        "execaddr must be the address to RANDOMIZE USR after load\n"
-        "packedpicfilename must be filename for a .scr that's been lzf-compressed\n"
-        "outfilename must be the name of the generated .tap file, overwritten without asking.\n"
+        "PROGNAME must be up to 10 char long name (\"Loading: 1234567890\")\n"
+        "EXECADDR must be the address to RANDOMIZE USR after load\n"
+        "PACKEDPICNAME must be filename for a .scr that's been lzf-compressed\n"
+        "OUTFILENAME must be the name of the generated .tap file, overwritten without asking.\n"
         "\n", pars[0]);
+        return 0;
     }
     int i;
     for (i = 0; i < 10; i++)
@@ -198,7 +201,8 @@ int main(int parc, char **pars)
     printf("Compressed picture file \"%s\" of length %d found.\n", picfile_name, picfile_len);
     if (picfile_len == 6912)
     {
-        printf("Warning: Picture file suspiciously exactly as big as uncompressed ones, did you LZF compress it?\n");
+        printf("* WARNING * Picture file suspiciously *exactly* as big as\n"
+               "            uncompressed ones, did you LZF compress it?\n");
     }
     header.putdata((unsigned char)0x00);
     payload.putdata((unsigned char)0xff);
