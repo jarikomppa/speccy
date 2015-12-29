@@ -11,12 +11,11 @@ bootloader:
     push hl
     ld hl, #1300 ; compressed data len (needs patching)
     push hl
-    ld hl, #24092 ; source position (needs patching?) 23828+264
+    ld hl, #24090 ; source position ofs+basic+unpacker=23759+69+262
     push hl
-    push hl ; needs another push to make the counts match
  	push ix
  	
-	ld	ix,#10
+	ld	ix,#8
 	add	ix,sp
 	ld	hl,#-6
 	add	hl,sp
@@ -27,7 +26,7 @@ next_data:
 	sub	a, -4 (ix) ; len
 	ld	a,b
 	sbc	a, -3 (ix) ; len
-	jr	NC, done_island
+	jp	NC, done
 	ld	l,-6 (ix) ; src
 	ld	h,-5 (ix) ; src
 	add	hl,bc
@@ -84,8 +83,6 @@ next_data:
 	ld	b,a
 next_data_island:
 	jr	next_data
-done_island:	
-    jr done
 not_literal:
 	ld	d,e
 	ld	e,#0x00
