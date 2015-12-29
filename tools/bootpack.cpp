@@ -9,24 +9,26 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define BOOTLEN 303
-#define BOOTLOADER_OFS 0x22
+#define BOOTLEN 302
+#define BOOTLOADER_OFS 0x21
 
-#define PATCH_BOOTLOADER_POS 0x1a
-#define PATCH_DESTPOS 0x23
-#define PATCH_COMPRESSEDLEN 0x27
-#define PATCH_SOURCEPOS 0x2b
-#define PATCH_DESTPOS2 0x12C
+#define PATCH_BOOTLOADER_POS 0x19
+#define PATCH_DESTPOS 0x22
+#define PATCH_COMPRESSEDLEN 0x26
+#define PATCH_SOURCEPOS 0x2a
+#define PATCH_DESTPOS2 0x12b
 
-#define PATCH_BORDER 0x61
-#define PATCH_CLEAR 0xc
+#define PATCH_BORDER 0x60
+#define PATCH_CLEAR 0x0f
 
 int max_addr = 0xffff;
 //int bootloader_addr = 0x4000;
-int image_addr = 0x6000;
+int image_addr = 0x8000;//0x6000;
 int no_border = 0;
 int no_clear = 0;
 int debugprint = 0;
+int appbat = 0;
+int mkbat = 0;
 
 int checkpatch16(unsigned char *data, int ofs, int expected)
 {
@@ -63,7 +65,9 @@ int main(int parc, char ** pars)
                "-nc              - don't clear attribute ram\n"
                "-v               - verbose mode (debug prints)\n"
                "-maxaddress addr - maximum address to overwrite, default 0x%04x\n"
-               "-imgaddress addr - start address of decompressed image, default 0x%04x\n", 
+               "-imgaddress addr - start address of decompressed image, default 0x%04x\n"
+               "-genappbat       - generate call_appmake.bat with calculated address\n"
+               "-genmkloader     - generate call_mkloader.bat with calculated address\n",
                pars[0], 
                max_addr,
                image_addr);
@@ -183,6 +187,8 @@ int main(int parc, char ** pars)
     if (no_clear)
     {
         patch8(data, PATCH_CLEAR, 0);
+        patch8(data, PATCH_CLEAR+1, 0);
+        patch8(data, PATCH_CLEAR+2, 0);
     }    
    
     f = fopen(pars[1], "wb");
@@ -193,13 +199,28 @@ int main(int parc, char ** pars)
     }
     fwrite(data, 1, len, f);
     fclose(f);
-    
-    f = fopen("call_appmake.bat", "w");
-    if (!f)
-    {
-        printf("Can't open call_appmake.bat for writing\n");
-        exit(0);
+
+    if (appbat)
+    {    
+        f = fopen("call_appmake.bat", "w");
+        if (!f)
+        {
+            printf("Can't open call_appmake.bat for writing\n");
+            exit(0);
+        }
+        fprintf(f, "appmake +zx --binfile %s --org %d %%1 %%2 %%3 %%4 %%5 %%6 %%7 %%8 %%9\n", pars[1], image_ofs);
+        fclose(f);
     }
-    fprintf(f, "appmake +zx --binfile %s --org %d\n", pars[1], image_ofs);
-    fclose(f);
+    
+    if (mkbat)
+    {
+        f = fopen("call_mkloader.bat", "w");
+        if (!f)
+        {
+            printf("Can't open call_mkloader.bat for writing\n");
+            exit(0);
+        }
+        fprintf(f, "mkloader %%1 %d %%2 %%3 %%4 %%5 %%6 %%7 %%8 %%9\n", image_ofs);
+        fclose(f);
+    }
 }    

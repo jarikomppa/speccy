@@ -4,22 +4,17 @@
 
 		.area _HEADER(ABS)
 
-        ;di
-        nop
+        di
 	
         ld sp, #0x4400 ; put stack into video memory
         
         ; mask screen to black through attributes
-        ld bc, #768
-        ld hl, #0x5800
-clearloop:
         ld a, #0
-        ld (hl), a
-        inc hl
-        dec bc
-        ld a, b
-        or a, c
-        jr NZ, clearloop
+        ld de, #0x5801
+        ld hl, #0x5800
+        ld bc, #767
+        ld (hl), a        
+        ldir
 
         ; Copy bootloader to video memory
         ld de, #0x4000 ; dst
