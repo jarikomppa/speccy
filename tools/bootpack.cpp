@@ -29,6 +29,7 @@ int no_clear = 0;
 int debugprint = 0;
 int appbat = 0;
 int mkbat = 0;
+int nobootbin = 0;
 
 int checkpatch16(unsigned char *data, int ofs, int expected)
 {
@@ -67,7 +68,8 @@ int main(int parc, char ** pars)
                "-maxaddress addr - maximum address to overwrite, default 0x%04x\n"
                "-imgaddress addr - start address of decompressed image, default 0x%04x\n"
                "-genappbat       - generate call_appmake.bat with calculated address\n"
-               "-genmkloader     - generate call_mkloader.bat with calculated address\n",
+               "-genmkloader     - generate call_mkloader.bat with calculated address\n"
+               "-nobootbin       - skip boot.bin check\n",
                pars[0], 
                max_addr,
                image_addr);
@@ -77,6 +79,22 @@ int main(int parc, char ** pars)
     int i;
     for (i = 2; i < parc; i++)
     {
+        
+        if (stricmp(pars[i], "-genappbat") == 0)
+        {
+            appbat = 1;
+        }
+        else
+        if (stricmp(pars[i], "-genmkloader") == 0)
+        {
+            mkbat = 1;
+        }
+        else
+        if (stricmp(pars[i], "-nobootbin") == 0)
+        {
+            nobootbin = 1;
+        }
+        else
         if (stricmp(pars[i], "-nb") == 0)
         {
             no_border = 1;
@@ -124,21 +142,24 @@ int main(int parc, char ** pars)
     
     fread(data, len, 1, f);
     fclose(f);
-    f = fopen("boot.bin", "rb");
-    if (!f)
+    if (!nobootbin)
     {
-        printf("Can't find boot.bin\n");
-        exit(0);
-    }
-    fseek(f,0,SEEK_END);
-    int bootlen = ftell(f);
-    fseek(f,0,SEEK_SET);
-    fclose(f);
-    
-    if (bootlen != BOOTLEN)
-    {
-        printf("boot.bin not expected length, aborting\n");
-        exit(0);
+        f = fopen("boot.bin", "rb");
+        if (!f)
+        {
+            printf("Can't find boot.bin\n");
+            exit(0);
+        }
+        fseek(f,0,SEEK_END);
+        int bootlen = ftell(f);
+        fseek(f,0,SEEK_SET);
+        fclose(f);
+        
+        if (bootlen != BOOTLEN)
+        {
+            printf("boot.bin not expected length, aborting\n");
+            exit(0);
+        }
     }
     
     if (max_addr - len < 0x5b00)
@@ -158,9 +179,9 @@ int main(int parc, char ** pars)
     if (!checkpatch16(data, PATCH_SOURCEPOS, 0xd000)) { printf("patch position mismatch, aborting\n"); exit(0);}
     
     int image_ofs = max_addr - len;
-    int compressed_len = len - bootlen;
+    int compressed_len = len - BOOTLEN;
     int dest_pos = image_addr;
-    int source_pos = image_ofs + bootlen;
+    int source_pos = image_ofs + BOOTLEN;
     int bootloader_pos = image_ofs + BOOTLOADER_OFS;
 
     if (debugprint) 
