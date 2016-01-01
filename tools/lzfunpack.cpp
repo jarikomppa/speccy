@@ -32,8 +32,14 @@ int main(int parc, char ** pars)
         exit(0);
     }
     fseek(f,0,SEEK_END);
-    int len = ftell(f);
+    int filelen = ftell(f);
     fseek(f,0,SEEK_SET);
+    unsigned short len;
+    fread(&len, 1, 2, f);    
+    if (len != filelen - 2)
+    {
+        printf("Warning: File length differs from header (file: %d, header: %d)\n", filelen, len);
+    }
     printf("%s - %d bytes\n", pars[1], len);
     unsigned char * data = new unsigned char[len];
     fread(data, len, 1, f);
