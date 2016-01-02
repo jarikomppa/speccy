@@ -46,7 +46,7 @@ public:
         }
     }    
     
-    void pack(unsigned char *aData, int aLen)
+    virtual void pack(unsigned char *aData, int aLen)
     {
         int i;
         int literals = 0;

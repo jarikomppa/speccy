@@ -8,13 +8,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "screen_unpacker.h"
 #include "..\common\lzfpack.h"
 #include "..\common\tapper.h"
+#include "zx7pack.h"
 #include "fona.h"
-#include "boot.h"
 
-#define VERSION "1.1"
+#include "screen_unpacker_lzf.h"
+#include "boot_lzf.h"
+#include "screen_unpacker_zx7.h"
+#include "boot_zx7.h"
+
+#define VERSION "1.5"
 
 #define SPEC_Y(y)  (((y) & 0xff00) | ((((y) >> 0) & 7) << 3) | ((((y) >> 3) & 7) << 0) | (((y) >> 6) & 3) << 6)
 #define SCR_LENGTH (32*192+24*32)
@@ -32,7 +36,7 @@
 
 Tapper gLoaderHeader, gLoaderPayload;
 Tapper gAppHeader, gAppPayload;
-LZFPack gScreen, gApp;
+LZFPack *gScreen, *gApp;
 
 int gExecAddr = 0;
 int gBootExecAddr = 0;
@@ -43,6 +47,16 @@ int gOptWeirdScr = 0;
 int gOptNoClear = 0;
 int gOptVerbose = 1;
 int gOptBinary = 0;
+int gOptScreenCodec = 1;
+int gOptAppCodec = 1;
+
+unsigned char *screen_unpacker_bin;
+int screen_unpacker_bin_len;
+unsigned char *boot_bin;
+int boot_bin_len;
+
+char * gScreenPackerString[] = { "LZF", "ZX7" };
+char * gAppPackerString[] = { "LZF", "ZX7" };
 
 void drawtext(unsigned char *aBuf, int aX, int aY, char *aText)
 {
@@ -116,8 +130,8 @@ void append_screen_unpacker()
 void append_pic()
 { 
     int i;
-    for (i = 0; i < gScreen.mMax; i++)
-        gLoaderPayload.putdata(gScreen.mPackedData[i]);   
+    for (i = 0; i < gScreen->mMax; i++)
+        gLoaderPayload.putdata(gScreen->mPackedData[i]);   
 }
 
 int checkpatch16(unsigned char *data, int ofs, int expected)
@@ -140,14 +154,14 @@ void patch8(unsigned char *data, int ofs, int patch)
 
 void append_bootbin()
 {
-    if (gMaxAddr - (boot_bin_len + gApp.mMax) < CODE_OFFSET)
+    if (gMaxAddr - (boot_bin_len + gApp->mMax) < CODE_OFFSET)
     {
-        printf("Image doesn't fit in physical memory: 0x%04x - 0x%04x < 0x%04x\n", gMaxAddr, (boot_bin_len + gApp.mMax), CODE_OFFSET);
+        printf("Image doesn't fit in physical memory: 0x%04x - 0x%04x < 0x%04x\n", gMaxAddr, (boot_bin_len + gApp->mMax), CODE_OFFSET);
         exit(0);
     }
-    if (gMaxAddr - (boot_bin_len + gApp.mMax) < gExecAddr)
+    if (gMaxAddr - (boot_bin_len + gApp->mMax) < gExecAddr)
     {
-        printf("Compressed image bigger than uncompressed: 0x%04x - 0x%04x < %d\n", gMaxAddr, (boot_bin_len + gApp.mMax), gExecAddr);
+        printf("Compressed image bigger than uncompressed: 0x%04x - 0x%04x < %d\n", gMaxAddr, (boot_bin_len + gApp->mMax), gExecAddr);
         exit(0);
     }
     
@@ -156,7 +170,7 @@ void append_bootbin()
     if (!checkpatch16(boot_bin, PATCH_SOURCEPOS, 0x5052)) { printf("SANITY FAIL patch position SOURCEPOS mismatch, aborting\n"); exit(0);}
     if (!checkpatch16(boot_bin, PATCH_BOOTLOADER_POS, 0xb007)) { printf("SANITY FAIL patch position BOOTLOADERPOS mismatch, aborting\n"); exit(0);}
     
-    int len = boot_bin_len + gApp.mMax;
+    int len = boot_bin_len + gApp->mMax;
     int image_ofs = gMaxAddr - len;
     int compressed_len = len - boot_bin_len;
     int dest_pos = gExecAddr;
@@ -196,8 +210,8 @@ void append_bootbin()
 void append_app()
 { 
     int i;
-    for (i = 0; i < gApp.mMax; i++)
-        gAppPayload.putdata(gApp.mPackedData[i]);   
+    for (i = 0; i < gApp->mMax; i++)
+        gAppPayload.putdata(gApp->mPackedData[i]);   
 }
 
 void save_tap(char *aFilename)
@@ -234,7 +248,7 @@ void save_tap(char *aFilename)
         aFilename, 
         len, 
         len * 8 / 1200 + 10, 
-        (gScreen.mMax + 69) * 8 / 1200 + 6);
+        (gScreen->mMax + 69) * 8 / 1200 + 6);
 }
 
 int decode_ihx(unsigned char *src, int len, unsigned char *data)
@@ -354,17 +368,17 @@ void load_code(char *aFilename)
         image_size = decode_ihx(src, len, data);
     }
     delete[] src;
-    gApp.pack(data + gExecAddr, image_size);
+    gApp->pack(data + gExecAddr, image_size);
     if (gOptVerbose)
     printf(
         "\n\"%s\":\n"
         "\tExec address : %d (0x%x)\n"
         "\tImage size   : %d bytes\n"
-        "\tCompressed to: %d bytes (%3.3f%%)\n", 
+        "\tCompressed to: %d bytes (%3.3f%%) by %s\n", 
         aFilename, 
         gExecAddr, gExecAddr,
         image_size, 
-        gApp.mMax, gApp.mMax*100.0f/image_size);
+        gApp->mMax, gApp->mMax*100.0f/image_size, gAppPackerString[gOptAppCodec]);
     
     delete[] data;
 }
@@ -409,13 +423,13 @@ void load_loadingscreen(int aHaveit, char * aFilename)
         unsigned char *temp = new unsigned char[len];
         fread(temp, 1, len, f);
         fclose(f);
-        gScreen.pack(temp, len);
+        gScreen->pack(temp, len);
         if (gOptVerbose)
         printf(
             "\n\"%s\"\n"
             "\tImage size   : %d bytes\n"
-            "\tCompressed to: %d bytes (%3.3f%%)\n", 
-            aFilename, len, gScreen.mMax, gScreen.mMax*100.0f/len);
+            "\tCompressed to: %d bytes (%3.3f%%) by %s\n", 
+            aFilename, len, gScreen->mMax, gScreen->mMax*100.0f/len, gScreenPackerString[gOptScreenCodec]);
         delete[] temp;
     }
     else
@@ -429,13 +443,13 @@ void load_loadingscreen(int aHaveit, char * aFilename)
         int l = 0;
         while (gProgName[l] != ' ' && l < 10) l++;
         drawtext(temp, 30-(l*2), 13*8, gProgName);        
-        gScreen.pack(temp, SCR_LENGTH);
+        gScreen->pack(temp, SCR_LENGTH);
         if (gOptVerbose)
         printf(
             "\nGenerated loading screen\n"
             "\tImage size   : %d bytes\n"
-            "\tCompressed to: %d bytes (%3.3f%%)\n", 
-            SCR_LENGTH, gScreen.mMax, gScreen.mMax*100.0f/SCR_LENGTH);
+            "\tCompressed to: %d bytes (%3.3f%%) by %s\n", 
+            SCR_LENGTH, gScreen->mMax, gScreen->mMax*100.0f/SCR_LENGTH, gScreenPackerString[gOptScreenCodec]);
         delete[] temp;        
     }
 }
@@ -464,6 +478,8 @@ void print_usage(int aDo, char *aFilename)
             "-maxaddress addr - Maximum address to overwrite, default 0x%04x\n"            
             "-binimage addr   - Input is not ihx but binary file. Needs exec addr.\n"
             "-weirdscr        - Ignore .scr file size, use whatever it is.\n"
+            "-screencodec x   - How to compress loading screen; values lzf, zx7 (default zx7)\n"
+            "-appcodec x      - How to compress app; values lzf, zx7 (default zx7)\n"
             "-q               - Quiet mode, only print errors.\n"
             "\n",
             aFilename,
@@ -479,6 +495,44 @@ void parse_commandline(int parc, char ** pars)
     {
         if (pars[i][0] == '-')
         {
+            if (stricmp(pars[i], "-appcodec") == 0)
+            {
+                i++;
+                if (stricmp(pars[i], "lzf") == 0)
+                {
+                    gOptAppCodec = 0;
+                }
+                else
+                if (stricmp(pars[i], "lz7") == 0)
+                {
+                    gOptAppCodec = 1;
+                }
+                else
+                {
+                    printf("Unknown app codec \"%s\"\n", pars[i]);
+                    exit(0);
+                }
+            }
+            else
+            if (stricmp(pars[i], "-screencodec") == 0)
+            {
+                i++;
+                if (stricmp(pars[i], "lzf") == 0)
+                {
+                    gOptScreenCodec = 0;
+                }
+                else
+                if (stricmp(pars[i], "lz7") == 0)
+                {
+                    gOptScreenCodec = 1;
+                }
+                else
+                {
+                    printf("Unknown screen codec \"%s\"\n", pars[i]);
+                    exit(0);
+                }
+            }
+            else
             if (stricmp(pars[i], "-weirdscr") == 0)
             {
                 gOptWeirdScr = 1;
@@ -525,11 +579,41 @@ int main(int parc, char ** pars)
     
     print_usage(nonflagparc < 3, pars[0]);
     parse_commandline(parc, pars);
+
+    switch (gOptScreenCodec)
+    {
+    case 0:
+        screen_unpacker_bin = screen_unpacker_lzf_bin;
+        screen_unpacker_bin_len = screen_unpacker_lzf_bin_len;
+        gScreen = new LZFPack;
+        break;
+    case 1:
+        screen_unpacker_bin = screen_unpacker_zx7_bin;
+        screen_unpacker_bin_len = screen_unpacker_zx7_bin_len;
+        gScreen = new ZX7Pack;
+        break;
+    }
+    
+    switch (gOptAppCodec)
+    {
+    case 0:
+        boot_bin = boot_lzf_bin;
+        boot_bin_len = boot_lzf_bin_len;
+        gApp = new LZFPack;
+        break;
+    case 1:
+        boot_bin = boot_zx7_bin;
+        boot_bin_len = boot_zx7_bin_len;
+        gApp = new ZX7Pack;
+        break;
+    }
+
+
     set_progname(nonflagparc > 3 ? pars[3] : pars[1]);
     load_code(pars[1]);    
     load_loadingscreen(nonflagparc > 4, pars[4]);
 
-    gBootExecAddr = gMaxAddr - (gApp.mMax + boot_bin_len);
+    gBootExecAddr = gMaxAddr - (gApp->mMax + boot_bin_len);
     if (gOptVerbose)
     printf("Boot exec address: %d (0x%x)\n", gBootExecAddr, gBootExecAddr);
     
