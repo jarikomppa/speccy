@@ -9,26 +9,24 @@
 #include <stdlib.h>
 #include <string.h>
 #include "screen_unpacker.h"
-#include "lzfpack.h"
-#include "tapper.h"
+#include "..\common\lzfpack.h"
+#include "..\common\tapper.h"
 #include "fona.h"
-#include "bootbin.h"
+#include "boot.h"
 
-#define VERSION "1.0"
+#define VERSION "1.1"
 
 #define SPEC_Y(y)  (((y) & 0xff00) | ((((y) >> 0) & 7) << 3) | ((((y) >> 3) & 7) << 0) | (((y) >> 6) & 3) << 6)
 #define SCR_LENGTH (32*192+24*32)
 
-#define BOOTLOADER_OFS 0x21
 
-#define PATCH_BOOTLOADER_POS 0x19
-#define PATCH_DESTPOS 0x22
-#define PATCH_COMPRESSEDLEN 0x26
-#define PATCH_SOURCEPOS 0x2a
-#define PATCH_DESTPOS2 0x12b
+#define PATCH_BOOTLOADER_POS 22
+#define PATCH_DESTPOS 31
+#define PATCH_SOURCEPOS 34
 
-#define PATCH_BORDER 0x60
-#define PATCH_CLEAR 0x0f
+#define BOOTLOADER_OFS (PATCH_DESTPOS-1)
+
+#define PATCH_CLEAR 12
 
 #define CODE_OFFSET (23759+69) // legal code offset, 23759+basic size
 
@@ -42,7 +40,6 @@ int gMaxAddr = 0xffff;
 char gProgName[11];
 
 int gOptWeirdScr = 0;
-int gOptNoBorder = 0;
 int gOptNoClear = 0;
 int gOptVerbose = 1;
 int gOptBinary = 0;
@@ -110,12 +107,10 @@ RANDOMIZE USR 32768
 
 void append_screen_unpacker()
 {
-    screen_unpacker[6] = (gScreen.mMax >> 0) & 0xff;
-    screen_unpacker[7] = (gScreen.mMax >> 8) & 0xff;
     int i;
-    for (i = 0; i < screen_unpacker_len; i++)
-        gLoaderPayload.putdata(screen_unpacker[i]);
-    if (gOptVerbose) printf("Screen unpacker  : %d bytes\n", screen_unpacker_len);
+    for (i = 0; i < screen_unpacker_bin_len; i++)
+        gLoaderPayload.putdata(screen_unpacker_bin[i]);
+    if (gOptVerbose) printf("Screen unpacker  : %d bytes\n", screen_unpacker_bin_len);
 }
 
 void append_pic()
@@ -157,10 +152,9 @@ void append_bootbin()
     }
     
     // sanity checks
-    if (!checkpatch16(boot_bin, PATCH_DESTPOS, 0x6000)) { printf("patch position mismatch, aborting\n"); exit(0);}
-    if (!checkpatch16(boot_bin, PATCH_DESTPOS2, 0x6000)) { printf("patch position mismatch, aborting\n"); exit(0);}
-    if (!checkpatch16(boot_bin, PATCH_COMPRESSEDLEN, 0x2727)) { printf("patch position mismach, aborting\n"); exit(0);}
-    if (!checkpatch16(boot_bin, PATCH_SOURCEPOS, 0xd000)) { printf("patch position mismatch, aborting\n"); exit(0);}
+    if (!checkpatch16(boot_bin, PATCH_DESTPOS, 0xde57)) { printf("SANITY FAIL patch position DESTPOS mismatch, aborting\n"); exit(0);}
+    if (!checkpatch16(boot_bin, PATCH_SOURCEPOS, 0x5052)) { printf("SANITY FAIL patch position SOURCEPOS mismatch, aborting\n"); exit(0);}
+    if (!checkpatch16(boot_bin, PATCH_BOOTLOADER_POS, 0xb007)) { printf("SANITY FAIL patch position BOOTLOADERPOS mismatch, aborting\n"); exit(0);}
     
     int len = boot_bin_len + gApp.mMax;
     int image_ofs = gMaxAddr - len;
@@ -169,7 +163,8 @@ void append_bootbin()
     int source_pos = image_ofs + boot_bin_len;
     int bootloader_pos = image_ofs + BOOTLOADER_OFS;
 
-    /*
+
+#ifdef DEBUGPRINT    
     if (gOptVerbose) 
     {
         printf("Image offset   : 0x%04x (%d)\n", image_ofs, image_ofs);
@@ -178,19 +173,11 @@ void append_bootbin()
         printf("Source pos     : 0x%04x (%d)\n", source_pos, source_pos);
         printf("Bootloader pos : 0x%04x (%d)\n", bootloader_pos, bootloader_pos);
     }
-    */
+#endif
     
     patch16(boot_bin, PATCH_BOOTLOADER_POS, bootloader_pos, "PATCH_BOOTLOADER_POS");
     patch16(boot_bin, PATCH_DESTPOS, dest_pos, "PATCH_DESTPOS");
-    patch16(boot_bin, PATCH_DESTPOS2, dest_pos, "PATCH_DESTPOS2");
-    patch16(boot_bin, PATCH_COMPRESSEDLEN, compressed_len, "PATCH_COMPRESSEDLEN");
     patch16(boot_bin, PATCH_SOURCEPOS, source_pos, "PATCH_SOURCEPOS");
-
-    if (gOptNoBorder)
-    {
-        patch8(boot_bin, PATCH_BORDER, 0);
-        patch8(boot_bin, PATCH_BORDER+1, 0);
-    }
     
     if (gOptNoClear)
     {
@@ -473,7 +460,6 @@ void print_usage(int aDo, char *aFilename)
             "APPNAME          - application name, max 10 chars, optional\n"
             "LOADINGSCREEN    - .scr file to use as loading screen, optional\n"
             "Options:\n"
-            "-noborders       - Don't blink borders while unpacking\n"
             "-noclear         - Don't clear attributes to 0 before unpacking\n"
             "-maxaddress addr - Maximum address to overwrite, default 0x%04x\n"            
             "-binimage addr   - Input is not ihx but binary file. Needs exec addr.\n"
@@ -496,11 +482,6 @@ void parse_commandline(int parc, char ** pars)
             if (stricmp(pars[i], "-weirdscr") == 0)
             {
                 gOptWeirdScr = 1;
-            }
-            else
-            if (stricmp(pars[i], "-noborders") == 0)
-            {
-                gOptNoBorder = 1;
             }
             else
             if (stricmp(pars[i], "-noclear") == 0)

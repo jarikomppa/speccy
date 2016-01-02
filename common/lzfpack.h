@@ -48,10 +48,13 @@ public:
     
     void pack(unsigned char *aData, int aLen)
     {
-        int dataout = 0;
         int i;
         int literals = 0;
         int literalsofs = 0;
+        
+        putc(0); // placeholder for size
+        putc(0); 
+        
         for (i = 0; i < aLen; i++)
         {
             int bestofs = 0;
@@ -85,21 +88,18 @@ public:
                 if (literals)
                 {
                     // every 32 literals takes one extra byte to encode
-                    dataout += literals + (literals / 32) + 1;
                     dump_literals(aData, literals, literalsofs, i);
                 }
     
                 int ofs = -(bestofs - i) - 1;
                 if (bestchars >= 7+2)
                 {
-                    dataout += 3; // 3 bytes to encode
                     putc((7 << 5) | ((ofs >> 8) & 31));
-                    putc(ofs & 0xff);
                     putc(bestchars - (7 + 2));
+                    putc(ofs & 0xff);
                 }
                 else
                 {
-                    dataout += 2; // 2 bytes to encode                
                     putc(((bestchars-2) << 5) | ((ofs >> 8) & 31));
                     putc(ofs & 0xff);
                 }
@@ -112,8 +112,10 @@ public:
         
         if (literals)
         {
-             dataout += literals + (literals / 32) + 1;
              dump_literals(aData, literals, literalsofs, i);
-        }    
+        }   
+        
+        mPackedData[0] = (((unsigned int)mMax-2) >> 0) & 0xff;
+        mPackedData[1] = (((unsigned int)mMax-2) >> 8) & 0xff;
     }
 };

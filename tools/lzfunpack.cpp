@@ -10,7 +10,7 @@
 #include <string.h>
 
 
-//#define DEBUGPRINT
+#define DEBUGPRINT
 
 /*
 
@@ -84,8 +84,6 @@ int main(int parc, char ** pars)
         else
         {
             // run
-            int ofs = ((op & 31) << 8) | data[idx];
-            idx++;
             if (len == 7)
             {
                 // long run
@@ -93,6 +91,9 @@ int main(int parc, char ** pars)
                 idx++;
             }
             len += 2;
+            
+            int ofs = ((op & 31) << 8) | data[idx];
+            idx++;
 #ifdef DEBUGPRINT
             int k;
             printf("[");

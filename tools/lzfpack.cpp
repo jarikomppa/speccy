@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "lzfpack.h"
+#include "../common/lzfpack.h"
 
 
 int main(int parc, char ** pars)
@@ -42,8 +42,6 @@ int main(int parc, char ** pars)
         exit(0);
     }
     
-    unsigned short l = p.mMax;
-    fwrite(&l, 1, 2, f);
     fwrite(p.mPackedData, 1, p.mMax, f);
     int dataout = ftell(f);
        
