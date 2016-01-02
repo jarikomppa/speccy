@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+int gOptNoConst = 0;
+
 int main(int parc, char ** pars)
 {
     if (parc < 3)
@@ -16,6 +18,20 @@ int main(int parc, char ** pars)
         printf("Usage: %s infile outfile\n", pars[0]);
         exit(0);
     }
+    
+    int i;
+    for (i = 3; i < parc; i++)
+    {
+        if (stricmp(pars[i], "-noconst") == 0)
+        {
+            gOptNoConst = 1;
+        }
+        else
+        {
+            printf("Unknown option %s\n", pars[i]);
+        }
+    }
+    
     FILE * f = fopen(pars[1], "rb");
     if (!f)
     {
@@ -31,7 +47,7 @@ int main(int parc, char ** pars)
     fclose(f);
 
     char *name = strdup(pars[1]);
-    int i = 0;
+    i = 0;
     while (name[i])
     {
         if (!((name[i] >= 'a' && name[i] <= 'z') ||
@@ -44,7 +60,7 @@ int main(int parc, char ** pars)
     f = fopen(pars[2], "w");
     
     fprintf(f, "#define %s_len %d\n", name, len);
-    fprintf(f, "const unsigned char %s[%s_len] = {\n", name, name);
+    fprintf(f, "%sunsigned char %s[%s_len] = {\n", gOptNoConst?"":"const ",name, name);
     for (i = 0; i < len; i++)
     {
         fprintf(f, "0x%02x%s%s", data[i], (i == len-1) ? "" : ", ", (i & 7) == 7 ? "\n":"");
