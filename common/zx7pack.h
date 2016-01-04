@@ -26,7 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-class ZX7Pack : public LZFPack
+class ZX7Pack : public Pack
 {
 public:
     enum constants

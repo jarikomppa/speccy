@@ -8,17 +8,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "..\common\lzfpack.h"
-#include "..\common\tapper.h"
-#include "zx7pack.h"
+#include "../common/pack.h"
+#include "../common/lzfpack.h"
+#include "../common/zx7pack.h"
+#include "../common/rcspack.h"
+#include "../common/tapper.h"
 #include "fona.h"
 
 #include "screen_unpacker_lzf.h"
-#include "boot_lzf.h"
 #include "screen_unpacker_zx7.h"
+#include "screen_unpacker_rcs.h"
+#include "boot_lzf.h"
 #include "boot_zx7.h"
 
-#define VERSION "1.5"
+#define VERSION "1.6"
 
 #define SPEC_Y(y)  (((y) & 0xff00) | ((((y) >> 0) & 7) << 3) | ((((y) >> 3) & 7) << 0) | (((y) >> 6) & 3) << 6)
 #define SCR_LENGTH (32*192+24*32)
@@ -36,7 +39,7 @@
 
 Tapper gLoaderHeader, gLoaderPayload;
 Tapper gAppHeader, gAppPayload;
-LZFPack *gScreen, *gApp;
+Pack *gScreen, *gApp;
 
 int gExecAddr = 0;
 int gBootExecAddr = 0;
@@ -55,7 +58,7 @@ int screen_unpacker_bin_len;
 unsigned char *boot_bin;
 int boot_bin_len;
 
-char * gScreenPackerString[] = { "LZF", "ZX7" };
+char * gScreenPackerString[] = { "LZF", "ZX7", "RCS" };
 char * gAppPackerString[] = { "LZF", "ZX7" };
 
 void drawtext(unsigned char *aBuf, int aX, int aY, char *aText)
@@ -478,7 +481,8 @@ void print_usage(int aDo, char *aFilename)
             "-maxaddress addr - Maximum address to overwrite, default 0x%04x\n"            
             "-binimage addr   - Input is not ihx but binary file. Needs exec addr.\n"
             "-weirdscr        - Ignore .scr file size, use whatever it is.\n"
-            "-screencodec x   - How to compress loading screen; values lzf, zx7 (default zx7)\n"
+            "-screencodec x   - How to compress loading screen;\n"
+            "                   values lzf, zx7, rcs (default rcs)\n"
             "-appcodec x      - How to compress app; values lzf, zx7 (default zx7)\n"
             "-q               - Quiet mode, only print errors.\n"
             "\n",
@@ -503,7 +507,7 @@ void parse_commandline(int parc, char ** pars)
                     gOptAppCodec = 0;
                 }
                 else
-                if (stricmp(pars[i], "lz7") == 0)
+                if (stricmp(pars[i], "zx7") == 0)
                 {
                     gOptAppCodec = 1;
                 }
@@ -522,9 +526,14 @@ void parse_commandline(int parc, char ** pars)
                     gOptScreenCodec = 0;
                 }
                 else
-                if (stricmp(pars[i], "lz7") == 0)
+                if (stricmp(pars[i], "zx7") == 0)
                 {
                     gOptScreenCodec = 1;
+                }
+                else
+                if (stricmp(pars[i], "rcs") == 0)
+                {
+                    gOptScreenCodec = 2;
                 }
                 else
                 {
@@ -591,6 +600,11 @@ int main(int parc, char ** pars)
         screen_unpacker_bin = screen_unpacker_zx7_bin;
         screen_unpacker_bin_len = screen_unpacker_zx7_bin_len;
         gScreen = new ZX7Pack;
+        break;
+    case 2:
+        screen_unpacker_bin = screen_unpacker_rcs_bin;
+        screen_unpacker_bin_len = screen_unpacker_rcs_bin_len;
+        gScreen = new RCSPack;
         break;
     }
     

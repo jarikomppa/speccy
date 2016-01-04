@@ -12,22 +12,9 @@
     111ddddd dddddddd LLLLLLLL - copy L+2+7 from d bytes before most recently decoded byte
 */
 
-class LZFPack
+class LZFPack : public Pack
 {
 public:
-    int mMax;
-    unsigned char mPackedData[65536];
-    
-    LZFPack()
-    {
-        mMax = 0;
-    }
-    
-    void putc(unsigned char d)
-    {
-        mPackedData[mMax] = d;
-        mMax++;
-    }
 
     void dump_literals(unsigned char * data, int &literals, int &literalsofs, int ofs)
     {
