@@ -1,15 +1,15 @@
 sdasz80 -xlos -g screen_unpacker_lzf.rel screen_unpacker_lzf.s
-sdld -i -b _HEADER=23828 screen_unpacker_lzf.rel
+sdld -i -b _HEADER=23810 screen_unpacker_lzf.rel
 ..\tools\ihx2bin screen_unpacker_lzf.ihx screen_unpacker_lzf.bin
 ..\tools\bin2h screen_unpacker_lzf.bin screen_unpacker_lzf.h -noconst
 
 sdasz80 -xlos -g screen_unpacker_zx7.rel screen_unpacker_zx7.s
-sdld -i -b _HEADER=23828 screen_unpacker_zx7.rel
+sdld -i -b _HEADER=23810 screen_unpacker_zx7.rel
 ..\tools\ihx2bin screen_unpacker_zx7.ihx screen_unpacker_zx7.bin
 ..\tools\bin2h screen_unpacker_zx7.bin screen_unpacker_zx7.h -noconst
 
 sdasz80 -xlos -g screen_unpacker_rcs.rel screen_unpacker_rcs.s
-sdld -i -b _HEADER=23828 screen_unpacker_rcs.rel
+sdld -i -b _HEADER=23810 screen_unpacker_rcs.rel
 ..\tools\ihx2bin screen_unpacker_rcs.ihx screen_unpacker_rcs.bin
 ..\tools\bin2h screen_unpacker_rcs.bin screen_unpacker_rcs.h -noconst
 

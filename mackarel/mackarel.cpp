@@ -35,7 +35,7 @@
 
 #define PATCH_CLEAR 12
 
-#define BASIC_SIZE 69
+#define BASIC_SIZE 51
 #define CODE_OFFSET (23759+BASIC_SIZE) // legal code offset, 23759+basic size
 
 Tapper gLoaderHeader, gLoaderPayload;
@@ -98,19 +98,19 @@ RANDOMIZE USR 32768
 */
     gLoaderPayload.putdata(0x00);
     gLoaderPayload.putdata(0x0a); // line number 10
-    gLoaderPayload.putdata(69); // bytes on line (69)
+    gLoaderPayload.putdata(BASIC_SIZE); // bytes on line (51)
     gLoaderPayload.putdata(0x00); // 0?
     gLoaderPayload.putdata(0xfd); // CLEAR
-    gLoaderPayload.putdataintlit(gBootExecAddr-1);
+    gLoaderPayload.putdataintlit_min(gBootExecAddr-1);
     gLoaderPayload.putdata(':');
     gLoaderPayload.putdata(0xf9); // RANDOMIZE
     gLoaderPayload.putdata(0xc0); // USR
-    gLoaderPayload.putdataintlit(CODE_OFFSET); // 23759+basic size
+    gLoaderPayload.putdataintlit_min(CODE_OFFSET); // 23759+basic size
     gLoaderPayload.putdata(':');
     gLoaderPayload.putdata(0xf4); // POKE
-    gLoaderPayload.putdataintlit(23739);
+    gLoaderPayload.putdataintlit_min(23739);
     gLoaderPayload.putdata(',');
-    gLoaderPayload.putdataintlit(111);
+    gLoaderPayload.putdataintlit_min(111);
     gLoaderPayload.putdata(':');
     gLoaderPayload.putdata(0xef); // LOAD
     gLoaderPayload.putdata('"');
@@ -119,7 +119,7 @@ RANDOMIZE USR 32768
     gLoaderPayload.putdata(':');
     gLoaderPayload.putdata(0xf9); // RANDOMIZE
     gLoaderPayload.putdata(0xc0); // USR
-    gLoaderPayload.putdataintlit(gBootExecAddr);
+    gLoaderPayload.putdataintlit_min(gBootExecAddr);
     gLoaderPayload.putdata(0x0d); // enter
     if (gOptVerbose) printf("BASIC part       : %d bytes\n", BASIC_SIZE);
 }

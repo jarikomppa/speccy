@@ -48,6 +48,17 @@ class Tapper
         putdataint(n);
         putdata(0x00);
     }
+
+    void putdataintlit_min(int n)
+    {
+        //0x33, 0x32, 0x37, 0x36, 0x37, 0x0e, 0x00, 0x00, 0xff, 0x7f, 0x00,
+        putdata('0');
+        putdata(0x0e);
+        putdata(0x00);
+        putdata(0x00);
+        putdataint(n);
+        putdata(0x00);
+    }
     
     void write(FILE * f)
     {

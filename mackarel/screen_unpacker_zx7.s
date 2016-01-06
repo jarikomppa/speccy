@@ -8,7 +8,7 @@
 	.module boot
 
 	.area _HEADER(ABS)
-	.org 23828
+	.org 23810
 
     di
         
