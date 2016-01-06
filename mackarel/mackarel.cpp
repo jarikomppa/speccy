@@ -52,7 +52,7 @@ int gOptWeirdScr = 0;
 int gOptNoClear = 0;
 int gOptVerbose = 1;
 int gOptBinary = 0;
-int gOptScreenCodec = 1;
+int gOptScreenCodec = 2;
 int gOptAppCodec = 1;
 
 unsigned char *screen_unpacker_bin;
