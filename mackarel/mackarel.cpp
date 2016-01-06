@@ -70,10 +70,10 @@ void drawtext(unsigned char *aBuf, int aX, int aY, char *aText)
     {
         int charofs = (*aText / 16) * 16 * 32 + (*aText % 16)*2;
         int i;
-        for (i = 0; i < 16; i++)
+        for (i = 0; i < 8; i++)
         {
-            aBuf[SPEC_Y(aY+i)*32+aX] = fona[charofs + i * 32] ^ 0xff;
-            aBuf[SPEC_Y(aY+i)*32+aX+1] = fona[charofs+1 + i * 32] ^ 0xff;
+            aBuf[SPEC_Y(aY+i)*32+aX] = fona[charofs + i * 32 * 2] ^ 0xff;
+            aBuf[SPEC_Y(aY+i)*32+aX+1] = fona[charofs+1 + i * 32 * 2] ^ 0xff;
         }
         aText++;
         aX+=2;
@@ -445,7 +445,7 @@ void load_loadingscreen(int aHaveit, char * aFilename)
         memset(temp + 32*192, 7 | (1 << 6), 11*32);       
         memset(temp + 32*192 + 11*32, 1 << 3, 32);       
         memset(temp + 32*192 + 12*32, 7, 32*12);
-        drawtext(temp, 2, 8*8, "Loading");
+        drawtext(temp, 2, 8*8+8, "Loading");
         int l = 0;
         while (gProgName[l] != ' ' && l < 10) l++;
         drawtext(temp, 30-(l*2), 13*8, gProgName);        
