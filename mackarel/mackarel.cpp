@@ -21,7 +21,7 @@
 #include "boot_lzf.h"
 #include "boot_zx7.h"
 
-#define VERSION "1.6"
+#define VERSION "1.7"
 
 #define SPEC_Y(y)  (((y) & 0xff00) | ((((y) >> 0) & 7) << 3) | ((((y) >> 3) & 7) << 0) | (((y) >> 6) & 3) << 6)
 #define SCR_LENGTH (32*192+24*32)
@@ -35,12 +35,14 @@
 
 #define PATCH_CLEAR 12
 
-#define CODE_OFFSET (23759+69) // legal code offset, 23759+basic size
+#define BASIC_SIZE 69
+#define CODE_OFFSET (23759+BASIC_SIZE) // legal code offset, 23759+basic size
 
 Tapper gLoaderHeader, gLoaderPayload;
 Tapper gAppHeader, gAppPayload;
 Pack *gScreen, *gApp;
 
+int gImageSize = 0;
 int gExecAddr = 0;
 int gBootExecAddr = 0;
 int gMaxAddr = 0xffff;
@@ -119,7 +121,7 @@ RANDOMIZE USR 32768
     gLoaderPayload.putdata(0xc0); // USR
     gLoaderPayload.putdataintlit(gBootExecAddr);
     gLoaderPayload.putdata(0x0d); // enter
-    if (gOptVerbose) printf("BASIC part       : 69 bytes\n");
+    if (gOptVerbose) printf("BASIC part       : %d bytes\n", BASIC_SIZE);
 }
 
 void append_screen_unpacker()
@@ -251,7 +253,7 @@ void save_tap(char *aFilename)
         aFilename, 
         len, 
         len * 8 / 1200 + 10, 
-        (gScreen->mMax + 69) * 8 / 1200 + 6);
+        (gScreen->mMax + BASIC_SIZE) * 8 / 1200 + 6);
 }
 
 int decode_ihx(unsigned char *src, int len, unsigned char *data)
@@ -370,6 +372,7 @@ void load_code(char *aFilename)
     {            
         image_size = decode_ihx(src, len, data);
     }
+    gImageSize = image_size;
     delete[] src;
     gApp->pack(data + gExecAddr, image_size);
     if (gOptVerbose)
@@ -459,11 +462,12 @@ void load_loadingscreen(int aHaveit, char * aFilename)
 
 void print_usage(int aDo, char *aFilename)
 {
-    if (gOptVerbose && !aDo) printf("Mackarel " VERSION " by Jari Komppa, http://iki.fi/sol\n");
+    if (gOptVerbose || aDo) printf("Mackarel " VERSION " by Jari Komppa, http://iki.fi/sol\n");
     
     if (aDo)
     {
         printf(
+            "\n"
             "Generate zx spectrum tape files from intel hex files\n"
             "(with compressed loading screens and compressed data images)\n"
             "\n"
@@ -579,6 +583,61 @@ void parse_commandline(int parc, char ** pars)
         
 }
 
+void memory_map()
+{
+    int i;
+    printf("\n");
+    printf("Memory : 0       8       16      24      32      40      48      56      64\n");
+    printf("         |-------|-------|-------|-------|-------|-------|-------|-------|\n");
+    printf("On load: ");
+    for (i = 0; i < 16; i++)
+        printf("r");
+    for (i = 0; i < (192*32+24*32)/1024; i++)
+        printf("s");
+    int ofs = 16*1024 + 192*32+24*32;
+    while (ofs < CODE_OFFSET)
+    {
+        printf("b");
+        ofs+= 1024;
+    }
+    while (ofs < gBootExecAddr)
+    {
+        printf(".");
+        ofs+= 1024;
+    }
+    while (ofs < gMaxAddr)
+    {
+        printf("c");
+        ofs+= 1024;
+    }
+
+    printf("\n");
+    printf("On boot: ");
+    for (i = 0; i < 16; i++)
+        printf("r");
+    for (i = 0; i < (192*32+24*32)/1024; i++)
+        printf("s");
+    ofs = 16*1024 + 192*32+24*32;        
+    while (ofs < gExecAddr)
+    {
+        printf(".");
+        ofs+= 1024;
+    }
+    while (ofs < gExecAddr+gImageSize)
+    {
+        printf("i");
+        ofs+= 1024;
+    }
+    while (ofs < gMaxAddr)
+    {
+        printf(".");
+        ofs+= 1024;
+    }
+    printf("\n");
+    printf("Key    : r)om s)creen b)asic c)ompressed i)mage .)unused\n");
+    printf("\n");
+}
+
 int main(int parc, char ** pars)
 {
     int nonflagparc = 0;
@@ -629,7 +688,7 @@ int main(int parc, char ** pars)
 
     gBootExecAddr = gMaxAddr - (gApp->mMax + boot_bin_len);
     if (gOptVerbose)
-    printf("Boot exec address: %d (0x%x)\n", gBootExecAddr, gBootExecAddr);
+    printf("\nBoot exec address: %d (0x%x)\n", gBootExecAddr, gBootExecAddr);
     
     // Block flag bytes
     gLoaderHeader.putdata((unsigned char)0x00);
@@ -644,7 +703,9 @@ int main(int parc, char ** pars)
     
     // App
     append_bootbin();    
-    append_app();    
+    append_app();
+    
+    if (gOptVerbose) memory_map();
         
     save_tap(pars[2]);    
 }    
