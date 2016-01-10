@@ -21,31 +21,22 @@
 #include "boot_lzf.h"
 #include "boot_zx7.h"
 
-#define VERSION "1.7"
+#define VERSION "2.0"
 
 #define SPEC_Y(y)  (((y) & 0xff00) | ((((y) >> 0) & 7) << 3) | ((((y) >> 3) & 7) << 0) | (((y) >> 6) & 3) << 6)
 #define SCR_LENGTH (32*192+24*32)
-
-
-#define PATCH_BOOTLOADER_POS 22
-#define PATCH_DESTPOS 31
-#define PATCH_SOURCEPOS 34
-
-#define BOOTLOADER_OFS (PATCH_DESTPOS-1)
-
-#define PATCH_CLEAR 12
 
 #define BASIC_SIZE 51
 #define CODE_OFFSET (23759+BASIC_SIZE) // legal code offset, 23759+basic size
 
 Tapper gLoaderHeader, gLoaderPayload;
 Tapper gAppHeader, gAppPayload;
-Pack *gScreen, *gApp;
+Pack *gScreen, *gApp, *gLowBlock;
 
 int gImageSize = 0;
 int gExecAddr = 0;
 int gBootExecAddr = 0;
-int gMaxAddr = 0xffff;
+int gMaxAddr = 0xff58;
 char gProgName[11];
 
 int gOptWeirdScr = 0;
@@ -55,6 +46,15 @@ int gOptVerbose = 1;
 int gOptBinary = 0;
 int gOptScreenCodec = 2;
 int gOptAppCodec = 1;
+int gOptLowBlock = 0;
+int gOptLowBlockAddr = 0x4000 + SCR_LENGTH;
+int gOptLowBlockCompress = 1;
+char *gOptLowBlockFilename = 0;
+int gOptHiBlock = 0;
+int gOptHiBlockAddr = 0xffff;
+char *gOptHiBlockFilename = 0;
+int gOptHiBlockLen = 0;
+unsigned char *gOptHiBlockData = 0;
 
 unsigned char *screen_unpacker_bin;
 int screen_unpacker_bin_len;
@@ -219,9 +219,9 @@ void gen_bootasm()
     p(0xE9);                        // jp (hl) ; jumps to dest position          
 
     int boot_len = boot_bin_len + gBootasmidx;
-    int image_ofs = gMaxAddr - (boot_len + gApp->mMax);
+    int image_ofs = gMaxAddr - (boot_len + gApp->mMax + gOptLowBlock * gLowBlock->mMax);
     int vidmem_ofs = 0x4100 - (gBootasmidx - bootloaderidx);
-    int source_ofs = image_ofs + gBootasmidx + boot_bin_len;
+    int source_ofs = image_ofs + gBootasmidx + boot_bin_len + gOptLowBlock * gLowBlock->mMax;
     int boot_ofs = image_ofs + bootloaderidx;
     
     // Sanity check
@@ -294,6 +294,26 @@ void append_bootbin()
         gAppPayload.putdata(boot_bin[i]);
         
     if (gOptVerbose) printf("App bootstrap    : %d bytes (%d codec, %d rest)\n", boot_bin_len + gBootasmidx, boot_bin_len, gBootasmidx);
+}
+
+void append_hiblock()
+{ 
+    if (gOptHiBlock)
+    {        
+        int i;
+        for (i = 0; i < gOptHiBlockLen; i++)
+            gAppPayload.putdata(gOptHiBlockData[i]);   
+    }
+}
+
+void append_lowblock()
+{ 
+    if (gOptLowBlock)
+    {
+        int i;
+        for (i = 0; i < gLowBlock->mMax; i++)
+            gAppPayload.putdata(gLowBlock->mPackedData[i]);   
+    }
 }
 
 void append_app()
@@ -473,6 +493,87 @@ void load_code(char *aFilename)
     delete[] data;
 }
 
+void load_hiblock()
+{   
+    if (!gOptHiBlock)
+        return;
+    FILE * f = fopen(gOptHiBlockFilename, "rb");
+    if (!f)
+    {
+        printf("\"%s\" not found\n", gOptHiBlockFilename);
+        exit(0);
+    }
+    fseek(f,0,SEEK_END);
+    int len = ftell(f);
+    fseek(f,0,SEEK_SET);
+    
+    unsigned char * src = new unsigned char[len];
+    
+    fread(src, len, 1, f);
+    fclose(f);
+
+    if (gOptVerbose)
+    printf(
+        "\n\"%s\":\n"
+        "\tHiBlock addr : %d (0x%x)\n"
+        "\tHiBlock size : %d bytes\n"
+        "\tCompressed to: (no compression on hi blocks)\n", 
+        gOptHiBlockFilename, 
+        gOptHiBlockAddr, gOptHiBlockAddr,
+        len);
+
+    gOptHiBlockData = src;
+    gOptHiBlockLen = len;
+    
+    gMaxAddr = gOptHiBlockAddr - gOptHiBlockLen;
+}
+
+void load_lowblock()
+{   
+    if (!gOptLowBlock)
+        return;
+    FILE * f = fopen(gOptLowBlockFilename, "rb");
+    if (!f)
+    {
+        printf("\"%s\" not found\n", gOptLowBlockFilename);
+        exit(0);
+    }
+    fseek(f,0,SEEK_END);
+    int len = ftell(f);
+    fseek(f,0,SEEK_SET);
+    
+    unsigned char * src = new unsigned char[len];
+    
+    fread(src, len, 1, f);
+    fclose(f);
+
+    if (gOptLowBlockCompress)
+        gLowBlock->pack(src, len);
+        
+    if (gLowBlock->mMax >= len || gOptLowBlockCompress == 0)
+    {
+        gOptLowBlockCompress = 0;
+        gLowBlock->mMax = len;
+        int i;
+        for (i = 0; i < len; i++)
+            gLowBlock->mPackedData[i] = src[i];
+    }
+
+    if (gOptVerbose)
+    printf(
+        "\n\"%s\":\n"
+        "\tLowBlock addr: %d (0x%x)\n"
+        "\tLowBlock size: %d bytes\n"
+        "\tCompressed to: %d bytes (%3.3f%%) by %s\n", 
+        gOptLowBlockFilename, 
+        gOptLowBlockAddr, gOptLowBlockAddr,
+        len, 
+        gLowBlock->mMax, gLowBlock->mMax*100.0f/len, gOptLowBlockCompress?gAppPackerString[gOptAppCodec]:"(uncompressed)");
+
+    delete[] src;        
+}
+
+
 void set_progname(char *aName)
 {
     int i;
@@ -565,14 +666,17 @@ void print_usage(int aDo, char *aFilename)
             "APPNAME          - application name, max 10 chars, optional\n"
             "LOADINGSCREEN    - .scr file to use as loading screen, optional\n"
             "Options:\n"
+            "-binimage addr   - Input is not ihx but binary file. Needs exec addr.\n"
+            "-maxaddress addr - Maximum address to overwrite, default 0x%04x\n"            
             "-noclear         - Don't clear attributes to 0 before unpacking\n"
             "-noei            - Don't enable interrupts before calling iamge\n"
-            "-maxaddress addr - Maximum address to overwrite, default 0x%04x\n"            
-            "-binimage addr   - Input is not ihx but binary file. Needs exec addr.\n"
             "-weirdscr        - Ignore .scr file size, use whatever it is.\n"
             "-screencodec x   - How to compress loading screen;\n"
             "                   values lzf, zx7, rcs (default rcs)\n"
             "-appcodec x      - How to compress app; values lzf, zx7 (default zx7)\n"
+            "-lowblock fn addr- Low-memory data block, filename and mem offset\n"
+            "-nolowblockpack  - Don't try to compress low block\n"
+            "-hiblock fn addr - High-memory data block, filename and mem offset\n"
             "-q               - Quiet mode, only print errors.\n"
             "\n",
             aFilename,
@@ -588,6 +692,29 @@ void parse_commandline(int parc, char ** pars)
     {
         if (pars[i][0] == '-')
         {
+            if (stricmp(pars[i], "-nolowblockpack") == 0)
+            {
+                gOptLowBlockCompress = 0;
+            }
+            else
+            if (stricmp(pars[i], "-lowblock") == 0)
+            {
+                gOptLowBlock = 1;
+                i++;
+                gOptLowBlockFilename = strdup(pars[i]);
+                i++;
+                gOptLowBlockAddr = strtol(pars[i],0,0);                
+            }
+            else
+            if (stricmp(pars[i], "-hiblock") == 0)
+            {
+                gOptHiBlock = 1;
+                i++;
+                gOptHiBlockFilename = strdup(pars[i]);
+                i++;
+                gOptHiBlockAddr = strtol(pars[i],0,0);                
+            }
+            else
             if (stricmp(pars[i], "-appcodec") == 0)
             {
                 i++;
@@ -752,11 +879,13 @@ int main(int parc, char ** pars)
         boot_bin = boot_lzf_bin;
         boot_bin_len = boot_lzf_bin_len;
         gApp = new LZFPack;
+        gLowBlock = new LZFPack;
         break;
     case 1:
         boot_bin = boot_zx7_bin;
         boot_bin_len = boot_zx7_bin_len;
         gApp = new ZX7Pack;
+        gLowBlock = new ZX7Pack;
         break;
     }
 
@@ -765,9 +894,12 @@ int main(int parc, char ** pars)
     load_code(pars[1]);    
     load_loadingscreen(nonflagparc > 4, pars[4]);
 
+    load_lowblock();
+    load_hiblock();
+
     gen_bootasm();
 
-    gBootExecAddr = gMaxAddr - (gApp->mMax + boot_bin_len + gBootasmidx);
+    gBootExecAddr = gMaxAddr - (gApp->mMax + boot_bin_len + gBootasmidx + gOptLowBlock * gLowBlock->mMax);
     if (gOptVerbose)
     printf("\nBoot exec address: %d (0x%x)\n", gBootExecAddr, gBootExecAddr);
     
@@ -784,7 +916,9 @@ int main(int parc, char ** pars)
     
     // App
     append_bootbin();
+    append_lowblock();
     append_app();
+    append_hiblock();
     
     if (gOptVerbose) memory_map();
         
