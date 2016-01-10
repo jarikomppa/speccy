@@ -50,6 +50,7 @@ char gProgName[11];
 
 int gOptWeirdScr = 0;
 int gOptNoClear = 0;
+int gOptNoEI = 0;
 int gOptVerbose = 1;
 int gOptBinary = 0;
 int gOptScreenCodec = 2;
@@ -141,24 +142,115 @@ void append_pic()
 
 int checkpatch16(unsigned char *data, int ofs, int expected)
 {
-    if (boot_bin[ofs] != (expected & 0xff)) return 0;
-    if (boot_bin[ofs+1] != ((expected >> 8) & 0xff)) return 0;
+    if (data[ofs] != (expected & 0xff)) return 0;
+    if (data[ofs+1] != ((expected >> 8) & 0xff)) return 0;
     return 1;
 }
 
-void patch16(unsigned char *data, int ofs, int patch, char * name)
+void patch16(unsigned char *data, int ofs, int patch)
 {
-    boot_bin[ofs] = patch & 0xff;
-    boot_bin[ofs+1] = (patch >> 8) & 0xff;
+    data[ofs] = patch & 0xff;
+    data[ofs+1] = (patch >> 8) & 0xff;
 }
 
 void patch8(unsigned char *data, int ofs, int patch)
 {
-    boot_bin[ofs] = patch & 0xff;
+    data[ofs] = patch & 0xff;
+}
+
+unsigned char gBootasm[512];
+int gBootasmidx = 0;
+void p(unsigned char c)
+{
+    gBootasm[gBootasmidx] = c;
+    gBootasmidx++;
+}
+
+void gen_bootasm()
+{
+   p(0xf3); // DI
+
+    if (!gOptNoClear)
+    {
+        p(0x3E); p(0x00);          //  ld a, #0
+        p(0x11); p(0x01); p(0x58); //  ld de, #0x5801
+        p(0x21); p(0x00); p(0x58); //  ld hl, #0x5800
+        p(0x01); p(0xFF); p(0x02); //  ld bc, #767
+        p(0x77);                   //  ld (hl), a        
+        p(0xED); p(0xB0);          //  ldir       
+    }
+   
+    // Copy bootloader to video memory 
+    int vidmemposidx = gBootasmidx + 1;
+    p(0x11); p(0x00); p(0x40);   //  ld de, #0x4000 ; dst (needs patching)
+    p(0x01); p(0x00); p(0x02);   //  ld bc, #0x200  ; len, currently ~140 bytes, but a little extra doesn't hurt
+
+    int bootidx = gBootasmidx + 1;
+
+    p(0x21); p(0x07); p(0xB0);   //  ld hl, #0xb007 ; src (needs patching)
+    p(0xED); p(0xB0);            //  ldir
+
+    // Put stack into video memory (and save sp in ix)    
+    p(0xDD); p(0x21); p(0x00); p(0x00);   // ld ix, #0
+    p(0xDD); p(0x39);                     // add ix, sp
+    p(0x31); p(0x00); p(0x44);            // ld sp, #0x4400 ; put stack into video memory
+    
+    // Jump to video memory
+    int vidmemposidx2 = gBootasmidx + 1;
+    p(0x21); p(0x00); p(0x40);   //  ld hl, #0x4000                        
+    p(0xE9);                     //  jp (hl)    
+
+    int bootloaderidx = gBootasmidx;
+    int destposidx = gBootasmidx + 1;
+    // Bootloader:
+    p(0x11); p(0x57); p(0xDE);      // ld de, #0xde57 ; destination position (needs patching)
+    int srcposidx = gBootasmidx + 1;
+    p(0x21); p(0x52); p(0x50);      // ld hl, #0x5052 ; source position (needs patching)   
+    p(0xD5);                        // push de ; put dest into stack
+    p(0xDD); p(0xE5);               // push ix ; save basic stack pointer..
+    p(0xCD); p(0x00); p(0x41);      // call unpack at 0x4100
+    p(0xDD); p(0xE1);               // pop ix 
+    p(0xE1);                        // pop hl ; dest address
+    p(0xDD); p(0xF9);               // ld sp, ix ; restore BASIC stack
+    if (!gOptNoEI)
+    {
+        p(0xFB);                    // ei
+    }
+    p(0xE9);                        // jp (hl) ; jumps to dest position          
+
+    int boot_len = boot_bin_len + gBootasmidx;
+    int image_ofs = gMaxAddr - (boot_len + gApp->mMax);
+    int vidmem_ofs = 0x4100 - (gBootasmidx - bootloaderidx);
+    int source_ofs = image_ofs + gBootasmidx + boot_bin_len;
+    int boot_ofs = image_ofs + bootloaderidx;
+    
+    // Sanity check
+    if (!checkpatch16(gBootasm, vidmemposidx, 0x4000)) { printf("SANITY FAIL patch position vidmemposidx mismatch, aborting %02x%02x\n", gBootasm[vidmemposidx], gBootasm[vidmemposidx+1]); exit(0);}
+    if (!checkpatch16(gBootasm, vidmemposidx2, 0x4000)) { printf("SANITY FAIL patch position vidmemposidx2 mismatch, aborting %02x%02x\n", gBootasm[vidmemposidx2], gBootasm[vidmemposidx2+1]); exit(0);}
+    if (!checkpatch16(gBootasm, bootidx, 0xb007)) { printf("SANITY FAIL patch position bootidx mismatch, aborting %02x%02x\n", gBootasm[bootidx], gBootasm[bootidx+1]); exit(0);}
+    if (!checkpatch16(gBootasm, destposidx, 0xDE57)) { printf("SANITY FAIL patch position destposidx mismatch, aborting %02x%02x\n", gBootasm[destposidx], gBootasm[destposidx+1]); exit(0);}
+    if (!checkpatch16(gBootasm, srcposidx, 0x5052)) { printf("SANITY FAIL patch position srcposidx mismatch, aborting %02x%02x\n", gBootasm[srcposidx], gBootasm[srcposidx+1]); exit(0);}
+            
+    patch16(gBootasm, vidmemposidx, vidmem_ofs);
+    patch16(gBootasm, bootidx, boot_ofs);
+    patch16(gBootasm, vidmemposidx2, vidmem_ofs);
+    patch16(gBootasm, destposidx, gExecAddr);
+    patch16(gBootasm, srcposidx, source_ofs);
+
+    if (gOptVerbose) 
+    {
+        printf("Video memory code offset : 0x%04x %5d\n", vidmem_ofs, vidmem_ofs);
+        printf("Compressed image offset  : 0x%04x %5d\n", source_ofs, source_ofs);
+        printf("Compressed image len     : 0x%04x %5d\n", gApp->mMax, gApp->mMax);
+        printf("Destination image offset : 0x%04x %5d\n", gExecAddr, gExecAddr);
+        printf("Bootloader code offset   : 0x%04x %5d\n", boot_ofs, boot_ofs);
+    }
 }
 
 void append_bootbin()
 {
+ 
+/*    
     if (gMaxAddr - (boot_bin_len + gApp->mMax) < CODE_OFFSET)
     {
         printf("Image doesn't fit in physical memory: 0x%04x - 0x%04x < 0x%04x\n", gMaxAddr, (boot_bin_len + gApp->mMax), CODE_OFFSET);
@@ -169,12 +261,7 @@ void append_bootbin()
         printf("Compressed image bigger than uncompressed: 0x%04x - 0x%04x < %d\n", gMaxAddr, (boot_bin_len + gApp->mMax), gExecAddr);
         exit(0);
     }
-    
-    // sanity checks
-    if (!checkpatch16(boot_bin, PATCH_DESTPOS, 0xde57)) { printf("SANITY FAIL patch position DESTPOS mismatch, aborting\n"); exit(0);}
-    if (!checkpatch16(boot_bin, PATCH_SOURCEPOS, 0x5052)) { printf("SANITY FAIL patch position SOURCEPOS mismatch, aborting\n"); exit(0);}
-    if (!checkpatch16(boot_bin, PATCH_BOOTLOADER_POS, 0xb007)) { printf("SANITY FAIL patch position BOOTLOADERPOS mismatch, aborting\n"); exit(0);}
-    
+        
     int len = boot_bin_len + gApp->mMax;
     int image_ofs = gMaxAddr - len;
     int compressed_len = len - boot_bin_len;
@@ -197,19 +284,16 @@ void append_bootbin()
     patch16(boot_bin, PATCH_BOOTLOADER_POS, bootloader_pos, "PATCH_BOOTLOADER_POS");
     patch16(boot_bin, PATCH_DESTPOS, dest_pos, "PATCH_DESTPOS");
     patch16(boot_bin, PATCH_SOURCEPOS, source_pos, "PATCH_SOURCEPOS");
-    
-    if (gOptNoClear)
-    {
-        patch8(boot_bin, PATCH_CLEAR, 0);
-        patch8(boot_bin, PATCH_CLEAR+1, 0);
-        patch8(boot_bin, PATCH_CLEAR+2, 0);
-    }    
-    
+*/       
     int i;
+    
+    for (i = 0; i < gBootasmidx; i++)
+        gAppPayload.putdata(gBootasm[i]);
+    
     for (i = 0; i < boot_bin_len; i++)
         gAppPayload.putdata(boot_bin[i]);
         
-    if (gOptVerbose) printf("App bootstrap    : %d bytes\n", boot_bin_len);
+    if (gOptVerbose) printf("App bootstrap    : %d bytes (%d codec, %d rest)\n", boot_bin_len + gBootasmidx, boot_bin_len, gBootasmidx);
 }
 
 void append_app()
@@ -374,7 +458,7 @@ void load_code(char *aFilename)
     }
     gImageSize = image_size;
     delete[] src;
-    gApp->pack(data + gExecAddr, image_size);
+    gApp->pack(data + gExecAddr, gImageSize);
     if (gOptVerbose)
     printf(
         "\n\"%s\":\n"
@@ -482,6 +566,7 @@ void print_usage(int aDo, char *aFilename)
             "LOADINGSCREEN    - .scr file to use as loading screen, optional\n"
             "Options:\n"
             "-noclear         - Don't clear attributes to 0 before unpacking\n"
+            "-noei            - Don't enable interrupts before calling iamge\n"
             "-maxaddress addr - Maximum address to overwrite, default 0x%04x\n"            
             "-binimage addr   - Input is not ihx but binary file. Needs exec addr.\n"
             "-weirdscr        - Ignore .scr file size, use whatever it is.\n"
@@ -556,6 +641,11 @@ void parse_commandline(int parc, char ** pars)
                 gOptNoClear = 1;
             }
             else
+            if (stricmp(pars[i], "-noei") == 0)
+            {
+                gOptNoEI = 1;
+            }
+            else
             if (stricmp(pars[i], "-q") == 0)
             {
                 gOptVerbose = 0;
@@ -587,52 +677,41 @@ void memory_map()
 {
     int i;
     printf("\n");
-    printf("Memory : 0       8       16      24      32      40      48      56      64\n");
+    printf("Memory : 0       2       4       6       8       10      12      14      16\n");
     printf("         |-------|-------|-------|-------|-------|-------|-------|-------|\n");
     printf("On load: ");
-    for (i = 0; i < 16; i++)
-        printf("r");
-    for (i = 0; i < (192*32+24*32)/1024; i++)
-        printf("s");
-    int ofs = 16*1024 + 192*32+24*32;
-    while (ofs < CODE_OFFSET)
-    {
-        printf("b");
-        ofs+= 1024;
+
+#define MEMBLOCK(max, ch) \
+    while (ofs < (max)) \
+    {\
+        o += printf("%c", (ch));\
+        ofs+= 256;\
+        if (o == 64)\
+        {\
+            printf("\n         ");\
+            o = 0;\
+        }\
     }
-    while (ofs < gBootExecAddr)
-    {
-        printf(".");
-        ofs+= 1024;
-    }
-    while (ofs < gMaxAddr)
-    {
-        printf("c");
-        ofs+= 1024;
-    }
+
+    int o = 0;
+    int ofs = 0;
+    MEMBLOCK(16*1024, 'r');
+    MEMBLOCK(16*1024+(192+24)*32, 's');
+    MEMBLOCK(CODE_OFFSET, 'b');
+    MEMBLOCK(gBootExecAddr, '.');
+    MEMBLOCK(gMaxAddr, 'c');
+    MEMBLOCK(0xffff, '-');
 
     printf("\n");
     printf("On boot: ");
-    for (i = 0; i < 16; i++)
-        printf("r");
-    for (i = 0; i < (192*32+24*32)/1024; i++)
-        printf("s");
-    ofs = 16*1024 + 192*32+24*32;        
-    while (ofs < gExecAddr)
-    {
-        printf(".");
-        ofs+= 1024;
-    }
-    while (ofs < gExecAddr+gImageSize)
-    {
-        printf("i");
-        ofs+= 1024;
-    }
-    while (ofs < gMaxAddr)
-    {
-        printf(".");
-        ofs+= 1024;
-    }
+    ofs = 0;
+    MEMBLOCK(16*1024, 'r');
+    MEMBLOCK(16*1024+(192+24)*32, 's');
+    MEMBLOCK(gExecAddr, '.');
+    MEMBLOCK(gExecAddr+gImageSize, 'i');
+    MEMBLOCK(gMaxAddr, '.');
+    MEMBLOCK(0xffff, '-');
+
     printf("\n");
     printf("Key    : r)om s)creen b)asic c)ompressed i)mage .)unused\n");
     printf("\n");
@@ -686,7 +765,9 @@ int main(int parc, char ** pars)
     load_code(pars[1]);    
     load_loadingscreen(nonflagparc > 4, pars[4]);
 
-    gBootExecAddr = gMaxAddr - (gApp->mMax + boot_bin_len);
+    gen_bootasm();
+
+    gBootExecAddr = gMaxAddr - (gApp->mMax + boot_bin_len + gBootasmidx);
     if (gOptVerbose)
     printf("\nBoot exec address: %d (0x%x)\n", gBootExecAddr, gBootExecAddr);
     
@@ -702,7 +783,7 @@ int main(int parc, char ** pars)
     append_pic();
     
     // App
-    append_bootbin();    
+    append_bootbin();
     append_app();
     
     if (gOptVerbose) memory_map();
