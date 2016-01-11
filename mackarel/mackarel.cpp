@@ -39,6 +39,7 @@ int gBootExecAddr = 0;
 int gMaxAddr = 0xff58;
 char gProgName[11];
 
+int gOptDiscoFever = 0;
 int gOptMoveBack = 0;
 int gOptExecAddress = 0;
 int gOptWeirdScr = 0;
@@ -177,7 +178,14 @@ void gen_bootasm()
 //    p(0x76); // HALT (for debugging)
 
     // Put stack into video memory
-    p(0x31); p(0x00); p(0x44);            // ld sp, #0x4400 ; put stack into video memory
+    if (gOptDiscoFever)
+    {
+        p(0x31); p(0x00); p(0x5b);            // ld sp, #0x5b00 ; put stack into video memory attributes
+    }
+    else
+    {
+        p(0x31); p(0x00); p(0x44);            // ld sp, #0x4400 ; put stack into video memory
+    }
 
     if (!gOptNoClear)
     {
@@ -725,9 +733,10 @@ void print_usage(int aDo, char *aFilename)
             "-execaddr addr    - Specify exec address (default: start of binary image.\n"
             "-maxaddress addr  - Maximum address to overwrite, default 0x%04x\n"            
             "-moveback bytes   - Move decompressed image back N bytes.\n"
-            "-noclear          - Don't clear attributes to 0 before unpacking\n"
+            "-noclear          - Don't clear attributes to 0 before unpacking\n"            
             "-noei             - Don't enable interrupts before calling image\n"
             "-nosprestore      - Don't bother restoring SP before calling image\n"
+            "-discofever       - Put decompress stack in attribute memory\n"
             "-weirdscr         - Ignore .scr file size, use whatever it is.\n"
             "-screencodec x    - How to compress loading screen;\n"
             "                    values lzf, zx7, rcs (default rcs)\n"
@@ -750,6 +759,11 @@ void parse_commandline(int parc, char ** pars)
     {
         if (pars[i][0] == '-')
         {
+            if (stricmp(pars[i], "-discofever") == 0)
+            {
+                gOptDiscoFever = 1;
+            }
+            else
             if (stricmp(pars[i], "-moveback") == 0)
             {
                 i++;
