@@ -39,6 +39,7 @@ int gBootExecAddr = 0;
 int gMaxAddr = 0xff58;
 char gProgName[11];
 
+int gOptMoveBack = 0;
 int gOptExecAddress = 0;
 int gOptWeirdScr = 0;
 int gOptNoClear = 0;
@@ -203,6 +204,7 @@ void gen_bootasm()
     p(0x21); p(0x00); p(0x40);   //  ld hl, #0x4000                        
     p(0xE9);                     //  jp (hl)    
 
+    // Bootloader (the bit that gets copied to vid mem):
     int bootloaderidx = gBootasmidx;
 
     int lowdestposidx;
@@ -227,12 +229,24 @@ void gen_bootasm()
     }
 
     int destposidx = gBootasmidx + 1;
-    // Bootloader:
     p(0x11); p(0x57); p(0xDE);      // ld de, #0xde57 ; destination position (needs patching)
     int srcposidx = gBootasmidx + 1;
     p(0x21); p(0x52); p(0x50);      // ld hl, #0x5052 ; source position (needs patching)       
     p(0xD5);                        // push de ; put dest into stack
     p(0xCD); p(0x00); p(0x41);      // call unpack at 0x4100
+    int finaldestidx = 0;
+    int finalsrcidx = 0;
+    int imagelenidx = 0;
+    if (gOptMoveBack)
+    {
+        finaldestidx = gBootasmidx + 1;
+        p(0x11); p(0x57); p(0xDE); // ld de, #0xde57 ; final destination - note: end address (needs patching)
+        finalsrcidx = gBootasmidx + 1;
+        p(0x21); p(0x52); p(0x50); // ld hl, #0x5052 ; final source - note: end address (needs patching)
+        imagelenidx = gBootasmidx + 1;
+        p(0x01); p(0x00); p(0x02); // ld bc, #0x0200 ; image len (needs patching)
+        p(0xed); p(0xb8);          // lddr
+    }
     p(0xE1);                        // pop hl ; dest address
     if (gOptExecAddress)
     {
@@ -291,11 +305,22 @@ void gen_bootasm()
         patch16(gBootasm, lowdestposidx, gOptLowBlockAddr);
         
     }
+    
+    if (gOptMoveBack)
+    {
+        if (!checkpatch16(gBootasm, imagelenidx, 0x0200)) { printf("SANITY FAIL patch position imagelenidx mismatch, aborting %02x%02x\n", gBootasm[imagelenidx], gBootasm[imagelenidx+1]); exit(0);}
+        if (!checkpatch16(gBootasm, finaldestidx, 0xDE57)) { printf("SANITY FAIL patch position finaldestidx mismatch, aborting %02x%02x\n", gBootasm[finaldestidx], gBootasm[finaldestidx+1]); exit(0);}
+        if (!checkpatch16(gBootasm, finalsrcidx, 0x5052)) { printf("SANITY FAIL patch position finalsrcidx mismatch, aborting %02x%02x\n", gBootasm[finalsrcidx], gBootasm[finalsrcidx+1]); exit(0);}
+            
+        patch16(gBootasm, finaldestidx, gExecAddr + gImageSize);
+        patch16(gBootasm, finalsrcidx, gExecAddr + gImageSize - gOptMoveBack);
+        patch16(gBootasm, imagelenidx, gImageSize);
+    }
             
     patch16(gBootasm, vidmemposidx, vidmem_ofs);
     patch16(gBootasm, bootidx, boot_ofs);
     patch16(gBootasm, vidmemposidx2, vidmem_ofs);
-    patch16(gBootasm, destposidx, gExecAddr);
+    patch16(gBootasm, destposidx, gExecAddr - gOptMoveBack);
     patch16(gBootasm, srcposidx, source_ofs);
 
 /*
@@ -699,6 +724,7 @@ void print_usage(int aDo, char *aFilename)
             "-binimage addr    - Input is not ihx but binary file. Needs exec addr.\n"
             "-execaddr addr    - Specify exec address (default: start of binary image.\n"
             "-maxaddress addr  - Maximum address to overwrite, default 0x%04x\n"            
+            "-moveback bytes   - Move decompressed image back N bytes.\n"
             "-noclear          - Don't clear attributes to 0 before unpacking\n"
             "-noei             - Don't enable interrupts before calling image\n"
             "-nosprestore      - Don't bother restoring SP before calling image\n"
@@ -724,6 +750,12 @@ void parse_commandline(int parc, char ** pars)
     {
         if (pars[i][0] == '-')
         {
+            if (stricmp(pars[i], "-moveback") == 0)
+            {
+                i++;
+                gOptMoveBack = strtol(pars[i],0,0);
+            }
+            else
             if (stricmp(pars[i], "-nosprestore") == 0)
             {
                 gOptNoSPRestore = 1;
@@ -914,11 +946,11 @@ void sanity_checks()
     if (gBootExecAddr < gExecAddr)
         { ok = 0; printf("\nError: Compressed image (0x%04x-) must start later in memory than uncompressed (0x%04x-)\n", gBootExecAddr, gExecAddr); }
 
-    if (gExecAddr + gImageSize == gMaxAddr)
-        { printf("\nWarning: compressed and decompressed images end at same address, success of decompression uncertain\n\n"); }
+    if (gExecAddr + gImageSize - gOptMoveBack == gMaxAddr)
+        { printf("\nWarning: compressed and decompressed images end at same address, success of decompression uncertain. Use -moveback\n\n"); }
     else
-    if (gExecAddr + gImageSize >= gMaxAddr - 16)
-        { printf("\nWarning: compressed and decompressed images end at nearly same address, success of decompression uncertain\n\n"); }
+    if (gExecAddr + gImageSize - gOptMoveBack >= gMaxAddr - 16)
+        { printf("\nWarning: compressed and decompressed images end at nearly same address, success of decompression uncertain. Use -moveback\n\n"); }
 
     // stack is at (gBootExecAddr-1) - (gBootExecAddr-24)
     if (!gOptNoSPRestore &&
