@@ -14,6 +14,7 @@ unsigned char *screen_ptr;
 
 unsigned char port254tonebit;
 unsigned short framecounter = 0;
+#define COLOR(BLINK, BRIGHT, PAPER, INK) (((BLINK) << 7) | ((BRIGHT) << 6) | ((PAPER) << 3) | (INK))
 
 #include "yofstab.h"
 #include "bg.h"
@@ -67,6 +68,77 @@ unsigned char player_y;
 unsigned char player_x;
 unsigned char playsound;
 
+char needclean = 16;
+void attribclean()
+{
+    unsigned short i;    
+    char o;
+    if (needclean == 0)
+        return;
+    needclean--;
+    o = (framecounter * 3) & 15;
+    for (i = 0; i < 32*16; i += 16)
+        *((unsigned char*)0x4000+192*32+ 8*32+i + o) = 7;    
+}
+
+void attribline(char x, char y, unsigned char c)
+{
+    unsigned short i;
+    char d = 32 - x;
+    i = 0x4000+192*32+ 7*32 + y * 32 + x;
+    while (d)
+    {
+        *((unsigned char*)i) = c;
+        d--;
+        i++;
+    }
+    needclean = 16;
+}
+
+void attribmess(char x, char y, char c)
+{
+    unsigned short i;
+    i = 0x4000+192*32+ 8*32 + y * 32 + x;
+
+    *((unsigned char*)i) = c;    
+    *((unsigned char*)i + 1) = c;    
+    *((unsigned char*)i + 2) = c;    
+
+    *((unsigned char*)i + 31) = c;    
+    *((unsigned char*)i + 32) = c;    
+    *((unsigned char*)i + 33) = c;    
+    *((unsigned char*)i + 34) = c;    
+    *((unsigned char*)i + 35) = c;    
+
+    *((unsigned char*)i + 64) = c;    
+    *((unsigned char*)i + 65) = c;    
+    *((unsigned char*)i + 66) = c;    
+
+    needclean = 16;
+}
+
+void kill(char i)
+{
+    enemy[i].life = 0;
+    attribmess(enemy[i].x/8,enemy[i].y/8,COLOR(0,1,0,2));
+    playsound = 2;
+}
+
+void kill_enemies(unsigned char y)
+{
+    char i;
+    for (i = 0; i < 18; i++)
+    {
+        if (enemy[i].life)
+        {
+            if (enemy[i].x > player_x/2 &&
+                enemy[i].y / 16 == y)
+            {
+                kill(i);
+            }
+        }
+    }
+}
 void enemy_physics(char spriteofs)
 {
     char i;
@@ -111,8 +183,7 @@ void enemy_physics(char spriteofs)
                     x < xe + 16 &&
                     y < ye + 16)
                 {
-                    enemy[spriteidx].life = 0;
-                    playsound = 2;
+                    kill(spriteidx);
                 }
             }
         }               
@@ -120,7 +191,6 @@ void enemy_physics(char spriteofs)
 }
 
 
-#define COLOR(BLINK, BRIGHT, PAPER, INK) (((BLINK) << 7) | ((BRIGHT) << 6) | ((PAPER) << 3) | (INK))
 
 void main()
 {           
@@ -189,9 +259,11 @@ void main()
         if (bgo == 0) bgi = 1;
         if (bgo == (126 << 1)) bgi = -1;
         port254(2);
-//        scroller(160);
-//        spritetest();
+#if 0    
 
+        spriteofs = 6 * spritemux;
+        spritemux++;
+        if (spritemux == 3) spritemux = 0;
 
         if (playsound)
         {
@@ -263,6 +335,19 @@ void main()
         if ((keydata[KEYBYTE_Q] & KEYBIT_Q) != KEYBIT_Q) player_y--;
         if ((keydata[KEYBYTE_A] & 0x1f) != 0x1f) player_y++;
         */
+        if (recharge == 25 && !KEYUP(SPACE))
+        {
+            kill_enemies(player_y/32);
+            attribline(player_x/16+2,player_y/16+2,COLOR(1,1,6,2));
+            recharge = 0;
+            playsound = 1;
+        }
+        if (recharge < 25 && KEYUP(SPACE))
+        {
+            recharge++;
+        }
+        port254(5);
+        attribclean();
         port254(0);                                             
     }    
 }
