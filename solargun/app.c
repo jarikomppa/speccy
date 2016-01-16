@@ -25,9 +25,6 @@ unsigned short framecounter = 0;
 #include "ship.h"
 #include "rock_16.h"
 #include "sprites.c"
-const unsigned char logo[] = {
-#include "logo.h"
-};
 
 extern void playfx(unsigned short fx) __z88dk_fastcall;  
 
@@ -191,9 +188,9 @@ void enemy_physics(char spriteofs)
 }
 
 
-
 void main()
-{           
+{         
+    char recharge = 0;  
     char player_xm = 0;
     char player_ym = 0;
     unsigned short i;
@@ -212,8 +209,8 @@ void main()
     for (i = 0; i < 32*24; i++)
         *dst++ = 7;
     
-    cp((unsigned char*)0x4000, 32*64, logo);
-    cp((unsigned char*)0x4000+(32*192), 32*8, logo+32*64);
+    cp((unsigned char*)0x4000, 32*64, (char*)0x5b00);
+    cp((unsigned char*)0x4000+(32*192), 32*8, (char*)0x5b00+32*64);
     
     for (i = 0; i < 18; i++)
     {
@@ -259,7 +256,6 @@ void main()
         if (bgo == 0) bgi = 1;
         if (bgo == (126 << 1)) bgi = -1;
         port254(2);
-#if 0    
 
         spriteofs = 6 * spritemux;
         spritemux++;
@@ -326,15 +322,7 @@ void main()
                 player_y = 208;
 //                player_ym = -player_ym;
             }
-        
-        /*
-        if (!(keydata[KEYBYTE_Q] & KEYBIT_Q)) player_y--;
-        if (!(keydata[KEYBYTE_A] & KEYBIT_A)) player_y++;
-        */
-        /*
-        if ((keydata[KEYBYTE_Q] & KEYBIT_Q) != KEYBIT_Q) player_y--;
-        if ((keydata[KEYBYTE_A] & 0x1f) != 0x1f) player_y++;
-        */
+
         if (recharge == 25 && !KEYUP(SPACE))
         {
             kill_enemies(player_y/32);
@@ -342,10 +330,12 @@ void main()
             recharge = 0;
             playsound = 1;
         }
+        
         if (recharge < 25 && KEYUP(SPACE))
         {
             recharge++;
         }
+
         port254(5);
         attribclean();
         port254(0);                                             
