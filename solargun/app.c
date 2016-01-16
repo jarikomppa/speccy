@@ -65,7 +65,7 @@ struct Enemy
 struct Enemy enemy[18];
 unsigned char player_y;
 unsigned char player_x;
-
+unsigned char playsound;
 
 void enemy_physics(char spriteofs)
 {
@@ -112,6 +112,7 @@ void enemy_physics(char spriteofs)
                     y < ye + 16)
                 {
                     enemy[spriteidx].life = 0;
+                    playsound = 2;
                 }
             }
         }               
@@ -133,6 +134,7 @@ void main()
     char spritemux = 0;
     player_y = 10;
     player_x = 10;
+    playsound = 0;
 
     do_halt();
     
@@ -182,6 +184,7 @@ void main()
         // Let's do interlaced copy instead =)
         i = ((player_y) + (bgo << 1)) / 16;
         fbcopy_i(i, (framecounter >> 3) & 31, 13);
+            
         bgo += bgi;
         if (bgo == 0) bgi = 1;
         if (bgo == (126 << 1)) bgi = -1;
@@ -189,17 +192,27 @@ void main()
 //        scroller(160);
 //        spritetest();
 
-        spriteofs = 6 * spritemux;
-        spritemux++;
-        if (spritemux == 3) spritemux = 0;
-        
-        for (ci = 0; ci < 6; ci++, spriteofs++)
+
+        if (playsound)
         {
-            if (enemy[spriteofs].life != 0)
+            playfx(playsound - 1);
+        }
+        else
+        {
+            spriteofs = 6 * spritemux;
+            spritemux++;
+            if (spritemux == 3) spritemux = 0;
+            
+            for (ci = 0; ci < 6; ci++, spriteofs++)
             {
-                drawsprite_16(rock_16, enemy[spriteofs].x, enemy[spriteofs].y + 64);
-            }
-        }        
+                if (enemy[spriteofs].life != 0)
+                {
+                    drawsprite_16(rock_16, enemy[spriteofs].x, enemy[spriteofs].y + 64);
+                }
+            }        
+        }
+        
+        playsound = 0;
 
         drawsprite_16(ship, player_x / 2, player_y / 2 + 64);
     
