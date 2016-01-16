@@ -179,9 +179,9 @@ SoundEffectsData:
 
 SoundEffect0Data:
 	.db 2 ;noise
-	.dw 20,20,10
+	.dw 20,50,10
 	.db 0
 SoundEffect1Data:
 	.db 1 ;tone
-	.dw 100,2,2000,65531,128
+	.dw 200,2,2000,65531,128
 	.db 0
