@@ -28,6 +28,8 @@ const unsigned char logo[] = {
 #include "logo.h"
 };
 
+extern void playfx(unsigned short fx) __z88dk_fastcall;  
+
 unsigned short seed = 0xACE1u;
 
 unsigned short rand()
@@ -57,9 +59,13 @@ struct Enemy
     unsigned char y;
     char xi;
     char yi;
+    char life;
 };
 
 struct Enemy enemy[18];
+unsigned char player_y;
+unsigned char player_x;
+
 
 void enemy_physics(char spriteofs)
 {
@@ -67,13 +73,48 @@ void enemy_physics(char spriteofs)
     char spriteidx = spriteofs * 6;
     for (i = 0; i < 6; i++, spriteidx++)
     {
-        enemy[spriteidx].x += enemy[i].xi;
-        if (enemy[spriteidx].x > (256 - 16)) enemy[spriteidx].x = 8;        
-        if (enemy[spriteidx].x < 4) enemy[spriteidx].x = 240; //(256 - 16);
+        if (enemy[spriteidx].life)
+        {
+            unsigned char xe = enemy[spriteidx].x;
+            unsigned char ye = enemy[spriteidx].y;
+            
+            xe += enemy[i].xi;
+            if (xe > (256 - 16)) xe = 8;        
+            if (xe < 4) xe = 240; //(256 - 16);
+    
+            ye += enemy[spriteidx].yi;
+            if (ye < 8) enemy[spriteidx].yi = -enemy[spriteidx].yi;//176;
+            if (ye > 104) enemy[spriteidx].yi = -enemy[spriteidx].yi;//64;
+                
+            enemy[spriteidx].x = xe;
+            enemy[spriteidx].y = ye;
+                
+            if (enemy[spriteidx].x < 128)
+            {
+                
+/*
 
-        enemy[spriteidx].y += enemy[spriteidx].yi;
-        if (enemy[spriteidx].y < 64) enemy[spriteidx].y = 176;
-        if (enemy[spriteidx].y > 176) enemy[spriteidx].y = 64;
+ x----+
+ |    |
+ |  a----+
+ |  | |  |
+ +--|-y  |
+    |    |
+    +----+
+
+*/                
+                char x = player_x / 2 + 4;
+                char y = player_y / 2 + 4;
+
+                if (x + 8 > xe &&
+                    y + 8 > ye &&
+                    x < xe + 16 &&
+                    y < ye + 16)
+                {
+                    enemy[spriteidx].life = 0;
+                }
+            }
+        }               
     }
 }
 
@@ -82,15 +123,17 @@ void enemy_physics(char spriteofs)
 
 void main()
 {           
-    unsigned char player_y = 100;
-    unsigned char player_x = 10;
+    char player_xm = 0;
+    char player_ym = 0;
     unsigned short i;
     unsigned char ci;
     unsigned char *dst;//, *src;
     char bgi = 1;
     unsigned short bgo = 0;
     char spritemux = 0;
-    
+    player_y = 10;
+    player_x = 10;
+
     do_halt();
     
     dst = (unsigned char*)(0x4000 + (32*192));// + 20*32);
@@ -103,9 +146,12 @@ void main()
     for (i = 0; i < 18; i++)
     {
         enemy[i].x = (i * 117) & 255;        
-        enemy[i].y = ((i * 17) & 127) + 64;        
+        enemy[i].y = ((i * 17) & 127);        
+        if (enemy[i].y > 104) enemy[i].y -= 60;
+        if (enemy[i].y < 8) enemy[i].y += 60;
         enemy[i].xi = -(((i & 7) + 1));
         enemy[i].yi = ((i * 3) & 7) - 4;
+        enemy[i].life = 1;
     }
     
     enemy_physics(0);
@@ -134,7 +180,8 @@ void main()
         // can do about 64 scanlines in a frame (with nothing else)
         //fbcopy(s_png + sinofs[framecounter & 0xff] * 32, 64, 110);
         // Let's do interlaced copy instead =)
-        fbcopy_i(bgo >> 2, (framecounter >> 3) & 31, 13);
+        i = ((player_y) + (bgo << 1)) / 16;
+        fbcopy_i(i, (framecounter >> 3) & 31, 13);
         bgo += bgi;
         if (bgo == 0) bgi = 1;
         if (bgo == (126 << 1)) bgi = -1;
@@ -148,21 +195,53 @@ void main()
         
         for (ci = 0; ci < 6; ci++, spriteofs++)
         {
-            drawsprite_16(rock_16, enemy[spriteofs].x, enemy[spriteofs].y);
+            if (enemy[spriteofs].life != 0)
+            {
+                drawsprite_16(rock_16, enemy[spriteofs].x, enemy[spriteofs].y + 64);
+            }
         }        
 
-        drawsprite_16(ship, player_x, player_y);
-
+        drawsprite_16(ship, player_x / 2, player_y / 2 + 64);
+    
         port254(1);
         
         enemy_physics(spritemux);
         
         readkeyboard();
         
-        if (!KEYUP(Q)) player_y--;
-        if (!KEYUP(A)) player_y++;
-        if (!KEYUP(O)) player_x--;
-        if (!KEYUP(P)) player_x++;
+        if (!KEYUP(Q)) player_ym -= 5;
+        if (!KEYUP(A)) player_ym += 5;
+        if (!KEYUP(O)) player_xm -= 5;
+        if (!KEYUP(P)) player_xm += 5;
+       
+        player_xm = (player_xm * 3) / 4;
+        player_ym = (player_ym * 3) / 4;
+                        
+        player_x += player_xm / 2;
+        player_y += player_ym / 2;
+        
+        if (player_x < 8) 
+            {
+                player_x = 8;
+//                player_xm = -player_xm;
+            }
+        if (player_x > 240) 
+            {
+                player_x = 240;
+//                player_xm = -player_xm;
+                
+            }
+        if (player_y < 8) 
+            {
+                player_y = 8;
+//                player_ym = -player_ym;
+            }
+        if (player_y > 208) 
+            {
+                player_y = 208;
+//                player_ym = -player_ym;
+            }
+        
         /*
         if (!(keydata[KEYBYTE_Q] & KEYBIT_Q)) player_y--;
         if (!(keydata[KEYBYTE_A] & KEYBIT_A)) player_y++;
@@ -171,6 +250,6 @@ void main()
         if ((keydata[KEYBYTE_Q] & KEYBIT_Q) != KEYBIT_Q) player_y--;
         if ((keydata[KEYBYTE_A] & 0x1f) != 0x1f) player_y++;
         */
-        port254(0);                                     
+        port254(0);                                             
     }    
 }
