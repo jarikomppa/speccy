@@ -339,5 +339,6 @@ void main()
         port254(5);
         attribclean();
         port254(0);                                             
+        scroller(0);
     }    
 }
