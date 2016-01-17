@@ -14,6 +14,8 @@ unsigned char *screen_ptr;
 
 unsigned short framecounter;
 
+unsigned char gamestate;
+
 #define HWIF_IMPLEMENTATION
 
 #include "yofstab.h"
@@ -39,6 +41,7 @@ void cp(unsigned char *dst, unsigned short len, unsigned char *src)  __z88dk_cal
 
 extern void initfbcopy();
 extern void ingame();
+extern void init_ingame();
 
 void main()
 {         
@@ -59,7 +62,22 @@ void main()
     initfbcopy();
 
     framecounter = 0;
-    ingame();
     
-   
+    gamestate = 0;
+    
+    while(1)
+    {
+        switch (gamestate)
+        {
+        case 0:
+            init_ingame();
+            gamestate = 1;
+            break;
+        case 1:             
+            ingame();
+            break;
+        }    
+        framecounter++;
+
+    }       
 }

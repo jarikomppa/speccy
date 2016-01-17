@@ -3,11 +3,13 @@ extern unsigned char *data_ptr;
 extern unsigned char *screen_ptr;
 extern unsigned short framecounter;
 extern const unsigned short yofs[];
+extern char gamestate;
 
 #define COLOR(BLINK, BRIGHT, PAPER, INK) (((BLINK) << 7) | ((BRIGHT) << 6) | ((PAPER) << 3) | (INK))
 
 extern void playfx(unsigned short fx) __z88dk_fastcall;  
 extern void cp(unsigned char *dst, unsigned short len, unsigned char *src)  __z88dk_callee;
+extern void drawstring(unsigned char *t, unsigned char x, unsigned char y);
 
 #include "hwif.c"
 #include "bg.h"
@@ -30,8 +32,19 @@ struct Enemy enemy[18];
 unsigned char player_y;
 unsigned char player_x;
 unsigned char playsound;
+char recharge;  
+char player_xm;
+char player_ym;
+char bgi;
+unsigned short bgo;
+char spritemux;
+char next_enemyslot;
+char needclean;
+char hp;
 
-char needclean = 16;
+unsigned char spawnbuf;
+unsigned char spawninc;
+
 void attribclean()
 {
     unsigned short i;    
@@ -85,6 +98,7 @@ void kill(char i)
     enemy[i].life = 0;
     attribmess(enemy[i].x/8,enemy[i].y/8,COLOR(0,1,0,2));
     playsound = 2;
+    next_enemyslot = i;
 }
 
 void kill_enemies(unsigned char y)
@@ -102,6 +116,17 @@ void kill_enemies(unsigned char y)
         }
     }
 }
+
+
+void hurtplayer()
+{
+    if (hp == 0)
+        gamestate = 2;
+    else    
+    hp--;
+    *((char*)0x4000+192*32+7*32+14+hp) = 1;
+}
+
 void enemy_physics(char spriteofs)
 {
     char i;
@@ -115,7 +140,7 @@ void enemy_physics(char spriteofs)
             
             xe += enemy[i].xi;
             if (xe > (256 - 16)) xe = 8;        
-            if (xe < 4) xe = 240; //(256 - 16);
+            if (xe < 4) enemy[spriteidx].life = 0;//xe = 240; //(256 - 16);
     
             ye += enemy[spriteidx].yi;
             if (ye < 8) enemy[spriteidx].yi = -enemy[spriteidx].yi;//176;
@@ -146,6 +171,7 @@ void enemy_physics(char spriteofs)
                     x < xe + 16 &&
                     y < ye + 16)
                 {
+                    hurtplayer();
                     kill(spriteidx);
                 }
             }
@@ -153,131 +179,203 @@ void enemy_physics(char spriteofs)
     }
 }
 
-void ingame()
+void clear_guncharge()
 {
-    char recharge = 0;  
-    char player_xm = 0;
-    char player_ym = 0;
-    char bgi = 1;
-    unsigned short bgo = 0;
-    char spritemux = 0;
-    unsigned short i;
-    unsigned char ci;
+    char c;
+    for (c = 0; c < 11; c++)
+    {
+        *((char*)0x4000+192*32+7*32+2+c) = 2;
+    }
+}
 
-    player_y = 10;
+void guncharge(char pos)
+{
+    *((char*)0x4000+192*32+7*32+2+pos/4) = 0x40 + (2<<3);
+}
+
+
+char spawncount;
+
+void init_ingame()
+{
+    unsigned short i;
+    recharge = 0;  
+    player_xm = 0;
+    player_ym = 0;
+    bgi = 1;
+    bgo = 0;
+    spritemux = 0;
+    needclean = 16;
+
+    player_y = 112;
     player_x = 10;
     playsound = 0;
+    
+    spawnbuf = 0;
+    spawninc = 3;
+    spawncount = 0;
+    
+    hp = 3;
+    *((char*)0x4000+192*32+7*32+14+0) = 0x44;
+    *((char*)0x4000+192*32+7*32+14+1) = 0x44;
+    *((char*)0x4000+192*32+7*32+14+2) = 0x44;
+
+    next_enemyslot = 0;
 
     for (i = 0; i < 18; i++)
     {
-        enemy[i].x = (i * 117) & 255;        
-        enemy[i].y = ((i * 17) & 127);        
-        if (enemy[i].y > 104) enemy[i].y -= 60;
-        if (enemy[i].y < 8) enemy[i].y += 60;
-        enemy[i].xi = -(((i & 7) + 1));
-        enemy[i].yi = ((i * 3) & 7) - 4;
-        enemy[i].life = 1;
+        enemy[i].life = 0;
     }
     
     enemy_physics(0);
     enemy_physics(1);
     enemy_physics(2);
+    
+    clear_guncharge();
+    drawstring("Score: 00000", 18, 56);
+    drawstring("Gun charged", 2, 56);
+             // 12345678901
+    drawstring("***", 14, 56);
+}
 
-    while(1)
+void spawn_enemy()
+{
+    struct Enemy *e;
+    char c = 0;
+    while (c < 18 && enemy[next_enemyslot].life != 0)
     {
-        char spriteofs = 0;
-        framecounter++;
-        do_halt(); // halt waits for interrupt - or vertical retrace
-        
-        port254(1);
-        // can do about 64 scanlines in a frame (with nothing else)
-        //fbcopy(s_png + sinofs[framecounter & 0xff] * 32, 64, 110);
-        // Let's do interlaced copy instead =)
-        i = ((player_y) + (bgo << 1)) / 16;
-        fbcopy_i(i, (framecounter >> 2) & 31, 13);
-            
-        bgo += bgi;
-        if (bgo == 0) bgi = 1;
-        if (bgo == (126 << 1)) bgi = -1;
-        port254(2);
+        c++;
+        next_enemyslot++;
+        if (next_enemyslot == 18)
+            next_enemyslot = 0;
+    }
+    if (c == 18)
+        return;
+    e = enemy + next_enemyslot;
+    e->x = 240;        
+    e->y = ((framecounter * 17) & 127);        
+    if (e->y > 104) e->y -= 60;
+    if (e->y < 8) e->y += 60;
+    e->xi = -(((framecounter & 7) + 1));
+    e->yi = ((framecounter * 3) & 7) - 4;
+    e->life = 1;
+    spawncount++;
+    if (spawncount > 10)
+    {
+        spawncount = 0;
+        spawninc++;
+        if (spawninc > 50)
+            spawninc = 50;
+    }
+}
 
+
+void ingame()
+{
+    unsigned short i;
+    unsigned char ci;    
+
+    char spriteofs = 0;
+    do_halt(); // halt waits for interrupt - or vertical retrace
+ 
+    
+    
+    port254(1);
+    // can do about 64 scanlines in a frame (with nothing else)
+    //fbcopy(s_png + sinofs[framecounter & 0xff] * 32, 64, 110);
+    // Let's do interlaced copy instead =)
+    i = ((player_y) + (bgo << 1)) / 16;
+    fbcopy_i(i, (framecounter >> 2) & 31, 13);
+        
+    bgo += bgi;
+    if (bgo == 0) bgi = 1;
+    if (bgo == (126 << 1)) bgi = -1;
+    port254(2);
+
+    spriteofs = 6 * spritemux;
+    spritemux++;
+    if (spritemux == 3) spritemux = 0;
+
+    if (playsound)
+    {
+        playfx(playsound - 1);
+    }
+    else
+    {
         spriteofs = 6 * spritemux;
         spritemux++;
         if (spritemux == 3) spritemux = 0;
-
-        if (playsound)
-        {
-            playfx(playsound - 1);
-        }
-        else
-        {
-            spriteofs = 6 * spritemux;
-            spritemux++;
-            if (spritemux == 3) spritemux = 0;
-            
-            for (ci = 0; ci < 6; ci++, spriteofs++)
-            {
-                if (enemy[spriteofs].life != 0)
-                {
-                    drawsprite_16(rock_16, enemy[spriteofs].x, enemy[spriteofs].y + 64);
-                }
-            }        
-        }
         
-        playsound = 0;
-
-        drawsprite_16(ship, player_x / 2, player_y / 2 + 64);
+        for (ci = 0; ci < 6; ci++, spriteofs++)
+        {
+            if (enemy[spriteofs].life != 0)
+            {
+                drawsprite_16(rock_16, enemy[spriteofs].x, enemy[spriteofs].y + 64);
+            }
+        }        
+    }
     
-        port254(1);
-        
-        enemy_physics(spritemux);
-        
-        readkeyboard();
-        
-        if (!KEYUP(Q)) player_ym -= 5;
-        if (!KEYUP(A)) player_ym += 5;
-        if (!KEYUP(O)) player_xm -= 5;
-        if (!KEYUP(P)) player_xm += 5;
-       
-        player_xm = (player_xm * 3) / 4;
-        player_ym = (player_ym * 3) / 4;
-                        
-        player_x += player_xm / 2;
-        player_y += player_ym / 2;
-        
-        if (player_x < 8) 
-            {
-                player_x = 8;
-            }
-        if (player_x > 240) 
-            {
-                player_x = 240;               
-            }
-        if (player_y < 8) 
-            {
-                player_y = 8;
-            }
-        if (player_y > 208) 
-            {
-                player_y = 208;
-            }
+    playsound = 0;
 
-        if (recharge == 25 && !KEYUP(SPACE))
+    drawsprite_16(ship, player_x / 2, player_y / 2 + 64);
+
+    port254(1);
+    
+    enemy_physics(spritemux);
+    
+    readkeyboard();
+    
+    if (!KEYUP(Q)) player_ym -= 5;
+    if (!KEYUP(A)) player_ym += 5;
+    if (!KEYUP(O)) player_xm -= 5;
+    if (!KEYUP(P)) player_xm += 5;
+   
+    player_xm = (player_xm * 3) / 4;
+    player_ym = (player_ym * 3) / 4;
+                    
+    player_x += player_xm / 2;
+    player_y += player_ym / 2;
+    
+    if (player_x < 8) 
         {
-            kill_enemies(player_y/32);
-            attribline(player_x/16+2,player_y/16+2,COLOR(1,1,6,2));
-            recharge = 0;
-            playsound = 1;
+            player_x = 8;
         }
-        
-        if (recharge < 25 && KEYUP(SPACE))
+    if (player_x > 240) 
         {
-            recharge++;
+            player_x = 240;               
+        }
+    if (player_y < 8) 
+        {
+            player_y = 8;
+        }
+    if (player_y > 208) 
+        {
+            player_y = 208;
         }
 
-        port254(5);
-        attribclean();
-        port254(0);                                             
-        scroller(0);
-    } 
+    if (recharge == 40 && !KEYUP(SPACE))
+    {
+        kill_enemies(player_y/32);
+        attribline(player_x/16+2,player_y/16+2,COLOR(1,1,6,2));
+        recharge = 0;
+        playsound = 1;
+        clear_guncharge();
+    }
+    
+    if (recharge < 40 && KEYUP(SPACE))
+    {
+        recharge++;
+        guncharge(recharge);
+    }
+
+    port254(5);
+    attribclean();
+    port254(0);                                             
+    scroller(0);    
+    spawnbuf += spawninc;
+    if (spawnbuf > 220)
+    {
+        spawn_enemy();
+        spawnbuf = 0;        
+    }
 }

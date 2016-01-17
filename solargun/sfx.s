@@ -178,10 +178,10 @@ SoundEffectsData:
 	.dw #SoundEffect1Data
 
 SoundEffect0Data:
-	.db 2 ;noise
-	.dw 20,50,10
-	.db 0
-SoundEffect1Data:
 	.db 1 ;tone
 	.dw 200,2,2000,65531,128
+	.db 0
+SoundEffect1Data:
+	.db 2 ;noise
+	.dw 20,50,10
 	.db 0
