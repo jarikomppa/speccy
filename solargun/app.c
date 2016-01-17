@@ -47,15 +47,9 @@ extern void mainmenu();
 
 void main()
 {         
-    unsigned short i;
-    unsigned char *dst;//, *src;
-
     do_halt();
-    
-    dst = (unsigned char*)(0x4000 + (32*192));// + 20*32);
-    for (i = 0; i < 32*24; i++)
-        *dst++ = 7;
-    
+    do_port254(0);
+        
     cp((unsigned char*)0x4000, 32*64, (char*)0x5b00);
     cp((unsigned char*)0x4000+(32*192), 32*8, (char*)0x5b00+32*64);
     

@@ -18,11 +18,20 @@ void mainmenu()
     unsigned short i;
     for (i = 0; i < 128*32; i++)
         *((unsigned char*)0x4000+64*32 + i) = 0;
-    for (i = 0; i < 32*16; i++)
+    for (i = 0; i < 32*8; i++)
         *((unsigned char*)0x4000+192*32+ 8*32 + i) = 7;    
+    for (i = 0; i < 32*8; i++)
+        *((unsigned char*)0x4000+192*32+ 16*32 + i) = 3;    
         
     drawstring("Pick controls:", 2, 80);
     drawstring("1) OPQA space", 2, 96);
+        
+              //12345678901234567890123456789012
+    drawstring("  Navigate through an unending", 0, 136);
+    drawstring("         asteroid field.",0,144);
+    drawstring("     Avoid a rock = 1 point", 0, 152);
+    drawstring("    Shoot a rock = 10 points", 0, 160);
+    drawstring("   - never tell me the odds -", 0, 176);
         
     while (1)
     {

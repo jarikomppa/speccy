@@ -154,26 +154,24 @@ void readkeyboard()
     __endasm;
 }
 
-void port254(const unsigned char color) __z88dk_fastcall
-{
-    color;
-}
-/*
 // xxxsmbbb
 // where b = border color, m is mic, s is speaker
-void port254(const unsigned char color) __z88dk_fastcall
+void do_port254(const unsigned char color) __z88dk_fastcall
 {
     color; // color is in l
     // Direct border color setting
     __asm
         ld a,l
-        ld hl, #_port254tonebit
-        or a, (hl)
         out (254),a
     __endasm;    
     
 }
-*/
+
+void port254(const unsigned char color) __z88dk_fastcall
+{
+    color;
+    // do_port254(color);
+}
 
 // practically waits for retrace
 void do_halt()
