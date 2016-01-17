@@ -42,8 +42,37 @@ char next_enemyslot;
 char needclean;
 char hp;
 
+unsigned short score;
 unsigned char spawnbuf;
 unsigned char spawninc;
+unsigned char scoredirty;
+
+void addscore(unsigned char val)
+{
+    if (score != 0x9999)
+    {
+        score+=val;
+        if ((score & 0xf) >= 0xa) score += 0x6;
+        if ((score & 0xf0) >= 0xa0) score += 0x60;
+        if ((score & 0xf00) >= 0xa00) score += 0x600;    
+        if (score > 0x9999) score = 0x9999;
+        scoredirty = 1;
+    }
+}
+
+void printscore()
+{
+    if (scoredirty)
+    {
+        char temp[5] = "0000";
+        temp[3] += (score >> 0) & 0xf;
+        temp[2] += (score >> 4) & 0xf;
+        temp[1] += (score >> 8) & 0xf;
+        temp[0] += (score >> 12) & 0xf;
+        drawstring(temp, 26, 56);
+        scoredirty = 0;
+    }
+}
 
 void attribclean()
 {
@@ -112,19 +141,23 @@ void kill_enemies(unsigned char y)
                 enemy[i].y / 16 == y)
             {
                 kill(i);
+                addscore(0x10);
             }
         }
     }
 }
 
-
 void hurtplayer()
 {
     if (hp == 0)
+    {
         gamestate = 2;
+    }
     else    
-    hp--;
-    *((char*)0x4000+192*32+7*32+14+hp) = 1;
+    {
+        hp--;
+        *((char*)0x4000+192*32+7*32+15+hp) = 1;
+    }
 }
 
 void enemy_physics(char spriteofs)
@@ -140,7 +173,11 @@ void enemy_physics(char spriteofs)
             
             xe += enemy[i].xi;
             if (xe > (256 - 16)) xe = 8;        
-            if (xe < 4) enemy[spriteidx].life = 0;//xe = 240; //(256 - 16);
+            if (xe < 4) 
+            { 
+                enemy[spriteidx].life = 0;//xe = 240; //(256 - 16);
+                addscore(1);
+            }
     
             ye += enemy[spriteidx].yi;
             if (ye < 8) enemy[spriteidx].yi = -enemy[spriteidx].yi;//176;
@@ -206,6 +243,8 @@ void init_ingame()
     bgo = 0;
     spritemux = 0;
     needclean = 16;
+    score = 0;
+    scoredirty = 1;
 
     player_y = 112;
     player_x = 10;
@@ -216,9 +255,9 @@ void init_ingame()
     spawncount = 0;
     
     hp = 3;
-    *((char*)0x4000+192*32+7*32+14+0) = 0x44;
-    *((char*)0x4000+192*32+7*32+14+1) = 0x44;
-    *((char*)0x4000+192*32+7*32+14+2) = 0x44;
+    *((char*)0x4000+192*32+7*32+15+0) = 0x44;
+    *((char*)0x4000+192*32+7*32+15+1) = 0x44;
+    *((char*)0x4000+192*32+7*32+15+2) = 0x44;
 
     next_enemyslot = 0;
 
@@ -232,10 +271,10 @@ void init_ingame()
     enemy_physics(2);
     
     clear_guncharge();
-    drawstring("Score: 00000", 18, 56);
+    drawstring("Score:0000", 20, 56);
     drawstring("Gun charged", 2, 56);
              // 12345678901
-    drawstring("***", 14, 56);
+    drawstring("***", 15, 56);
 }
 
 void spawn_enemy()
@@ -269,16 +308,13 @@ void spawn_enemy()
     }
 }
 
-
 void ingame()
 {
     unsigned short i;
     unsigned char ci;    
 
     char spriteofs = 0;
-    do_halt(); // halt waits for interrupt - or vertical retrace
- 
-    
+    do_halt(); // halt waits for interrupt - or vertical retrace     
     
     port254(1);
     // can do about 64 scanlines in a frame (with nothing else)
@@ -378,4 +414,6 @@ void ingame()
         spawn_enemy();
         spawnbuf = 0;        
     }
+    
+    printscore();
 }
