@@ -5,7 +5,7 @@
  * (practically public domain)
 */
 
-unsigned char keydata[8];
+// Use HWIF_IMPLEMENTATION once in project
 
 #define MKEYBYTE(x) KEYBYTE_ ## x
 #define MKEYBIT(x) KEYBIT_ ## x
@@ -111,6 +111,17 @@ enum KEYS
     KEYBYTE_B     = 7 
 };
 
+#ifndef HWIF_IMPLEMENTATION
+
+extern unsigned char keydata[];
+extern void do_halt();
+extern void port254(const unsigned char color) __z88dk_fastcall;
+extern void readkeyboard();
+
+#else
+
+unsigned char keydata[8];
+
 void readkeyboard()
 {
     __asm
@@ -171,3 +182,5 @@ void do_halt()
         di
     __endasm;
 }
+
+#endif
