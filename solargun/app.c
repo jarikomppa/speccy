@@ -15,6 +15,7 @@ unsigned char *screen_ptr;
 unsigned short framecounter;
 
 unsigned char gamestate;
+char inputscheme;
 
 #define HWIF_IMPLEMENTATION
 
@@ -64,6 +65,8 @@ void main()
     framecounter = 0;
     
     gamestate = 3;
+    
+    inputscheme = 0;
     
     while(1)
     {

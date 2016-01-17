@@ -4,6 +4,7 @@ extern unsigned char *screen_ptr;
 extern unsigned short framecounter;
 extern const unsigned short yofs[];
 extern char gamestate;
+extern char inputscheme;
 
 #define COLOR(BLINK, BRIGHT, PAPER, INK) (((BLINK) << 7) | ((BRIGHT) << 6) | ((PAPER) << 3) | (INK))
 
@@ -314,7 +315,8 @@ void spawn_enemy()
 void ingame()
 {
     unsigned short i;
-    unsigned char ci;    
+    unsigned char ci;
+    char fire = 0;
 
     char spriteofs = 0;
     do_halt(); // halt waits for interrupt - or vertical retrace     
@@ -363,11 +365,33 @@ void ingame()
     enemy_physics(spritemux);
     
     readkeyboard();
-    
-    if (!KEYUP(Q)) player_ym -= 5;
-    if (!KEYUP(A)) player_ym += 5;
-    if (!KEYUP(O)) player_xm -= 5;
-    if (!KEYUP(P)) player_xm += 5;
+ 
+    if (inputscheme == 0)
+    {       
+        if (!KEYUP(Q)) player_ym -= 5;
+        if (!KEYUP(A)) player_ym += 5;
+        if (!KEYUP(O)) player_xm -= 5;
+        if (!KEYUP(P)) player_xm += 5;
+        if (!KEYUP(SPACE)) fire = 1;
+    }
+    else
+    if (inputscheme == 1)
+    {       
+        if (!KEYUP(9)) player_ym -= 5;
+        if (!KEYUP(8)) player_ym += 5;
+        if (!KEYUP(6)) player_xm -= 5;
+        if (!KEYUP(7)) player_xm += 5;
+        if (!KEYUP(0)) fire = 1;
+    }
+    else
+    if (inputscheme == 2)
+    {       
+        if (!KEYUP(KEMPU)) player_ym -= 5;
+        if (!KEYUP(KEMPD)) player_ym += 5;
+        if (!KEYUP(KEMPL)) player_xm -= 5;
+        if (!KEYUP(KEMPR)) player_xm += 5;
+        if (KEYUP(KEMPF)) fire = 1;
+    }        
    
     player_xm = (player_xm * 3) / 4;
     player_ym = (player_ym * 3) / 4;
@@ -376,23 +400,23 @@ void ingame()
     player_y += player_ym / 2;
     
     if (player_x < 8) 
-        {
-            player_x = 8;
-        }
+    {
+        player_x = 8;
+    }
     if (player_x > 240) 
-        {
-            player_x = 240;               
-        }
+    {
+        player_x = 240;               
+    }
     if (player_y < 8) 
-        {
-            player_y = 8;
-        }
+    {
+        player_y = 8;
+    }
     if (player_y > 208) 
-        {
-            player_y = 208;
-        }
+    {
+        player_y = 208;
+    }
 
-    if (recharge == 40 && !KEYUP(SPACE))
+    if (recharge == 40 && fire)
     {
         kill_enemies(player_y/32);
         attribline(player_x/16+2,player_y/16+2,COLOR(1,1,6,2));
@@ -401,7 +425,7 @@ void ingame()
         clear_guncharge();
     }
     
-    if (recharge < 40 && KEYUP(SPACE))
+    if (recharge < 40 && fire == 0)
     {
         recharge++;
         guncharge(recharge);

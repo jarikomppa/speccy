@@ -63,6 +63,11 @@ enum KEYS
     KEYBIT_N     = (1 << 3),
     KEYBIT_B     = (1 << 4),
 
+    KEYBIT_KEMPL = (1 << 0),
+    KEYBIT_KEMPR = (1 << 1),
+    KEYBIT_KEMPU = (1 << 2),
+    KEYBIT_KEMPD = (1 << 3),
+    KEYBIT_KEMPF = (1 << 4),
 
     KEYBYTE_SHIFT = 0,
     KEYBYTE_Z     = 0,
@@ -110,7 +115,13 @@ enum KEYS
     KEYBYTE_SYM   = 7,
     KEYBYTE_M     = 7,
     KEYBYTE_N     = 7,
-    KEYBYTE_B     = 7 
+    KEYBYTE_B     = 7,
+    
+    KEYBYTE_KEMPL = 8,
+    KEYBYTE_KEMPR = 8,
+    KEYBYTE_KEMPU = 8,
+    KEYBYTE_KEMPD = 8,
+    KEYBYTE_KEMPF = 8
 };
 
 #ifndef HWIF_IMPLEMENTATION
@@ -122,7 +133,7 @@ extern void readkeyboard();
 
 #else
 
-unsigned char keydata[8];
+unsigned char keydata[16];
 
 void readkeyboard()
 {
@@ -151,6 +162,9 @@ void readkeyboard()
         ld bc, #0x7ffe
         in a, (c)
         ld (#_keydata+7), a
+        ld bc, #31 ; kempston
+        in a, (c) 
+        ld (#_keydata+8), a
     __endasm;
 }
 

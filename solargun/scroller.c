@@ -5,8 +5,14 @@
  * (practically public domain)
 */
 
-const unsigned char scrolltext[] = ". .. ...   . .. SolarGun work in progress ... by Jari Komppa ... http://iki.fi/sol ... blah blah ... .. .   ... .. .    ";
-unsigned char scrolltext_idx = 0;
+const unsigned char scrolltext[] = 
+". .. ...   .   ... .. .  SolarGun 1.0 ... by Jari Komppa ... http://iki.fi/sol ... Packaged with Mackarel 2.1 ... "
+"Graphics conversion with Image Spectrumizer 3.0 ... Compiled with SDCC and z88dk ... Sound effects played via "
+"BeepFX by Shiru ... \"SolarGun\" name invented by Pekuja ... Uses zx7 compression by Einar Saukas ... "
+"All sources to this project are available, under very liberal license, in github: https://github.com/jarikomppa/speccy ... "
+" .. .          ";
+
+unsigned short scrolltext_idx = 0;
 unsigned char scrollcycle = 0;
 unsigned char nextdata;
 unsigned char vloop;
