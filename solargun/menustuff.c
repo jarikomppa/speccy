@@ -1,4 +1,3 @@
-unsigned char fbcopy_idx;
 extern unsigned char *data_ptr;
 extern unsigned char *screen_ptr;
 extern unsigned short framecounter;
@@ -13,6 +12,44 @@ extern void drawstring(unsigned char *t, unsigned char x, unsigned char y);
 extern void scroller(unsigned char y);
 
 #include "hwif.c"
+
+void mainmenu()
+{
+    unsigned short i;
+    for (i = 0; i < 128*32; i++)
+        *((unsigned char*)0x4000+64*32 + i) = 0;
+    for (i = 0; i < 32*16; i++)
+        *((unsigned char*)0x4000+192*32+ 8*32 + i) = 7;    
+        
+    drawstring("Pick controls:", 2, 80);
+    drawstring("1) OPQA space", 2, 96);
+        
+    while (1)
+    {
+        readkeyboard();
+        if (!ANYKEY())
+            break;
+        for (i = 0; i < 256; i++)
+            *((unsigned char*)0x4000+192*32+ 8*32 + i) = 7;    
+        scroller(0);
+        do_halt();
+        framecounter++;           
+    }
+    
+    while (1)
+    {
+        readkeyboard();
+        if (KEYDOWN(1))
+        {
+            return;
+        }
+        for (i = 0; i < 256; i++)
+            *((unsigned char*)0x4000+192*32+ 8*32 + i) = 7;    
+        scroller(0);
+        do_halt();
+        framecounter++;           
+    }    
+}
 
 void gameover()
 {
@@ -69,7 +106,7 @@ void gameover()
         readkeyboard();
         if (!ANYKEY())
             o = 1;
-        for (i = 0; i < 128; i++)
+        for (i = 0; i < 256; i++)
             *((unsigned char*)0x4000+192*32+ 8*32 + i) = 7;    
         scroller(0);
         do_halt();
@@ -81,7 +118,7 @@ void gameover()
         readkeyboard();
         if (ANYKEY())
             o = 0;
-        for (i = 0; i < 128; i++)
+        for (i = 0; i < 256; i++)
             *((unsigned char*)0x4000+192*32+ 8*32 + i) = 7;    
         scroller(0);
         do_halt();
@@ -93,12 +130,10 @@ void gameover()
         readkeyboard();
         if (!ANYKEY())
             o = 1;
-        for (i = 0; i < 128; i++)
+        for (i = 0; i < 256; i++)
             *((unsigned char*)0x4000+192*32+ 8*32 + i) = 7;    
         scroller(0);
         do_halt();
         framecounter++;
     }    
-    
-    gamestate = 0;
 }

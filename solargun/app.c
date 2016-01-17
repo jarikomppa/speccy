@@ -43,6 +43,7 @@ extern void initfbcopy();
 extern void ingame();
 extern void init_ingame();
 extern void gameover();
+extern void mainmenu();
 
 void main()
 {         
@@ -68,7 +69,7 @@ void main()
 
     framecounter = 0;
     
-    gamestate = 0;
+    gamestate = 3;
     
     while(1)
     {
@@ -83,6 +84,11 @@ void main()
             break;
         case 2:
             gameover();
+            gamestate = 3;
+            break;
+        case 3:
+            mainmenu();
+            gamestate = 0;
             break;
         }    
         framecounter++;
