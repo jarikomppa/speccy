@@ -42,6 +42,7 @@ void cp(unsigned char *dst, unsigned short len, unsigned char *src)  __z88dk_cal
 extern void initfbcopy();
 extern void ingame();
 extern void init_ingame();
+extern void gameover();
 
 void main()
 {         
@@ -57,6 +58,10 @@ void main()
     cp((unsigned char*)0x4000, 32*64, (char*)0x5b00);
     cp((unsigned char*)0x4000+(32*192), 32*8, (char*)0x5b00+32*64);
     
+    drawstring("Score:0000", 20, 56);
+    drawstring("Gun charged", 2, 56);
+             // 12345678901
+    drawstring("***", 15, 56);
     
     //initmusic();
     initfbcopy();
@@ -75,6 +80,9 @@ void main()
             break;
         case 1:             
             ingame();
+            break;
+        case 2:
+            gameover();
             break;
         }    
         framecounter++;

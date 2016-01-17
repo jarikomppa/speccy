@@ -10,6 +10,8 @@
 #define MKEYBYTE(x) KEYBYTE_ ## x
 #define MKEYBIT(x) KEYBIT_ ## x
 #define KEYUP(x) (keydata[MKEYBYTE(x)] & MKEYBIT(x))
+#define KEYDOWN(x) (!KEYUP(x))
+#define ANYKEY(x) (((keydata[0] & keydata[1] & keydata[2] & keydata[3] & keydata[4] & keydata[5] & keydata[6] & keydata[7]) & 0x1f) != 0x1f)
 
 enum KEYS
 {

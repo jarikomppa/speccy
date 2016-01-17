@@ -74,16 +74,23 @@ void printscore()
     }
 }
 
+const unsigned char spanattr[32] = { 
+    0x01, 0x41, 0x05, 0x07, 0x07, 0x07, 0x07, 0x07,
+    0x47, 0x47, 0x47, 0x47, 0x47, 0x47, 0x47, 0x47,
+    0x47, 0x47, 0x47, 0x47, 0x47, 0x47, 0x47, 0x47,
+    0x07, 0x07, 0x07, 0x07, 0x07, 0x05, 0x41, 0x01
+};
+
 void attribclean()
-{
+{    
     unsigned short i;    
-    char o;
+    unsigned short o;
     if (needclean == 0)
         return;
     needclean--;
     o = (framecounter * 3) & 15;
-    for (i = 0; i < 32*16; i += 16)
-        *((unsigned char*)0x4000+192*32+ 8*32+i + o) = 7;    
+    for (i = 0; i < 32; i++, o += 16)
+        *((unsigned char*)0x4000+192*32+ 8*32 + o) = spanattr[o & 31];    
 }
 
 void attribline(char x, char y, unsigned char c)
@@ -271,10 +278,6 @@ void init_ingame()
     enemy_physics(2);
     
     clear_guncharge();
-    drawstring("Score:0000", 20, 56);
-    drawstring("Gun charged", 2, 56);
-             // 12345678901
-    drawstring("***", 15, 56);
 }
 
 void spawn_enemy()
