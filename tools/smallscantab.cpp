@@ -27,12 +27,12 @@ int main(int parc, char ** pars)
             int res = 0;
             for (k = a; k <= b; k++)
             {
-                res |= 1 << k;
+                res |= 1 << (7-k);
             }
             fprintf(f, "0x%02x%s", res, ((i*8+j)==63)?" ":",");
             fprintf(f, " // %d,%d - ", i, j);
             for (k = 0; k < 8; k++)
-                fprintf(f, "%d", (res & (1 << k)) != 0);
+                fprintf(f, "%d", (res & (1 << (7-k))) != 0);
             fprintf(f, "\n");                    
         }                 
     }
