@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "../common/stb_image.h"
 
 void fprintbin(FILE *f, int val)
 {
@@ -64,8 +64,16 @@ int main(int parc, char ** pars)
     }    
 
     FILE * f = fopen(pars[2],"w");
+    char name[64];
+    i = 0;
+    while (pars[2][i] != '.')
+    {
+        name[i] = pars[2][i];
+        i++;
+    }
+    name[i] = 0;
 
-    fprintf(f, "const unsigned char bubble[(%d + 1) * %d * 2 * 8] = {\n", x/8, y);
+    fprintf(f, "const unsigned char %s[(%d + 1) * %d * 2 * 8] = {\n", name, x/8, y);
     int shift;
     for (shift = 0; shift < 8; shift++)
     {
