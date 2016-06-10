@@ -619,6 +619,44 @@ void ingame()
     
     while (!done)
     {
+        unsigned short q = xorshift16() & 255;
+        while (q >= 250) q = xorshift16() & 255;
+        get_question(q);
+        robotalk = 0;
+        clearfields(1,1);
+
+        while (keydown == 0)
+        {
+            readkeyboard();
+            drawstringfancy(tempa1+1,3,16,7,(robotalk < *tempa1) ? robotalk : *tempa1);
+            drawstringfancy(tempa2+1,17,16,7,(robotalk < *tempa2) ? robotalk : *tempa2);
+            drawstringfancy(tempa3+1,3,20,7,(robotalk < *tempa3) ? robotalk : *tempa3);
+            drawstringfancy(tempa4+1,17,20,7,(robotalk < *tempa4) ? robotalk : *tempa4);
+            drawstringfancy(tempq+1,15,1,7,(robotalk < *tempq) ? robotalk : *tempq);
+            if (robotalk >= *tempq)
+            {
+                mouth(0x66);
+                eyes(!(robotalk & 0x80));
+            }
+            else
+            {
+                mouth(tempq[robotalk]);
+                eyes(!(robotalk & 0xc));
+            }
+            do_halt();
+            do_halt();
+            do_halt();
+            do_halt();
+            if (KEYDOWN(1))
+                keydown = 1;
+            robotalk++;
+        }        
+        while (ANYKEY())
+        {
+            readkeyboard();
+        }
+        keydown = 0;
+        
         turn++;
         if (turn == maxturn)
             done = 1;
