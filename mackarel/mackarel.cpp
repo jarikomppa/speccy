@@ -957,8 +957,9 @@ void sanity_checks()
     if (gOptLowBlockAddr + gOptLowBlockLen > gExecAddr)
         { ok = 0; printf("\nError: Low block (0x%04x-0x%04x) overlaps with code block (0x%04x-) (low block too big?)\n", 
             gOptLowBlockAddr, gOptLowBlockAddr + gOptLowBlockLen, gExecAddr); }
-    if (gBootExecAddr < gExecAddr)
-        { ok = 0; printf("\nError: Compressed image (0x%04x-) must start later in memory than uncompressed (0x%04x-)\n", gBootExecAddr, gExecAddr); }
+    // over-zealous. TODO: should compare to code block start, not compressed lowblock start
+    //if (gBootExecAddr < gExecAddr)
+        //{ ok = 0; printf("\nError: Compressed image (0x%04x-) must start later in memory than uncompressed (0x%04x-)\n", gBootExecAddr, gExecAddr); }
 
     if (gExecAddr + gImageSize - gOptMoveBack == gMaxAddr)
         { printf("\nWarning: compressed and decompressed images end at same address, success of decompression uncertain. Use -moveback\n\n"); }
