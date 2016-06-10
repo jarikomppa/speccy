@@ -1,0 +1,63 @@
+{
+    "About": {
+        "WhatIsThis": "Image Spectrumizer 4.0 workspace file",
+        "Magic": "0x50534D49",
+        "Version": 4
+    },
+    "Config": {
+        "gWindowAbout": 0,
+        "gWindowAttribBitmap": 0,
+        "gWindowHelp": 0,
+        "gWindowHistograms": 0,
+        "gWindowModifierPalette": 0,
+        "gWindowOptions": 0,
+        "gWindowZoomedOutput": 0,
+        "gWindowZoomedModified": 0,
+        "gWindowZoomedInput": 0,
+        "gOptShowOriginal": 1,
+        "gOptShowModified": 1,
+        "gOptShowResult": 1,
+        "gOptImagesDocked": 1,
+        "gOptTrackFile": 1,
+        "gOptTopmost": 0,
+        "gDeviceId": 0
+    },
+    "Device": {
+        "Name": "ZXSpectrum",
+        "mOptAttribOrder": 0,
+        "mOptBright": 0.500000,
+        "mOptPaper": 0,
+        "mOptCellSize": 0,
+        "mOptScreenOrder": 1,
+        "mOptWidthCells": 32,
+        "mOptHeightCells": 24,
+        "mOptConversionMode": 0,
+        "mOptPivotBias": 0.500000
+    },
+    "Stack": {
+        "Item[0]": {
+            "Name": "ScalePos",
+            "Type": 1,
+            "mEnabled": 1,
+            "mR_en": 1,
+            "mG_en": 1,
+            "mB_en": 1,
+            "mX": 0,
+            "mY": 0,
+            "mHQ": 0,
+            "mScale": 0.500000
+        },
+        "Item[1]": {
+            "Name": "OrderedDither",
+            "Type": 6,
+            "mEnabled": 1,
+            "mR_en": 1,
+            "mG_en": 1,
+            "mB_en": 1,
+            "mV": 1,
+            "mXOfs": 0,
+            "mYOfs": 0,
+            "mMatrix": 4
+        }
+    }
+}
