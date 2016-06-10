@@ -234,6 +234,18 @@ void clearfields(char q, char a)
         st((unsigned char*)yofs[20 * 8 + i] +  3, 0, 12);
         st((unsigned char*)yofs[20 * 8 + i] + 17, 0, 12);
     }
+    st((unsigned char*)0x5800+16*32+3,7,12);
+    st((unsigned char*)0x5800+17*32+3,7,12);
+
+    st((unsigned char*)0x5800+20*32+3,7,12);
+    st((unsigned char*)0x5800+21*32+3,7,12);
+
+    st((unsigned char*)0x5800+16*32+17,7,12);
+    st((unsigned char*)0x5800+17*32+17,7,12);
+
+    st((unsigned char*)0x5800+20*32+17,7,12);
+    st((unsigned char*)0x5800+21*32+17,7,12);
+
 }
 
 void setplayerbright(unsigned char player, unsigned char bright)
@@ -590,9 +602,55 @@ void mainmenu()
         }
         
         robotalk++;
-        
-        
+        xorshift16();        
     }    
+}
+
+void ingame()
+{
+    char done = 0;
+    unsigned short turn = 0;
+    unsigned short maxturn = 0;
+    unsigned short robotalk;
+    unsigned char keydown = 0;
+    char i;
+    for (i = 0; i < players; i++)
+        maxturn += 12;
+    
+    while (!done)
+    {
+        turn++;
+        if (turn == maxturn)
+            done = 1;
+    }
+    clearfields(1,1);
+    eyes(0);
+    
+    robotalk = 0;
+    for (robotalk = 0; robotalk < 200; robotalk++)
+    {
+        static const char blurb[] =
+        //1234567890123456
+         "And that was\n"
+         "our game.\n"
+         "\n"
+         "What fun we\n"
+         "had.\n"
+         "\n"
+         "Play again\n"
+         "sometime,\n"
+         "I won't mind.";
+        drawstringfancy(blurb, 15, 1, 7, robotalk);
+        do_halt();
+        do_halt();
+        do_halt();
+        do_halt();
+        if (robotalk < sizeof(blurb))
+            mouth(blurb[robotalk]);
+        else
+            mouth(0x66);
+    }
+    
 }
 
 void main()
@@ -613,37 +671,22 @@ void main()
         
     cp((unsigned char*)0x4000, 6912, (char*)0x5b00);
                
-               
-    mainmenu();
-     
     y8 = 1;
+    y16 = 1;
+      
+    while(1)
+    {         
+        mainmenu();
+        ingame();
+    }
+
 /*
-    drawstringfancy("1234567890123456", 15, 2, 7, 5);
-    drawstringfancy("1234567890123456", 15, 3, 7, 25);
-    drawstringfancy("1234567890123456", 15, 4, 7, 255);
-    drawstringfancy("1234567890123456", 15, 5, 7, 255);
-    drawstringfancy("1234567890123456", 15, 6, 7, 255);
-    drawstringfancy("1234567890123456", 15, 7, 7, 255);
-    drawstringfancy("1234567890123456", 15, 8, 7, 255);
-    drawstringfancy("1234567890123456", 15, 9, 7, 255);
-*/
-    
-    drawstringfancy("000", 6, 13, 7, 255);
-    drawstringfancy("000", 12, 13, 7, 255);
-    drawstringfancy("000", 18, 13, 7, 255);
-    drawstringfancy("000", 24, 13, 7, 255);
-    
+         
     drawstringfancy(tempa1+1,3,16,7,*tempa1);
     drawstringfancy(tempa2+1,17,16,7,*tempa2);
     drawstringfancy(tempa3+1,3,20,7,*tempa3);
     drawstringfancy(tempa4+1,17,20,7,*tempa4);
 
-/*
-    print_keys(0,3);
-    print_keys(1,2);
-    print_keys(2,1);
-    print_keys(3,0);
-*/
     print_keys(0,0);
     while(1) 
     {
@@ -674,17 +717,18 @@ void main()
         setplayerbright(2, (framecounter & 3) == 2);
         setplayerbright(3, (framecounter & 3) == 3);
         
-        /*
+      
         drawstringfancy("This is some\n"
                         "rather fancy\n"
                         "writing that\n"
                         "happens to have\n"
                         "mostly same\n"
                         "length lines.", 15, 1, blinky[framecounter & 3], framecounter);
-                        */
+      
         do_halt();
         do_halt();
         
     }
+    */
 
 }
