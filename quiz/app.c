@@ -157,6 +157,22 @@ void print_keys(unsigned char player, unsigned char ofs)
     drawstringfancy(k4, 17+11-ofs,21,c,1);
 }
 
+void mouth(unsigned char v)
+{
+    unsigned char v1 = v | 0xc0;
+    unsigned char v2 = v | 0x07;
+    *((unsigned char*)(yofs[31]+5)) = v2;
+    *((unsigned char*)(yofs[32]+5)) = v2;
+    *((unsigned char*)(yofs[33]+5)) = v2;
+    *((unsigned char*)(yofs[34]+5)) = v2;
+
+    *((unsigned char*)(yofs[31]+4)) = v1;
+    *((unsigned char*)(yofs[32]+4)) = v1;
+    *((unsigned char*)(yofs[33]+4)) = v1;
+    *((unsigned char*)(yofs[34]+4)) = v1;
+    
+}
+
 void main()
 {   
     short i;
@@ -221,8 +237,19 @@ void main()
     {
         static const blinky[4] = {7,3,1,5};
         framecounter++;
+        i = framecounter;
         
-        drawstringfancy(tempq+1,15,1,7,*tempq);
+        if (i > *tempq) i = *tempq;
+        drawstringfancy(tempq+1,15,1,7,i);
+        if (i == *tempq)
+        {
+            mouth(0x66);
+        }
+        else
+        {
+            mouth(tempq[i]);
+        }
+        
         
         /*
         drawstringfancy("This is some\n"
