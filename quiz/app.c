@@ -173,6 +173,31 @@ void mouth(unsigned char v)
     
 }
 
+void eyes(unsigned char v)
+{
+    switch (v)
+    {
+        default:
+        case 0:
+        *((unsigned char*)(yofs[24]+4)) = 0xce;
+        *((unsigned char*)(yofs[25]+4)) = 0xce;
+        *((unsigned char*)(yofs[26]+4)) = 0xc0;
+        *((unsigned char*)(yofs[24]+5)) = 0x1c;
+        *((unsigned char*)(yofs[25]+5)) = 0x1c;
+        *((unsigned char*)(yofs[26]+5)) = 0;
+        break;
+        case 1:
+        *((unsigned char*)(yofs[24]+4)) = 0xc0;
+        *((unsigned char*)(yofs[25]+4)) = 0xce;
+        *((unsigned char*)(yofs[26]+4)) = 0xce;
+        *((unsigned char*)(yofs[24]+5)) = 0;
+        *((unsigned char*)(yofs[25]+5)) = 0x1c;
+        *((unsigned char*)(yofs[26]+5)) = 0x1c;
+        break;
+    }
+
+}
+
 void main()
 {   
     short i;
@@ -244,11 +269,14 @@ void main()
         if (i == *tempq)
         {
             mouth(0x66);
+            eyes(0);
         }
         else
         {
             mouth(tempq[i]);
+            eyes(tempq[i] & 1);
         }
+        
         
         
         /*
