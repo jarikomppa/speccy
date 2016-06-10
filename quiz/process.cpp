@@ -435,7 +435,7 @@ void wordwrap()
     {
         for (j = 0; j < 5; j++)
         {            
-            wrapstring(question[i].a[j], (j==0)? 24 : 12);
+            wrapstring(question[i].a[j], (j==0)? 16 : 12);
         }
     }
 }
