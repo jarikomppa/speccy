@@ -39,10 +39,20 @@ void cp(unsigned char *dst, unsigned short len, unsigned char *src)  __z88dk_cal
 
 // returns values from 1 to 255 inclusive, period is 255
 unsigned char y8;
-unsigned char xorshift8(void) {
+unsigned char xorshift8(void) 
+{
     y8 ^= (y8 << 7);
     y8 ^= (y8 >> 5);
     return y8 ^= (y8 << 3);
+}
+
+// returns values from 1 to 65535 inclusive, period is 65535
+unsigned short y16;
+unsigned short xorshift16(void) 
+{
+    y16 ^= (y16 << 13);
+    y16 ^= (y16 >> 9);
+    return y16 ^= (y16 << 7);
 }
 
 void setcolor(char x, char y, unsigned char c)
