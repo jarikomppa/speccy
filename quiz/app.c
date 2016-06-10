@@ -619,19 +619,40 @@ void ingame()
     
     while (!done)
     {
-        unsigned short q = xorshift16() & 255;
+        char *a[4];
+        char correct;
+        unsigned short q;
+
+        clearfields(1,1);
+        q = xorshift16() & 255;
         while (q >= 250) q = xorshift16() & 255;
         get_question(q);
+        a[0] = tempa1;
+        a[1] = tempa2;
+        a[2] = tempa3;
+        a[3] = tempa4;
+        for (i = 0; i < 8; i++)
+        {
+            char s1 = xorshift8() & 3;
+            char s2 = xorshift8() & 3;
+            char *t = a[s1];
+            a[s1] = a[s2];
+            a[s2] = t;
+        }
+        correct = 0;
+        if (a[0] == tempa1) correct = 0;
+        if (a[1] == tempa1) correct = 1;
+        if (a[2] == tempa1) correct = 2;
+        if (a[3] == tempa1) correct = 3;
         robotalk = 0;
-        clearfields(1,1);
 
         while (keydown == 0)
         {
             readkeyboard();
-            drawstringfancy(tempa1+1,3,16,7,(robotalk < *tempa1) ? robotalk : *tempa1);
-            drawstringfancy(tempa2+1,17,16,7,(robotalk < *tempa2) ? robotalk : *tempa2);
-            drawstringfancy(tempa3+1,3,20,7,(robotalk < *tempa3) ? robotalk : *tempa3);
-            drawstringfancy(tempa4+1,17,20,7,(robotalk < *tempa4) ? robotalk : *tempa4);
+            drawstringfancy(a[0]+1,3,16,7,(robotalk < *a[0]) ? robotalk : *a[0]);
+            drawstringfancy(a[1]+1,17,16,7,(robotalk < *a[1]) ? robotalk : *a[1]);
+            drawstringfancy(a[2]+1,3,20,7,(robotalk < *a[2]) ? robotalk : *a[2]);
+            drawstringfancy(a[3]+1,17,20,7,(robotalk < *a[3]) ? robotalk : *a[3]);
             drawstringfancy(tempq+1,15,1,7,(robotalk < *tempq) ? robotalk : *tempq);
             if (robotalk >= *tempq)
             {
@@ -650,11 +671,27 @@ void ingame()
             if (KEYDOWN(1))
                 keydown = 1;
             robotalk++;
-        }        
+        }
+        
+        setanswerbright(correct, 1);
+        for (i = 0; i < 15; i++) do_halt();
+        setanswerbright(correct, 0);
+        for (i = 0; i < 15; i++) do_halt();
+        setanswerbright(correct, 1);
+        for (i = 0; i < 15; i++) do_halt();
+        setanswerbright(correct, 0);
+        for (i = 0; i < 15; i++) do_halt();
+        setanswerbright(correct, 1);
+        for (i = 0; i < 15; i++) do_halt();
+        setanswerbright(correct, 0);
+        
         while (ANYKEY())
         {
             readkeyboard();
         }
+        
+        // if a[x] == tempa1, we have correct answer
+        
         keydown = 0;
         
         turn++;
