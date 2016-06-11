@@ -6,7 +6,6 @@
 struct Question
 {
     char * a[5];
-    int l[5];
     char * c[5];
 };
 
@@ -48,6 +47,17 @@ void parsefield(char *in, char *out, int len)
     }
 }
 
+char * mystrdup(char * a)
+{
+    if (!a) return 0;
+    int len = strlen(a);
+    char *str = (char*)malloc(len + 256); // allocate enough extra for our word wrap
+    if (!str)
+        return 0;
+    memcpy(str, a, len+1);
+    return str;
+}
+
 int parse(char * aFilename)
 {
     char buf[256];
@@ -62,31 +72,21 @@ int parse(char * aFilename)
         if (buf[0])
         {
             parsefield(buf, out, 72);
-            question[maxquestion].a[0] = strdup(out);
-            question[maxquestion].l[0] = strlen(out);
+            question[maxquestion].a[0] = mystrdup(out);
             parsefield(buf+72+20*0, out, 20);
-            question[maxquestion].a[1] = strdup(out);
-            question[maxquestion].l[1] = strlen(out);
+            question[maxquestion].a[1] = mystrdup(out);
             parsefield(buf+72+20*1, out, 20);
-            question[maxquestion].a[2] = strdup(out);
-            question[maxquestion].l[2] = strlen(out);
+            question[maxquestion].a[2] = mystrdup(out);
             parsefield(buf+72+20*2, out, 20);
-            question[maxquestion].a[3] = strdup(out);
-            question[maxquestion].l[3] = strlen(out);
+            question[maxquestion].a[3] = mystrdup(out);
             parsefield(buf+72+20*3, out, 20);
-            question[maxquestion].a[4] = strdup(out);
-            question[maxquestion].l[4] = strlen(out);
+            question[maxquestion].a[4] = mystrdup(out);
             int correct = buf[152] - '0';
             if (correct != 1)
             {
                 char *temp = question[maxquestion].a[1];
                 question[maxquestion].a[1] = question[maxquestion].a[correct];
                 question[maxquestion].a[correct] = temp;
-
-                int templ = question[maxquestion].l[1];
-                question[maxquestion].l[1] = question[maxquestion].l[correct];
-                question[maxquestion].l[correct] = templ;
-
             }
             maxquestion++;            
         }
@@ -183,23 +183,6 @@ int sorter(const void * a, const void * b)
     return substringvalue[*(int*)b] - substringvalue[*(int*)a];
 }
 
-void sort(int* base, size_t num, size_t size, int (*compar)(const void*,const void*))
-{
-    int i, j;
-    for (i = 0; i < num; i++)
-    {
-        for (j = i+1; j < num; j++)
-        {
-            if (compar((void*)(base+i), (void*)(base+j)) > 0)
-            {
-                int x = *(base+i);
-                *(base+i) = *(base+j);
-                *(base+j) = x;
-            }
-        }
-    }        
-}
-
 
 void calcvalues()
 {
@@ -222,7 +205,7 @@ void compress()
         for (j = 0; j < 5; j++)
         {
             char * str = question[i].a[j];
-            int    len = question[i].l[j];
+            int    len = strlen(str);
             for (k = 0; k < len - 1; k++)
             {
                 int max = len + 1 - k;
@@ -272,7 +255,7 @@ void compress()
         {
             for (j = 0; j < 5; j++)
             {
-                int len = question[i].l[j];
+                int len = strlen(question[i].a[j]);
                 for (k = 0; k < len - 1;)
                 {
                     int max = len + 1 - k - 1;
@@ -289,7 +272,7 @@ void compress()
                         int plen   =  substringlen[substringorder[p]];
                         int phash  = substringhash[substringorder[p]];
                         
-                        if (plen <= max && phash == h[plen-1])
+                        if (plen <= max && plen-1 > 0 && phash == h[plen-1])
                         {
                             found = 1;
                             int x;
@@ -350,7 +333,7 @@ void compress()
         {
             char temp[128];
             int outidx = 0;
-            int len = question[i].l[j];
+            int len = strlen(question[i].a[j]);
             for (k = 0; k < len;)
             {
                 int max = len + 1 - k - 1;
@@ -405,28 +388,147 @@ void compress()
 }
 
 
-void wrapstring(char *str, int len)
+int try_wrapstring(char *str, int maxlen, int maxrows)
 {
-    //if (*str >= 'A' && *str <= 'Z') *str += 'a' - 'A';
-    
+    char *str0 = str;
     int x = 0;
+    int y = 0;
     while (*str)
     {
-        if (*str == ' ')
+        if (x >= maxlen)
         {
-            int w = 1;
-            while (str[w] > ' ') w++;
-            if (x+w > len)
-            {
-                *str = '\n';
-                x = 0;
-            }
+            while (str != str0 && *str != ' ' && *str != '\t') 
+                str--;
+            if (str == str0)
+                return 0;
+            *str = '\n';
+            x = 0;
+            y++;            
         }
         str++;
+        if (*str != '\t')
         x++;
     }
+    if (y < maxrows)
+        return 1;
+    return 0;
 }
 
+void wrap_direct(char *src, char *dst)
+{
+    while (*src)
+    {
+        *dst = *src;
+        dst++;
+        src++;
+    }
+    *dst = 0;
+}
+
+int myisalpha(char c)
+{
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) 
+        return 1;
+    return 0;
+}
+
+void wrap_nice(char *src, char *dst)
+{
+    while (*src)
+    {
+        *dst = *src;
+        if (*src == '-' || 
+            *src == '.' ||
+            *src == ',' ||
+            *src == '+' ||
+            *src == '/' ||
+            *src == '&' ||
+            *src == '@' ||
+            *src == '?' ||
+            *src == '!' ||
+            *src == '<' ||
+            *src == '>' ||
+            *src == ';' ||
+            *src == ':' ||
+            *src == '%' ||
+            *src == '*' ||
+            !myisalpha(*src) && myisalpha(*(src+1)) ||
+            myisalpha(*src) && !myisalpha(*(src+1))
+            )
+        {
+            // Insert potential word break position
+            dst++;
+            *dst = '\t';
+        }
+        dst++;
+        src++;
+    }
+    *dst = 0;
+}
+
+void wrap_brute(char *src, char *dst)
+{
+    while (*src)
+    {
+        *dst = *src;
+        if (*src != ' ')
+        {
+            // Break anywhere (except after space)
+            dst++;
+            *dst = '\t';
+        }
+        dst++;
+        src++;
+    }
+    *dst = 0;
+}
+
+void wrapstring(char *str, int len, int maxrows)
+{
+    //if (*str >= 'A' && *str <= 'Z') *str += 'a' - 'A';
+    char workstring[1024];
+    int q = 0;
+    wrap_direct(str, workstring);
+    if (try_wrapstring(workstring, len, maxrows) == 0)
+    {
+        q = 1;
+        printf("? \"%s\"\n", str);
+        printf("? Direct wrap to %d/%d didn't work, trying nice.. \n", len, maxrows);
+        wrap_nice(str, workstring);
+        if (try_wrapstring(workstring, len, maxrows) == 0)
+        {
+            printf("? Nice wrap to %d/%d didn't work, trying brute..\n", len, maxrows);
+            wrap_brute(str, workstring);
+            if (try_wrapstring(workstring, len, maxrows) == 0)
+            {
+                printf("!!!! unable to wrap string even with brute force\n");
+            }
+        }
+    }
+
+    char *s = workstring;
+    char *d = str;
+    
+    while (*s)
+    {
+        if (*s == '\t')
+        {
+            // skip
+            s++;
+        }
+        else
+        {
+            *d = *s;
+            s++;
+            d++;
+        }
+    }    
+    *d = 0;    
+    if (q)
+    {
+        printf("\"%s\"\n", str);
+    }
+}
 
 void wordwrap()
 {
@@ -435,7 +537,7 @@ void wordwrap()
     {
         for (j = 0; j < 5; j++)
         {            
-            wrapstring(question[i].a[j], (j==0)? 16 : 12);
+            wrapstring(question[i].a[j], (j==0)? 16 : 12, (j==0)?9:2);
         }
     }
 }
