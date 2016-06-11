@@ -46,7 +46,7 @@ gsinit:
 		.area _BSS
 
 		;; 2048 bytes of operating system stack
-		.ds	2048
+		.ds	1024
 _stack::
 		.area _HEAP
 _heap::

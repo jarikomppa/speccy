@@ -24,6 +24,81 @@ unsigned short score[4];
 #include "hwif.c"
 #include "textout.c"
 
+void playfx(unsigned short fx) __z88dk_fastcall;
+enum SFX
+{
+    SFX_SELECT = 0,
+    SFX_FAIL,
+    SFX_CORRECT,
+    SFX_E,
+    SFX_A,
+    SFX_O,
+    SFX_K,
+    SFX_P,
+    SFX_S,
+    SFX_PT,
+    SFX_X    
+};
+
+char playchar(char c)
+{
+    switch (c)
+    {
+        case 0x66:
+        case ' ':
+        case '.':
+        case '?':
+        case '!':
+        case '/':
+        case '&':
+        case '*':
+        case '+':
+        case '-':
+        case '\n':
+            return 0;
+            break;
+        case 'e':
+        case 'E':
+            playfx(SFX_E);
+            break;
+        case 'a':
+        case 'A':
+            playfx(SFX_A);
+            break;
+        case 'o':
+        case 'O':
+            playfx(SFX_O);
+            break;
+        case 'c':
+        case 'C':
+        case 'k':
+        case 'K':
+            playfx(SFX_K);
+            break;
+        case 'p':
+        case 'P':
+            playfx(SFX_P);
+            break;
+        case 's':
+        case 'S':
+            playfx(SFX_S);
+            break;
+        case 't':
+        case 'T':
+            playfx(SFX_PT);
+            break;
+        case 'x':
+        case 'X':
+            playfx(SFX_X);
+            break;
+        default:
+            playfx(SFX_E + (c & 7));
+            break;
+    }
+    return 1;
+}
+
+
 void cp(unsigned char *dst, unsigned short len, unsigned char *src)  __z88dk_callee
 {
        dst; len; src;
@@ -179,7 +254,7 @@ void print_keys(unsigned char player, unsigned char ofs)
     drawstringfancy(k4, 17+11-ofs,21,c,1);
 }
 
-void mouth(unsigned char v)
+char mouth(unsigned char v)
 {
     unsigned char v1 = v | 0xc0;
     unsigned char v2 = v | 0x07;
@@ -192,7 +267,7 @@ void mouth(unsigned char v)
     *((unsigned char*)(yofs[32]+4)) = v1;
     *((unsigned char*)(yofs[33]+4)) = v1;
     *((unsigned char*)(yofs[34]+4)) = v1;
-    
+    return playchar(v);
 }
 
 void eyes(unsigned char v)
@@ -484,10 +559,6 @@ void mainmenu()
     while (!done)
     {
         readkeyboard();
-        do_halt();
-        do_halt();
-        do_halt();
-        do_halt();
         ticker++;
         if (menumode == 0)
         {
@@ -529,6 +600,8 @@ void mainmenu()
                     keydown = 1;
                     clearfields(0,1);
                 }
+                if (keydown)
+                    playfx(SFX_SELECT);
             }
             else
             {
@@ -570,6 +643,8 @@ void mainmenu()
                     players = 4;
                     done = 1;                
                 }
+                if (keydown)                    
+                    playfx(SFX_SELECT);                
             }
             else
             {
@@ -587,13 +662,27 @@ void mainmenu()
             {
                 robotalk = 170;
                 mouth(0x66);
+                do_halt();
+                do_halt();
                 eyes(1);
             }
             else
             {
-                mouth(blurb[blurbno][robotalk]);
+                if (!mouth(blurb[blurbno][robotalk]))
+                {
+                    do_halt();
+                    do_halt();
+                }                    
             }            
         }
+        else
+        {
+            do_halt();
+            do_halt();
+            do_halt();
+            do_halt();
+        }
+
         if (robotalk == 199)
         {
             clearfields(1, 0);
@@ -733,16 +822,18 @@ void ingame()
             {
                 mouth(0x66);
                 eyes(!(robotalk & 0x80));
+                do_halt();
+                do_halt();
             }
             else
             {
-                mouth(tempq[robotalk]);
+                if (!mouth(tempq[robotalk]))
+                {
+                    do_halt();
+                    do_halt();
+                }
                 eyes(!(robotalk & 0xc));
             }
-            do_halt();
-            do_halt();
-            do_halt();
-            do_halt();
             if (gamemode == 4)
             {
                 switch (players)
@@ -898,19 +989,13 @@ void ingame()
             printscore(who);
             setplayerbright(who, 1);       
             setanswerbright(correct, 1);
-            for (i = 0; i < 15; i++) do_halt();
+            playfx(SFX_CORRECT);
             setplayerbright(who, 0);       
             setanswerbright(correct, -1);
-            for (i = 0; i < 15; i++) do_halt();
+            playfx(SFX_CORRECT);
             setplayerbright(who, 1);       
             setanswerbright(correct, 1);
-            for (i = 0; i < 15; i++) do_halt();
-            setplayerbright(who, 0);       
-            setanswerbright(correct, -1);
-            for (i = 0; i < 15; i++) do_halt();
-            setplayerbright(who, 1);       
-            setanswerbright(correct, 1);
-            for (i = 0; i < 15; i++) do_halt();
+            playfx(SFX_CORRECT);
             setplayerbright(who, 0);       
             setanswerbright(correct, 0);
             if (gamemode < 2)
@@ -923,15 +1008,15 @@ void ingame()
             printscore(who);
             setplayerbright(who, 1);       
             setanswerbright(correct, 1);
-            for (i = 0; i < 15; i++) do_halt();
+            playfx(SFX_FAIL);
             setanswerbright(correct, 1);
-            for (i = 0; i < 15; i++) do_halt();
+            playfx(SFX_FAIL);
             setanswerbright(correct, -1);
-            for (i = 0; i < 15; i++) do_halt();
+            playfx(SFX_FAIL);
             setanswerbright(correct, 1);
-            for (i = 0; i < 15; i++) do_halt();
+            playfx(SFX_FAIL);
             setanswerbright(correct, 1);
-            for (i = 0; i < 15; i++) do_halt();
+            playfx(SFX_FAIL);
             setanswerbright(correct, 0);
             if (gamemode > 1)
                 setplayerbright(who, 0);       
@@ -972,14 +1057,20 @@ void ingame()
          "sometime,\n"
          "I won't mind.";
         drawstringfancy(blurb, 15, 1, 7, robotalk);
-        do_halt();
-        do_halt();
-        do_halt();
-        do_halt();
         if (robotalk < sizeof(blurb))
-            mouth(blurb[robotalk]);
+        {
+            if (!mouth(blurb[robotalk]))
+            {
+                do_halt();
+                do_halt();
+            }
+        }
         else
+        {
             mouth(0x66);
+            do_halt();
+            do_halt();
+        }
     }
     
 }
@@ -1015,56 +1106,4 @@ void main()
         mainmenu();
         ingame();
     }
-
-/*
-         
-    drawstringfancy(tempa1+1,3,16,7,*tempa1);
-    drawstringfancy(tempa2+1,17,16,7,*tempa2);
-    drawstringfancy(tempa3+1,3,20,7,*tempa3);
-    drawstringfancy(tempa4+1,17,20,7,*tempa4);
-
-    print_keys(0,0);
-    while(1) 
-    {
-        static const blinky[4] = {7,3,1,5};
-        framecounter++;
-        i = framecounter & 127;
-        
-        if (i > *tempq) i = *tempq;
-        drawstringfancy(tempq+1,15,1,7,i);
-        if (i == *tempq)
-        {
-            mouth(0x66);
-            eyes(0);
-        }
-        else
-        {
-            mouth(tempq[i]);
-            eyes(tempq[i] & 1);
-        }
-        
-        setanswerbright(0, (framecounter & 3) == 0);
-        setanswerbright(1, (framecounter & 3) == 1);
-        setanswerbright(2, (framecounter & 3) == 2);
-        setanswerbright(3, (framecounter & 3) == 3);
-
-        setplayerbright(0, (framecounter & 3) == 0);
-        setplayerbright(1, (framecounter & 3) == 1);
-        setplayerbright(2, (framecounter & 3) == 2);
-        setplayerbright(3, (framecounter & 3) == 3);
-        
-      
-        drawstringfancy("This is some\n"
-                        "rather fancy\n"
-                        "writing that\n"
-                        "happens to have\n"
-                        "mostly same\n"
-                        "length lines.", 15, 1, blinky[framecounter & 3], framecounter);
-      
-        do_halt();
-        do_halt();
-        
-    }
-    */
-
 }
