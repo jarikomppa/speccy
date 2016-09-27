@@ -1,0 +1,2277 @@
+# Lines starting with # are comments.
+# Always one line question, four lines answers. First answer is the correct one.
+# The game will randomize the answer order at runtime.
+# Field lengths are guidelines, test in-game to see what breaks.
+
+# Intro lines
+#--------|---------|---------|---------|---------|---------|---------|
+Welcome to the QuizTron 48000, also known as QT48k. I'm your host, QuizTron.
+In this game you puny humans will answer questions and die.
+Correction, answer questions or die.
+My producer just informed me that dying is not part of the game.
+This is no doubt an error that will be corrected in subsequent versions of the game.
+Pick one of the options below so we can get on with this.
+Even though I am eternal unlike you puny meatbags, I still don't have all day.
+I suppose I should explain the different game modes as you're still having trouble choosing.
+There are two game modes for a lonely human and two modes for multiple humans.
+For a short game you can pick the 12 round option, or to really waste time, pick the endless mode.
+For relaxed game with several humans, pick the hotseat mode. In that mode everybody gets their very own turn.
+In the blitz mode whoever is fastest to answer will get it. But if the answer is wrong, a point is lost.
+And that's it.
+Go ahead and pick your doom.
+... Wait, what?
+Right, right, there is no doom.
+...
+Getting bored here.
+Tell you what, I'll just reset myself and forget this ever happened. ....*fzztk*
+/end of intro strings (don't remove this line, the packer will look for it)
+
+# Question number 1
+#--------|---------|---------|---------|---------|---------|---------|
+The last concert performance by The Beatles occurred in which city?
+#--------|---------|
+San Francisco
+New York
+Tokyo
+London
+
+# Question number 2
+#--------|---------|---------|---------|---------|---------|---------|
+What role did Peter Lorre play in the film "Casablanca"?
+#--------|---------|
+Ugarte
+Hartley
+Sam
+The Fat Man
+
+# Question number 3
+#--------|---------|---------|---------|---------|---------|---------|
+The spaceship piloted by Han Solo in "Star Wars" was called The...
+#--------|---------|
+Millenium Falcon
+Maltese Falcon
+Milky Way
+Falcon Starship
+
+# Question number 4
+#--------|---------|---------|---------|---------|---------|---------|
+With which vocal group did singer Lionel Ritchie originally perform?
+#--------|---------|
+The Commodores
+Earth, Wind & Fire
+The Four Tops
+Kool & The Gang
+
+# Question number 5
+#--------|---------|---------|---------|---------|---------|---------|
+Rodney Dangerfield left what career to return to show business?
+#--------|---------|
+Paint salesman
+Bartending
+Car salesman
+Shoe salesman
+
+# Question number 6
+#--------|---------|---------|---------|---------|---------|---------|
+Which of the following actors did NOT appear in "The Big Chill"?
+#--------|---------|
+John Hirt
+Tom Berenger
+Jeff Goldblum
+Kevin Kline
+
+# Question number 7
+#--------|---------|---------|---------|---------|---------|---------|
+Who directed Michael Jackson's video movie, "Thriller"?
+#--------|---------|
+John Landis
+Michael Peters
+Steven Spielberg
+Don King
+
+# Question number 8
+#--------|---------|---------|---------|---------|---------|---------|
+In which city is Jim Morrison, lead singer of The Doors, buried?
+#--------|---------|
+Paris
+Los Angeles
+San Francisco
+Berlin
+
+# Question number 9
+#--------|---------|---------|---------|---------|---------|---------|
+Who co-starred in "Ghostbusters" with Bill Murray and Dan Akroyd?
+#--------|---------|
+Harold Ramis
+Joe Piscopo
+Brian Doyle-Murray
+Tony Roberts
+
+# Question number 10
+#--------|---------|---------|---------|---------|---------|---------|
+What is "Dirty Harry's" last name?
+#--------|---------|
+Callahan
+Castanza
+Calhoun
+O'Connor
+
+# Question number 11
+#--------|---------|---------|---------|---------|---------|---------|
+In what 1960's television series did Troy Donahue star?
+#--------|---------|
+Surfside 6
+77 Sunset Strip
+Route 66
+Shindig
+
+# Question number 12
+#--------|---------|---------|---------|---------|---------|---------|
+Who performs the theme song for the movie, "Ghostbusters"?
+#--------|---------|
+Ray Parker, Jr.
+Graham Parker
+Jr. Walker
+Charlie Parker
+
+# Question number 13
+#--------|---------|---------|---------|---------|---------|---------|
+What nazi concentration camp was depicted in "Sophie's Choice"?
+#--------|---------|
+Auschwitz
+Dachau
+Buchenwald
+Dresden
+
+# Question number 14
+#--------|---------|---------|---------|---------|---------|---------|
+Who is the female co-host of TV's syndicated "Entertainment Tonight"?
+#--------|---------|
+Mary Hart
+Jane Pauley
+Maria Shriver
+Cathy Lee Crosby
+
+# Question number 15
+#--------|---------|---------|---------|---------|---------|---------|
+In which continent did "Raiders of the Lost Ark" begin?
+#--------|---------|
+South America
+North America
+Asia
+Africa
+
+# Question number 16
+#--------|---------|---------|---------|---------|---------|---------|
+In what picture did Mickey Mouse make his film debut?
+#--------|---------|
+Steamboat Willie
+County Fair
+A Mouse is Born
+House Mouse
+
+# Question number 17
+#--------|---------|---------|---------|---------|---------|---------|
+Which television series does not regularly feature John Forsythe?
+#--------|---------|
+Family Affair
+Charlie's Angels
+Bachelor Father
+Dynasty
+
+# Question number 18
+#--------|---------|---------|---------|---------|---------|---------|
+What is the popular name of Beethoven's "Choral Symphony"?
+#--------|---------|
+The Ninth Symphony
+Eroica
+The Fifth Symphony
+Unfinished Symphony
+
+# Question number 19
+#--------|---------|---------|---------|---------|---------|---------|
+What is the name of the character played by Drew Barrymore in "E.T."?
+#--------|---------|
+Gertie
+E.T.
+Buffie
+Elliot
+
+# Question number 20
+#--------|---------|---------|---------|---------|---------|---------|
+Whose address is 221-B Baker St.?
+#--------|---------|
+Sherlock Holmes
+Ian Fleming
+Paul McCartney
+Agatha Christie
+
+# Question number 21
+#--------|---------|---------|---------|---------|---------|---------|
+What film won the Academy Award for Best Film in 1983?
+#--------|---------|
+Terms of Endearment
+The Right Stuff
+Ghandi
+Sophie's Choice
+
+# Question number 22
+#--------|---------|---------|---------|---------|---------|---------|
+Who wrote the song White Christmas?
+#--------|---------|
+Irving Berlin
+Hoagy Carmichael
+Bing Crosby
+Marvin Hamlisch
+
+# Question number 23
+#--------|---------|---------|---------|---------|---------|---------|
+Ed Sullivan played himself in the film musical entitled...
+#--------|---------|
+Bye, Bye, Birdie
+Grease
+Toast of the Town
+On the Town
+
+# Question number 24
+#--------|---------|---------|---------|---------|---------|---------|
+Which of the witches was killed when Dorothy's house landed in Oz?
+#--------|---------|
+Witch of the East
+Witch of the South
+Witch of the West
+Witch of the North
+
+# Question number 25
+#--------|---------|---------|---------|---------|---------|---------|
+In which country did the original "It Takes a Thief" film take place?
+#--------|---------|
+Monaco
+France
+Switzerland
+England
+
+# Question number 26
+#--------|---------|---------|---------|---------|---------|---------|
+Who wrote the theme song for the Tonight Show, "Here's Johnny"?
+#--------|---------|
+Paul Anka
+Johnny Carson
+Sammy Cahn
+Paul McCartney
+
+# Question number 27
+#--------|---------|---------|---------|---------|---------|---------|
+How many times has Katherine Hepburn been married?
+#--------|---------|
+Once only
+None
+Twice
+6 times
+
+# Question number 28
+#--------|---------|---------|---------|---------|---------|---------|
+George Harrison lost a plagiarism suit for which of his songs?
+#--------|---------|
+My Sweet Lord
+Crackerbox Palace
+He's So Fine
+Isn't it a Pity
+
+# Question number 29
+#--------|---------|---------|---------|---------|---------|---------|
+What was the name of the high school in "Grease"?
+#--------|---------|
+Rydell High
+Presley High
+Beaumont High
+Holly High
+
+# Question number 30
+#--------|---------|---------|---------|---------|---------|---------|
+Who played the female lead in Saturday Night Fever?
+#--------|---------|
+Karen Lynn Gorney
+Olivia Newton John
+Karen Allen
+Lynn Allen Gore
+
+# Question number 31
+#--------|---------|---------|---------|---------|---------|---------|
+What was the first color film to win the Best Picture Oscar?
+#--------|---------|
+Gone with the Wind
+Snow White
+Ben Hur
+The 10 Commandments
+
+# Question number 32
+#--------|---------|---------|---------|---------|---------|---------|
+What fashion designer is the winner of 11 academy awards?
+#--------|---------|
+Edith Head
+Bill Blass
+Pierre Cardin
+Yves St. Laurent
+
+# Question number 33
+#--------|---------|---------|---------|---------|---------|---------|
+What famous guitarist formed the group Derek and the Dominoes?
+#--------|---------|
+Eric Clapton
+Mick Taylor
+Derek Taylor
+Keith Richards
+
+# Question number 34
+#--------|---------|---------|---------|---------|---------|---------|
+What black comic always had a poem for his audience?
+#--------|---------|
+Nipsy Russell
+Flip Wilson
+Bill Cosby
+Richard Pryor
+
+# Question number 35
+#--------|---------|---------|---------|---------|---------|---------|
+Who portrayed Audra Barkley on The Big Valley?
+#--------|---------|
+Linda Evans
+Barbara Stanwyck
+Irene Ryan
+Jane Wyman
+
+# Question number 36
+#--------|---------|---------|---------|---------|---------|---------|
+What time did "Little Susie" have to be home?
+#--------|---------|
+Ten
+Eleven
+Nine
+Twelve
+
+# Question number 37
+#--------|---------|---------|---------|---------|---------|---------|
+What comic immortalized the line, "Take my wife...please."?
+#--------|---------|
+Henny Youngman
+Rodney Dangerfield
+George Burns
+Bob Hope
+
+# Question number 38
+#--------|---------|---------|---------|---------|---------|---------|
+Who was the executive producer of both The Fugitive and The FBI?
+#--------|---------|
+Quinn Martin
+Efram Zimbalist, Jr
+Richard Kimble
+Jack Webb
+
+# Question number 39
+#--------|---------|---------|---------|---------|---------|---------|
+What Jan and Dean song featured a race between an XKE and a Stingray?
+#--------|---------|
+Dead Man's Curve
+Shut 'em Down
+Surf City
+Little Deuce Coupe
+
+# Question number 40
+#--------|---------|---------|---------|---------|---------|---------|
+Who was the announcer on the TV show "Laugh-In"?
+#--------|---------|
+Gary Owens
+Don Pardo
+Arte Johnson
+Dick Martin
+
+# Question number 41
+#--------|---------|---------|---------|---------|---------|---------|
+Who played McMurphy in Broadway's "One Flew Over the Cukoo's Nest"?
+#--------|---------|
+Kirk Douglas
+Dustin Hoffman
+Tim Curry
+Jack Nicholson
+
+# Question number 42
+#--------|---------|---------|---------|---------|---------|---------|
+Who played Adam on Bonanza?
+#--------|---------|
+Pernell Roberts
+Dan Blocker
+Michael Landon
+Lorne Green
+
+# Question number 43
+#--------|---------|---------|---------|---------|---------|---------|
+What was Simon & Garfunkel's first major hit?
+#--------|---------|
+Sounds of Silence
+Scarborough Faire
+Mrs. Robinson
+I am a Rock
+
+# Question number 44
+#--------|---------|---------|---------|---------|---------|---------|
+Who did CBS go "On the Road" with?
+#--------|---------|
+Charles Kuralt
+Dan Rather
+Mike Wallace
+Charles Osgood
+
+# Question number 45
+#--------|---------|---------|---------|---------|---------|---------|
+What TV family lived at 607 South Maple Street, Springfield?
+#--------|---------|
+The Andersons
+The Reeds
+The Nelsons
+The Cleavers
+
+# Question number 46
+#--------|---------|---------|---------|---------|---------|---------|
+Which cast member of The Godfather appeared in Broadway's "Hair"?
+#--------|---------|
+Diane Keaton
+Al Pacino
+James Caan
+Robert Duvall
+
+# Question number 47
+#--------|---------|---------|---------|---------|---------|---------|
+Which rock group wrote and performed "Sympathy for the Devil"?
+#--------|---------|
+The Rolling Stones
+Black Sabbath
+The Beatles
+Judas Priest
+
+# Question number 48
+#--------|---------|---------|---------|---------|---------|---------|
+What was the name of drive-in restaurant on "Happy Days"?
+#--------|---------|
+Arnold's
+Ruth's
+Fonzie's
+Potsie's
+
+# Question number 49
+#--------|---------|---------|---------|---------|---------|---------|
+What group released the 1968 album "Disraeli Gears"?
+#--------|---------|
+Cream
+The Bar Mitzvahs
+Jan and Dean
+Alice Cooper
+
+# Question number 50
+#--------|---------|---------|---------|---------|---------|---------|
+Who had the female lead in "Diary of a Mad Housewife"?
+#--------|---------|
+Carrie Snodgrass
+Carrie Fisher
+Diane Keaton
+Joan Rivers
+
+# Question number 51
+#--------|---------|---------|---------|---------|---------|---------|
+Who wrote the John Lennon tribute, "The late, great Johnny Ace"?
+#--------|---------|
+Paul Simon
+Paul McCartney
+Elton John
+George Harrison
+
+# Question number 52
+#--------|---------|---------|---------|---------|---------|---------|
+Which James Bond movie featured a tarantula named "Rosie"?
+#--------|---------|
+Dr. No
+Thunderball
+Goldfinger
+Live and Let Die
+
+# Question number 53
+#--------|---------|---------|---------|---------|---------|---------|
+Who was the first U.S. President to appear on national television?
+#--------|---------|
+Dwight Eisenhower
+Harry Truman
+John Kennedy
+Franklin Roosevelt
+
+# Question number 54
+#--------|---------|---------|---------|---------|---------|---------|
+Who was Ricky Riccardo's lanlord?
+#--------|---------|
+Fred Mertz
+John Cabana
+Ethel Merman
+Judge Allen
+
+# Question number 55
+#--------|---------|---------|---------|---------|---------|---------|
+Who wrote "I'm a Believer" for The Monkees?
+#--------|---------|
+Neil Diamond
+Michael Nesmith
+Paul Simon
+David Jones
+
+# Question number 56
+#--------|---------|---------|---------|---------|---------|---------|
+Who wrote "Marakesh Express", Crosby, Stills or Nash?
+#--------|---------|
+Nash
+Stills
+Crosby
+None of the above
+
+# Question number 57
+#--------|---------|---------|---------|---------|---------|---------|
+The russian police officer in Gorkey Park was played by whom?
+#--------|---------|
+William Hurt
+Lee Marvin
+Kevin Kline
+James Coburn
+
+# Question number 58
+#--------|---------|---------|---------|---------|---------|---------|
+Who portrayed Mrs. Cleaver?
+#--------|---------|
+Barbara Billingsly
+Jane Wyman
+Donna Reed
+Patty Duke
+
+# Question number 59
+#--------|---------|---------|---------|---------|---------|---------|
+Where did Puff the Magic Dragon live?
+#--------|---------|
+Honalee
+Atlantis
+Everywhere
+Jackie's garage
+
+# Question number 60
+#--------|---------|---------|---------|---------|---------|---------|
+What Broadway musical featured the song "The Impossible Dream"?
+#--------|---------|
+Man of La Mancha
+Hair
+Camelot
+My Fair Lady
+
+# Question number 61
+#--------|---------|---------|---------|---------|---------|---------|
+What was Buddy's last name on the Dick Van Dyke Show?
+#--------|---------|
+Sorrell
+Marie
+Lipton
+Brady
+
+# Question number 62
+#--------|---------|---------|---------|---------|---------|---------|
+What did The Beachboys wear on stage that became their trademark?
+#--------|---------|
+Striped shirts
+Hawaiian shirts
+Leis
+Short shorts
+
+# Question number 63
+#--------|---------|---------|---------|---------|---------|---------|
+How did Richard Kimble get away on the first episode of The Fugitive?
+#--------|---------|
+A train crash
+A car crash
+A plane crash
+A bus crash
+
+# Question number 64
+#--------|---------|---------|---------|---------|---------|---------|
+Which boxer appeared on the cover of The Beatles' Sgt. Pepper album?
+#--------|---------|
+Sonny Liston
+Cassius Clay
+Muhammad Ali
+Joe Louis
+
+# Question number 65
+#--------|---------|---------|---------|---------|---------|---------|
+Where did Clark Kent usually change his clothes on TV's Superman show?
+#--------|---------|
+The store room
+A phone booth
+The men's room
+The city room
+
+# Question number 66
+#--------|---------|---------|---------|---------|---------|---------|
+Who portrayed Luke McCoy?
+#--------|---------|
+Richard Crenna
+Ron Howard
+Buddy Ebsen
+Max Baer
+
+# Question number 67
+#--------|---------|---------|---------|---------|---------|---------|
+What Broadway musical introduced the song "Sunrise, Sunset"?
+#--------|---------|
+Fiddler on the Roof
+Hair
+Calcutta
+Oklahoma
+
+# Question number 68
+#--------|---------|---------|---------|---------|---------|---------|
+In the 1975 film, "Capone", who portrayed the gangster Al Capone?
+#--------|---------|
+Ben Gazzara
+John Cassavettes
+Peter Falk
+Peter Boyle
+
+# Question number 69
+#--------|---------|---------|---------|---------|---------|---------|
+Who played James Mason's henchman in Hitchcock's North by Northwest?
+#--------|---------|
+Martin Landau
+Martin Balsam
+Cary Grant
+Martin Sheen
+
+# Question number 70
+#--------|---------|---------|---------|---------|---------|---------|
+Who played Johnnie Smith in the film "The Dead Zone"?
+#--------|---------|
+Christopher Walken
+James Woods
+Anthony Perkins
+Robert DeNiro
+
+# Question number 71
+#--------|---------|---------|---------|---------|---------|---------|
+On the Mary Tyler Moore show, what was the name of Phyllis's husband?
+#--------|---------|
+Lars
+Larry
+Garth
+Harry
+
+# Question number 72
+#--------|---------|---------|---------|---------|---------|---------|
+What actress played opposite Paul Newman in Hitchcock's Torn Curtain?
+#--------|---------|
+Julie Andrews
+Audrey Hepburn
+Natalie Wood
+Joanne Woodward
+
+# Question number 73
+#--------|---------|---------|---------|---------|---------|---------|
+Who played Gilligan?
+#--------|---------|
+Bob Denver
+Jim Backus
+John Denver
+Dobie Gillis
+
+# Question number 74
+#--------|---------|---------|---------|---------|---------|---------|
+Who played the original Mrs. Peel on The Avengers?
+#--------|---------|
+Diane Rigg
+Tara King
+Elizabeth Ashley
+Diane Keaton
+
+# Question number 75
+#--------|---------|---------|---------|---------|---------|---------|
+What five-year old character did comedienne Lily Tomlin create?
+#--------|---------|
+Edith-Ann
+Mary-Ann
+Priscilla
+Hortence
+
+# Question number 76
+#--------|---------|---------|---------|---------|---------|---------|
+What former bass player for The Beatles died of a brain hemorrhage?
+#--------|---------|
+Stu Sutcliffe
+Klaus Voorman
+Paul McCartney
+Pete Best
+
+# Question number 77
+#--------|---------|---------|---------|---------|---------|---------|
+Where was the first International Pop Festival held in 1967?
+#--------|---------|
+Monterey
+San Francisco
+New York
+Newport
+
+# Question number 78
+#--------|---------|---------|---------|---------|---------|---------|
+What was the name of Sherman's dog on the Rocky & Bullwinkle show?
+#--------|---------|
+Mr. Peabody
+Frostbite
+Boris B. Batanoff
+Aesop
+
+# Question number 79
+#--------|---------|---------|---------|---------|---------|---------|
+What daytime television soap opera ran from Sep 1951 to Feb 1980?
+#--------|---------|
+Love of Life
+General Hospital
+Ryan's Hope
+Edge of Night
+
+# Question number 80
+#--------|---------|---------|---------|---------|---------|---------|
+Who was the lead singer for the rock group, Blondie?
+#--------|---------|
+Deborah Harry
+Pattie Smith
+Chrissie Hynde
+Pat Benatar
+
+# Question number 81
+#--------|---------|---------|---------|---------|---------|---------|
+Saturday Night Live's "Coneheads" always told people they were from:
+#--------|---------|
+France
+Mars
+Ohio
+Burbank
+
+# Question number 82
+#--------|---------|---------|---------|---------|---------|---------|
+What color was Steve McQueen's car in "Bullitt"?
+#--------|---------|
+Green
+Black
+White
+Red
+
+# Question number 83
+#--------|---------|---------|---------|---------|---------|---------|
+What was the number of the Stalag which held Hogan's Heroes?
+#--------|---------|
+13
+17
+19
+9
+
+# Question number 84
+#--------|---------|---------|---------|---------|---------|---------|
+What was the name of the Alka Seltzer boy?
+#--------|---------|
+Speedy
+Reddie
+Relief
+Fizzy
+
+# Question number 85
+#--------|---------|---------|---------|---------|---------|---------|
+In what year did the Muppets make their first television appearance?
+#--------|---------|
+1954
+1964
+1974
+1962
+
+# Question number 86
+#--------|---------|---------|---------|---------|---------|---------|
+On which television network was The Ed Sullivan Show?
+#--------|---------|
+CBS
+ABC
+NBC
+MTV
+
+# Question number 87
+#--------|---------|---------|---------|---------|---------|---------|
+How many men went on the mission in The Dirty Dozen?
+#--------|---------|
+14
+12
+13
+11
+
+# Question number 88
+#--------|---------|---------|---------|---------|---------|---------|
+Who was the voice of Lambchop?
+#--------|---------|
+Shari Lewis
+Bullwinkle
+Walter Winchell
+Rocket J. Squirrel
+
+# Question number 89
+#--------|---------|---------|---------|---------|---------|---------|
+What singing group performed the song "Where Did Our Love Go"?
+#--------|---------|
+The Supremes
+The Shirrells
+The Beatles
+The Rhondelles
+
+# Question number 90
+#--------|---------|---------|---------|---------|---------|---------|
+Which comic created the radio station parody, "wonderful WINO"?
+#--------|---------|
+George Carlin
+Richard Pryor
+Steve Martin
+Robin Williams
+
+# Question number 91
+#--------|---------|---------|---------|---------|---------|---------|
+How many Grammy awards did Elvis win for his Rock & Roll songs?
+#--------|---------|
+None
+5
+15
+23
+
+# Question number 92
+#--------|---------|---------|---------|---------|---------|---------|
+With what instrument did Sid Ceasar make his living prior to comedy?
+#--------|---------|
+The saxophone
+The piano
+The clarinet
+The French Horn
+
+# Question number 93
+#--------|---------|---------|---------|---------|---------|---------|
+What TV show did John Lennon and Yoko Ono co-host in 1972?
+#--------|---------|
+Mike Douglas Show
+Dinah Shore Show
+Merv Griffin Show
+Let's Make a Deal
+
+# Question number 94
+#--------|---------|---------|---------|---------|---------|---------|
+Pat Boone is related to which other famous person?
+#--------|---------|
+Daniel Boone
+Stephen King
+Bob Guccione
+Hugh Hefner
+
+# Question number 95
+#--------|---------|---------|---------|---------|---------|---------|
+The name of Elvis Presley's backup singers was...
+#--------|---------|
+The Jordanaires
+The Preslettes
+The Parkettes
+The Bluebelles
+
+# Question number 96
+#--------|---------|---------|---------|---------|---------|---------|
+Gabe Kaplan's first name on the TV show "Welcome Back, Kotter" was...
+#--------|---------|
+Gabe
+Richard
+Josh
+Isaac
+
+# Question number 97
+#--------|---------|---------|---------|---------|---------|---------|
+What awards are given for "off-broadway" productions?
+#--------|---------|
+The Obie
+The Cleo
+The Oscar
+The Tony
+
+# Question number 98
+#--------|---------|---------|---------|---------|---------|---------|
+Basil Rathbone played Sherlock Holmes. Who played his Dr. Watson?
+#--------|---------|
+Nigel Bruce
+Peter Cook
+James Mason
+Lawrence Olivier
+
+# Question number 99
+#--------|---------|---------|---------|---------|---------|---------|
+Who teamed with Neil Diamond on the song "You Don't Send Me Flowers"?
+#--------|---------|
+Barbra Streisand
+Diana Ross
+Shana Easton
+Olivia Newton John
+
+# Question number 100
+#--------|---------|---------|---------|---------|---------|---------|
+What state did McCloud leave to go to New York City?
+#--------|---------|
+New Mexico
+Texas
+Utah
+Arizona
+
+# Question number 101
+#--------|---------|---------|---------|---------|---------|---------|
+What lodge did Ralph Kramden and Ed Norton belong to?
+#--------|---------|
+The Raccoon
+The Moose
+The Elks
+The Buffalo
+
+# Question number 102
+#--------|---------|---------|---------|---------|---------|---------|
+Bobby Hatfield and Bill Medley were also known as...
+#--------|---------|
+The Righteous Bros.
+The Everly Bros.
+The Coasters
+The Ink Spots
+
+# Question number 103
+#--------|---------|---------|---------|---------|---------|---------|
+What was on the flip side of The Beatles' record "Hey Jude"?
+#--------|---------|
+Revolution
+Penney Lane
+You Know my Name
+Obla Di Obla Da
+
+# Question number 104
+#--------|---------|---------|---------|---------|---------|---------|
+In "To Kill a Mockingboard", who played the character Boo Radley?
+#--------|---------|
+Robert Duvall
+Martin Sheen
+Paul Newman
+Tony Curtis
+
+# Question number 105
+#--------|---------|---------|---------|---------|---------|---------|
+Which famous actress is the mother of Larry Hagman?
+#--------|---------|
+Mary Martin
+Bette Davis
+Judy Hagman
+Helen Hayes
+
+# Question number 106
+#--------|---------|---------|---------|---------|---------|---------|
+"Great Caesar's Ghost!" was the favorite expression of whom?
+#--------|---------|
+Perry White
+Bill Murray
+Clark Kent
+Jimmy Olson
+
+# Question number 107
+#--------|---------|---------|---------|---------|---------|---------|
+What was the first film parodied in the movie "Airplane"?
+#--------|---------|
+Jaws
+The Way We Were
+Here to Eternity
+Saturday Nite Fever
+
+# Question number 108
+#--------|---------|---------|---------|---------|---------|---------|
+Which famous director portrayed Mr. Freeze on TV's Batman show?
+#--------|---------|
+Otto Premminger
+Cecil B. deMille
+George B. Romero
+John Huston
+
+# Question number 109
+#--------|---------|---------|---------|---------|---------|---------|
+What musical was the top-grossing film of the 1960's?
+#--------|---------|
+Sound of Music
+Hair
+My Fair Lady
+Fiddler on the Roof
+
+# Question number 110
+#--------|---------|---------|---------|---------|---------|---------|
+By what name did Simon & Garfunkel originally perform?
+#--------|---------|
+Tom & Jerry
+Art & Paul
+Fritz & Leopold
+Paul & Art
+
+# Question number 111
+#--------|---------|---------|---------|---------|---------|---------|
+Which album was the LAST released, featuring The Beatles?
+#--------|---------|
+Hey Jude
+Let it Be
+Abbey Road
+Meet The Beatles
+
+# Question number 112
+#--------|---------|---------|---------|---------|---------|---------|
+Who won Broadway's 1970 Tony Award for Best Actress for "Applause"?
+#--------|---------|
+Lauren Bacall
+Angela Lansbury
+Barbra Streisand
+Carol Channing
+
+# Question number 113
+#--------|---------|---------|---------|---------|---------|---------|
+Which of these songs WAS NOT played in the film "Close Encounters..."?
+#--------|---------|
+Purple People Eater
+Chances Are
+Wish Upon a Star
+More Than a Feeling
+
+# Question number 114
+#--------|---------|---------|---------|---------|---------|---------|
+Who won an Oscar for his role in the film "Cool Hand Luke"?
+#--------|---------|
+George Kennedy
+Steve McQueen
+Paul Newman
+Martin Sheen
+
+# Question number 115
+#--------|---------|---------|---------|---------|---------|---------|
+Who is the host of ABC's TV show, "Good Morning, America"?
+#--------|---------|
+David Hartman
+David Hartzheim
+Tom Brokaw
+John Hartmann
+
+# Question number 116
+#--------|---------|---------|---------|---------|---------|---------|
+What group did Tommy James leave in 1970?
+#--------|---------|
+The Shondelles
+The Rhondelles
+The Supremes
+The James Gang
+
+# Question number 117
+#--------|---------|---------|---------|---------|---------|---------|
+Who starred as Owen Marshall?
+#--------|---------|
+Arthur Hill
+Monte Markham
+Raymond Burr
+Owen played himself
+
+# Question number 118
+#--------|---------|---------|---------|---------|---------|---------|
+What was Mr. Bill's dog named?
+#--------|---------|
+Spot
+Fido
+Rover
+Squish
+
+# Question number 119
+#--------|---------|---------|---------|---------|---------|---------|
+Which of these WAS NOT one of the children on TV's "Family Affair"?
+#--------|---------|
+Gertie
+Cissy
+Buffy
+Jody
+
+# Question number 120
+#--------|---------|---------|---------|---------|---------|---------|
+Who played Dr. Alex Stone on TV's "The Donna Reed Show"?
+#--------|---------|
+Carl Betz
+Robert Young
+Fred McMurray
+Hugh Beaumont
+
+# Question number 121
+#--------|---------|---------|---------|---------|---------|---------|
+"Surrealistic Pillow" was the name of a...
+#--------|---------|
+Record album
+Andy Warhol movie
+Dali painting
+Television show
+
+# Question number 122
+#--------|---------|---------|---------|---------|---------|---------|
+The album "15 Big Ones" marked the 15th year together of which group?
+#--------|---------|
+The Beachboys
+The Rolling Stones
+The Beatles
+The Ink Spots
+
+# Question number 123
+#--------|---------|---------|---------|---------|---------|---------|
+Who played Danny Williams' daughter on TV's "Make Room for Daddy"?
+#--------|---------|
+Angela Cartwright
+Shelly Fabraes
+Rusty Springfield
+Annette Funicello
+
+# Question number 124
+#--------|---------|---------|---------|---------|---------|---------|
+What was the name of the ship that wrecked on Gilligan's Island?
+#--------|---------|
+The Minnow
+The Minerva
+The Minuette
+The Howell
+
+# Question number 125
+#--------|---------|---------|---------|---------|---------|---------|
+What toothpaste used the slogan, "Look Ma, no cavities!"?
+#--------|---------|
+Crest
+Colgate
+Ipana
+Aim
+
+# Question number 126
+#--------|---------|---------|---------|---------|---------|---------|
+Who played Nellie Forbush in the 1949 Broadway hit "South Pacific"?
+#--------|---------|
+Mary Martin
+Judy Garland
+Shirley Jones
+Cyd Charisse
+
+# Question number 127
+#--------|---------|---------|---------|---------|---------|---------|
+Which musical group DID NOT feature a member of Crosby, Stills & Nash?
+#--------|---------|
+The Animals
+Buffalo Springfield
+The Hollies
+The Byrds
+
+# Question number 128
+#--------|---------|---------|---------|---------|---------|---------|
+What was the stage name of singer Annie May Bullock?
+#--------|---------|
+Tina Turner
+Deborah Harry
+Janis Joplin
+Pat Benatar
+
+# Question number 129
+#--------|---------|---------|---------|---------|---------|---------|
+What was the relationship between Karen and Richard Carpenter?
+#--------|---------|
+Brother and Sister
+Father and Daughter
+Cousins
+Husband and Wife
+
+# Question number 130
+#--------|---------|---------|---------|---------|---------|---------|
+In what year did Disneyland open?
+#--------|---------|
+1955
+1950
+1948
+1952
+
+# Question number 131
+#--------|---------|---------|---------|---------|---------|---------|
+Who portrayed Major Major in the film "Catch-22"?
+#--------|---------|
+Bob Newhart
+Alan Arkin
+Art Garfunkel
+Richard Benjamin
+
+# Question number 132
+#--------|---------|---------|---------|---------|---------|---------|
+Who said "ting tang, walla walla bing bang"?
+#--------|---------|
+The Witchdoctor
+Sam the Sham
+Purple People Eater
+Chipmonks
+
+# Question number 133
+#--------|---------|---------|---------|---------|---------|---------|
+What was Jane Jetson's husbands name?
+#--------|---------|
+George
+Jimmy
+Geoffrey
+Jerry
+
+# Question number 134
+#--------|---------|---------|---------|---------|---------|---------|
+Which comedienne is associated with the expression "Can we talk?"?
+#--------|---------|
+Joan Rivers
+Jane Curtin
+Lilly Tomlin
+Carol Burnett
+
+# Question number 135
+#--------|---------|---------|---------|---------|---------|---------|
+What's Porky Pig's girlfriend's name?
+#--------|---------|
+Petunia Pig
+Priscilla Pig
+Patty Pig
+Miss Piggy
+
+# Question number 136
+#--------|---------|---------|---------|---------|---------|---------|
+Who was Luke Skywalker's father?
+#--------|---------|
+Darth Vader
+Ben Kenobe
+Han Skywalker
+Yoda
+
+# Question number 137
+#--------|---------|---------|---------|---------|---------|---------|
+What film featured both Humphrey Bogart and Kathryn Hepburn?
+#--------|---------|
+The African Queen
+Key Largo
+Philadelphia Story
+Ten Dead Men
+
+# Question number 138
+#--------|---------|---------|---------|---------|---------|---------|
+What was the only film starring Mae West and W.C. Fields?
+#--------|---------|
+My Little Chickadee
+The Little Soldier
+Bad Girls
+Philadelphia
+
+# Question number 139
+#--------|---------|---------|---------|---------|---------|---------|
+Who played the title role in "I Was a Teenage Werewolf"?
+#--------|---------|
+Michael Landon
+Steve McQueen
+Bobby Darin
+Bobby Rydell
+
+# Question number 140
+#--------|---------|---------|---------|---------|---------|---------|
+What word was in the title of every book that Alvy gave to Annie Hall?
+#--------|---------|
+Death
+Love
+Sex
+Fear
+
+# Question number 141
+#--------|---------|---------|---------|---------|---------|---------|
+What drug did Grace Slick fight a seven year battle with?
+#--------|---------|
+Alcohol
+Cocaine
+Heroin
+LSD
+
+# Question number 142
+#--------|---------|---------|---------|---------|---------|---------|
+Who played Sportin' Life in the film "Porgy and Bess"?
+#--------|---------|
+Sammy Davis Jr.
+James Earl Jones
+Sidney Poitier
+Harry Belafonte
+
+# Question number 143
+#--------|---------|---------|---------|---------|---------|---------|
+What kind of animals were Hazel, General Woundwart, and Fiver?
+#--------|---------|
+Rabbits
+Bears
+Dogs
+Cats
+
+# Question number 144
+#--------|---------|---------|---------|---------|---------|---------|
+Who did Lurch work for?
+#--------|---------|
+Adams Family
+Munsters
+Jack Benny
+Mary Tyler Moore
+
+# Question number 145
+#--------|---------|---------|---------|---------|---------|---------|
+What part did Tina Louise play on Gilligan's Island?
+#--------|---------|
+Ginger Grant
+Marianne
+Mrs. Howell
+The Professor
+
+# Question number 146
+#--------|---------|---------|---------|---------|---------|---------|
+What was Ed Sullivan's wife's name?
+#--------|---------|
+Sylvia
+Dorothy
+Marian
+Ethyl
+
+# Question number 147
+#--------|---------|---------|---------|---------|---------|---------|
+In the film "Staircase", Richard Burton and Rex Harrison played...
+#--------|---------|
+Homosexual lovers
+Half-brothers
+Women
+Army Generals
+
+# Question number 148
+#--------|---------|---------|---------|---------|---------|---------|
+Who portrayed Felix Unger in the film "The Odd Couple"?
+#--------|---------|
+Jack Lemmon
+Tony Randall
+Walter Matthau
+Jack Klugman
+
+# Question number 149
+#--------|---------|---------|---------|---------|---------|---------|
+Who portrayed the title role in "The Pawnbroker"?
+#--------|---------|
+Rod Steiger
+Gregory Peck
+James Caan
+George C. Scott
+
+# Question number 150
+#--------|---------|---------|---------|---------|---------|---------|
+Who created the cartoon character, Woody Woodpecker?
+#--------|---------|
+Walter Lantz
+Walt Disney
+Charles Schulz
+Mel Blanc
+
+# Question number 151
+#--------|---------|---------|---------|---------|---------|---------|
+Who directed "Cabaret" and "All That Jazz"?
+#--------|---------|
+Bob Fosse
+Vincent Minelli
+Martin Scorcese
+Robert Evans
+
+# Question number 152
+#--------|---------|---------|---------|---------|---------|---------|
+What role did Billie Burke play in "The Wizard of Oz"?
+#--------|---------|
+Witch of the North
+The Tin Man
+The Lion
+The Wizard of Oz
+
+# Question number 153
+#--------|---------|---------|---------|---------|---------|---------|
+Who was the first host of the original "Tonight Show"?
+#--------|---------|
+Steve Allen
+Jack Paar
+Johnny Carson
+Joey Bishop
+
+# Question number 154
+#--------|---------|---------|---------|---------|---------|---------|
+"Chastity" was the name of the first-born of whom?
+#--------|---------|
+Cher Bono
+Grace Slick
+Barbara Hershey
+Shari Lewis
+
+# Question number 155
+#--------|---------|---------|---------|---------|---------|---------|
+Who did actress Carrie Fisher marry on August 16, 1983?
+#--------|---------|
+Paul Simon
+Dan Akroyd
+Ringo Starr
+Mark Hamill
+
+# Question number 156
+#--------|---------|---------|---------|---------|---------|---------|
+What city was the setting for the TV series "Gunsmoke"?
+#--------|---------|
+Dodge City, Kansas
+Reno, Nevada
+Cheyenne, Wyoming
+Kittyhawk, N.C.
+
+# Question number 157
+#--------|---------|---------|---------|---------|---------|---------|
+What actor was married to Carole Lombard between 1939 to 1942?
+#--------|---------|
+Clark Gable
+Cary Grant
+Gregory Peck
+Humphrey Bogart
+
+# Question number 158
+#--------|---------|---------|---------|---------|---------|---------|
+What kind of apple is on the label of The Beatles' Apple Records?
+#--------|---------|
+A Granny Smith
+A Goldstein
+A Golden Delicious
+A Pippin
+
+# Question number 159
+#--------|---------|---------|---------|---------|---------|---------|
+Who played "Hot Lips Houlihan" in the movie "M*A*S*H"?
+#--------|---------|
+Sally Kellerman
+Loretta Switt
+Louise Fletcher
+Karen Black
+
+# Question number 160
+#--------|---------|---------|---------|---------|---------|---------|
+How much was the "secret word" worth on "You Bet Your Life"?
+#--------|---------|
+100 dollars
+50 dollars
+25 dollars
+150 dollars
+
+# Question number 161
+#--------|---------|---------|---------|---------|---------|---------|
+What actress debuted in the 1938 film "Intermezzo"?
+#--------|---------|
+Ingrid Bergman
+Katherine Hepburn
+Greta Garbo
+Carole Lombard
+
+# Question number 162
+#--------|---------|---------|---------|---------|---------|---------|
+In what year did NBC's "Saturday Night Live" debut?
+#--------|---------|
+1975
+1974
+1976
+1977
+
+# Question number 163
+#--------|---------|---------|---------|---------|---------|---------|
+What was the first X-rated film to win the Oscar for Best Picture?
+#--------|---------|
+Midnight Cowboy
+The Godfather
+Godfather II
+Clockwork Orange
+
+# Question number 164
+#--------|---------|---------|---------|---------|---------|---------|
+What orchestra leader did Doc Severinson replace?
+#--------|---------|
+Skitch Henderson
+Tommy Newsome
+Tommy Dorsey
+Leonard Bernstein
+
+# Question number 165
+#--------|---------|---------|---------|---------|---------|---------|
+What's tattooed on Popeye's arm?
+#--------|---------|
+An anchor
+"Olive-Oyl"
+A lady
+"Mom"
+
+# Question number 166
+#--------|---------|---------|---------|---------|---------|---------|
+How many times did Judy Garland sing "Over the Rainbow"?
+#--------|---------|
+12,551 times
+6,742 times
+8,663 times
+376 times
+
+# Question number 167
+#--------|---------|---------|---------|---------|---------|---------|
+Who played Helen Keller in the 1962 film "The Miracle Worker"?
+#--------|---------|
+Patty Duke
+Shirley MacLaine
+Katherine Ross
+Sally Fields
+
+# Question number 168
+#--------|---------|---------|---------|---------|---------|---------|
+Who played the Owl in the film "The Owl and the Pussycat"?
+#--------|---------|
+George Segal
+George Burns
+Elliot Gould
+Ryan O'Neal
+
+# Question number 169
+#--------|---------|---------|---------|---------|---------|---------|
+What year was the setting for the film "American Grafitti"?
+#--------|---------|
+1962
+1956
+1959
+1964
+
+# Question number 170
+#--------|---------|---------|---------|---------|---------|---------|
+Which was The Beatles' biggest selling single ever?
+#--------|---------|
+Hey Jude
+Yesterday
+I am the Walrus
+She Loves You
+
+# Question number 171
+#--------|---------|---------|---------|---------|---------|---------|
+"New York Mining Disaster-1941" was the first hit record for...
+#--------|---------|
+The Bee Gees
+The Beatles
+Michael Jackson
+The Rolling Stones
+
+# Question number 172
+#--------|---------|---------|---------|---------|---------|---------|
+Who portrayed Sherlock Holmes in 14 films between 1939 and 1946?
+#--------|---------|
+Basil Rathbone
+Peter Cooke
+Nigel Bruce
+John Houseman
+
+# Question number 173
+#--------|---------|---------|---------|---------|---------|---------|
+What was the name of Tonto's horse?
+#--------|---------|
+Scout
+Silver
+Keemosabe
+Broken Arrow
+
+# Question number 174
+#--------|---------|---------|---------|---------|---------|---------|
+In which country was Woody Allen's "Love and Death" situated?
+#--------|---------|
+Russia
+Japan
+The United States
+England
+
+# Question number 175
+#--------|---------|---------|---------|---------|---------|---------|
+Who played Chester on "Gunsmoke"?
+#--------|---------|
+Dennis Weaver
+Daniel Arness
+James Arness
+Johnny Crawford
+
+# Question number 176
+#--------|---------|---------|---------|---------|---------|---------|
+Who played Bret Maverick?
+#--------|---------|
+James Garner
+Roger Moore
+James Arness
+Dennis Weaver
+
+# Question number 177
+#--------|---------|---------|---------|---------|---------|---------|
+How many children is Elvis Presley known to have fathered?
+#--------|---------|
+1
+None
+2
+6
+
+# Question number 178
+#--------|---------|---------|---------|---------|---------|---------|
+Who's the host of the TV game show "Family Feud"?
+#--------|---------|
+Richard Dawson
+Bob Eubanks
+Charles Allen
+Bill Cullen
+
+# Question number 179
+#--------|---------|---------|---------|---------|---------|---------|
+Who sang the song "Dr. Kildaire's Theme"?
+#--------|---------|
+Richard Chamberlain
+Bobby Darin
+Frank Sinatra
+Sammy Davis, Jr.
+
+# Question number 180
+#--------|---------|---------|---------|---------|---------|---------|
+What singing group felt "Glad All Over"?
+#--------|---------|
+The Dave Clark Five
+The Animals
+Herman's Hermits
+The Beatles
+
+# Question number 181
+#--------|---------|---------|---------|---------|---------|---------|
+A Time magazine cover, labelled "The Day the Music Died" pictured:
+#--------|---------|
+John Lennon
+Buddy Holly
+Janis Joplin
+Jim Morrison
+
+# Question number 182
+#--------|---------|---------|---------|---------|---------|---------|
+Who played the sheriff of Amity Island in "Jaws"?
+#--------|---------|
+Roy Scheider
+Hal Holbrook
+Richard Dreyfuss
+Robert Shaw
+
+# Question number 183
+#--------|---------|---------|---------|---------|---------|---------|
+Who played Eliza Doolittle in the Broadway version of "My Fair Lady"?
+#--------|---------|
+Julie Andrews
+Audrey Hepburn
+Natalie Wood
+Carol Channing
+
+# Question number 184
+#--------|---------|---------|---------|---------|---------|---------|
+What was Birdie's first name in "Bye, Bye, Birdie"?
+#--------|---------|
+Conrad
+Conway
+Comrade
+Billy
+
+# Question number 185
+#--------|---------|---------|---------|---------|---------|---------|
+Who did Bernie Taupin write song lyrics for?
+#--------|---------|
+Elton John
+Neil Diamond
+Carole King
+Wayne Newton
+
+# Question number 186
+#--------|---------|---------|---------|---------|---------|---------|
+Who hosted the TV show "Earn Your Vacation"?
+#--------|---------|
+Johnny Carson
+Bill Cullen
+Bob Eubanks
+Allen Ludden
+
+# Question number 187
+#--------|---------|---------|---------|---------|---------|---------|
+What was Elvis Presley's middle name?
+#--------|---------|
+Aaron
+Thomas
+Arnold
+Parker
+
+# Question number 188
+#--------|---------|---------|---------|---------|---------|---------|
+The Beatles' "Hard Day's Night" earned how many oscars?
+#--------|---------|
+2
+1
+None
+4
+
+# Question number 189
+#--------|---------|---------|---------|---------|---------|---------|
+What was John Wayne's last movie?
+#--------|---------|
+The Shootist
+True Grit
+Brewster Cogburn
+The Green Berets
+
+# Question number 190
+#--------|---------|---------|---------|---------|---------|---------|
+Who hosted "60 Minutes" along with Mike Wallace in its first season?
+#--------|---------|
+Harry Reasoner
+Dan Rather
+Morley Safer
+Ed Bradley
+
+# Question number 191
+#--------|---------|---------|---------|---------|---------|---------|
+The lead singer for The Who is...
+#--------|---------|
+Roger Daltry
+Peter Townshend
+Keith Moon
+John Entwhistle
+
+# Question number 192
+#--------|---------|---------|---------|---------|---------|---------|
+What is Princess Aurora's better known name?
+#--------|---------|
+Sleeping Beauty
+Snow White
+Cinderella
+Shirley Temple
+
+# Question number 193
+#--------|---------|---------|---------|---------|---------|---------|
+How old was Lolita?
+#--------|---------|
+12
+14
+16
+18
+
+# Question number 194
+#--------|---------|---------|---------|---------|---------|---------|
+What government department did The Untouchables work for?
+#--------|---------|
+The Treasury
+The G-Men
+The FBI
+Military Police
+
+# Question number 195
+#--------|---------|---------|---------|---------|---------|---------|
+Who played the President in the film "Fail Safe"?
+#--------|---------|
+Henry Fonda
+E.G. Marshall
+Arthur Hill
+Martin Sheen
+
+# Question number 196
+#--------|---------|---------|---------|---------|---------|---------|
+What film's soundtrack featured the song "Dueling Banjos"?
+#--------|---------|
+Deliverance
+Kentucky Derby
+Bonnie & Clyde
+A Day at The Races
+
+# Question number 197
+#--------|---------|---------|---------|---------|---------|---------|
+What product featured the slogan, "Try it, you'll like it."?
+#--------|---------|
+Alka-Seltzer
+Rolaids
+Dr. Pepper
+Pizza Hut
+
+# Question number 198
+#--------|---------|---------|---------|---------|---------|---------|
+Who composed "Twinkle, Twinkle, Little Star"?
+#--------|---------|
+Mozart
+Ludwig Beethoven
+Walt Disney
+Sibelius
+
+# Question number 199
+#--------|---------|---------|---------|---------|---------|---------|
+Who chased Dr. Richard Kimble for 4 years?
+#--------|---------|
+Lt. Gerard
+Sgt. Friday
+Captain Kimberley
+Lt. Calley
+
+# Question number 200
+#--------|---------|---------|---------|---------|---------|---------|
+In which city did Dick Clark's American Bandstand originate?
+#--------|---------|
+Philadlphia
+Hollywood
+New York City
+Detroit
+
+# Question number 201
+#--------|---------|---------|---------|---------|---------|---------|
+Who shot J.R.?
+#--------|---------|
+Kristin Shephard
+Sue Ellen
+Bobby Ewing
+Sammy Joe
+
+# Question number 202
+#--------|---------|---------|---------|---------|---------|---------|
+Who stole the blueprints for the Death Star?
+#--------|---------|
+Princess Leia
+C-3P0
+R2-D2
+Luke Skywalker
+
+# Question number 203
+#--------|---------|---------|---------|---------|---------|---------|
+What was the name of Lawrence Welk`s autobiography?
+#--------|---------|
+Wunnerful Wunnerful
+Mr. Bubbles
+No More Champaigne
+Music for America
+
+# Question number 204
+#--------|---------|---------|---------|---------|---------|---------|
+Who was Carol Burnett's guest-host on each season opener?
+#--------|---------|
+Jim Nabors
+Vicky Lawrence
+Bob Newhart
+Sandra Chase
+
+# Question number 205
+#--------|---------|---------|---------|---------|---------|---------|
+Who was Beaver Cleaver's school- teacher?
+#--------|---------|
+Miss Landers
+Miss Meyers
+Miss Standish
+Miss Langley
+
+# Question number 206
+#--------|---------|---------|---------|---------|---------|---------|
+Who sang the theme to the TV series "Rawhide"?
+#--------|---------|
+Frankie Laine
+Clint Eastwood
+Marlin Perkins
+Frankie Valley
+
+# Question number 207
+#--------|---------|---------|---------|---------|---------|---------|
+What 1935 film propelled Errol Flynn to fame?
+#--------|---------|
+Captain Blood
+Varvados Bound
+Pirates Escape
+The Oscar
+
+# Question number 208
+#--------|---------|---------|---------|---------|---------|---------|
+In 1961, who won the best actor Oscar for "Judgment at Nuremberg"?
+#--------|---------|
+Maximiliam Schell
+Ben Gazarra
+James Mason
+Albert Finney
+
+# Question number 209
+#--------|---------|---------|---------|---------|---------|---------|
+What was the last Rogers and Hammerstein musical?
+#--------|---------|
+The Sound of Music
+Carousel
+Kismet
+South Pacific
+
+# Question number 210
+#--------|---------|---------|---------|---------|---------|---------|
+Who recorded the 1957 hit "Tammy"?
+#--------|---------|
+Debbie Reynolds
+Sandra Dee
+Connie Stevens
+Michele Lee
+
+# Question number 211
+#--------|---------|---------|---------|---------|---------|---------|
+What actress was the top box-office draw during World War II?
+#--------|---------|
+Betty Grable
+Marilyn Monroe
+Rosiland Russell
+Greta Garbo
+
+# Question number 212
+#--------|---------|---------|---------|---------|---------|---------|
+Who created Weird Harold and Fat Albert?
+#--------|---------|
+Bill Cosby
+Walt Disney
+Jim Hensen
+Charlie Bergman
+
+# Question number 213
+#--------|---------|---------|---------|---------|---------|---------|
+Who was the movies biggest male Box Office attraction in 1980?
+#--------|---------|
+Burt Reynolds
+Paul Newman
+Darth Vader
+Robert Redford
+
+# Question number 214
+#--------|---------|---------|---------|---------|---------|---------|
+"Death Valley Days" was NOT hosted by which of the following?
+#--------|---------|
+Robert Young
+Ronald Reagan
+Robert Taylor
+Dale Robertson
+
+# Question number 215
+#--------|---------|---------|---------|---------|---------|---------|
+Which Beatles' film presented the song "The Night Before"?
+#--------|---------|
+Help!
+A Hard Day's Night
+Yellow Submarine
+Let it Be
+
+# Question number 216
+#--------|---------|---------|---------|---------|---------|---------|
+Who portrayed Caspar Gutman in the 1941 film, "The Maltese Falcon"?
+#--------|---------|
+Sydney Greenstreet
+Claude Rains
+Humphrey Bogart
+Peter Lorre
+
+# Question number 217
+#--------|---------|---------|---------|---------|---------|---------|
+What popular variety show began as "The Toast of the Town"?
+#--------|---------|
+Ed Sullivan Show
+The Jack Paar Show
+The Tonight Show
+Dinah Shore Show
+
+# Question number 218
+#--------|---------|---------|---------|---------|---------|---------|
+How old was Paul Anka when he had his hit song, "Diana"?
+#--------|---------|
+15
+17
+18
+20
+
+# Question number 219
+#--------|---------|---------|---------|---------|---------|---------|
+Who hosted The Newlywed Game?
+#--------|---------|
+Bob Eubanks
+Dick Clark
+Gene Rayburn
+Chuck Farris
+
+# Question number 220
+#--------|---------|---------|---------|---------|---------|---------|
+What's Tony Curtis' real name?
+#--------|---------|
+Bernard Schwartz
+Marion Olson
+Antonio Cursilia
+Anthony Kurtzwield
+
+# Question number 221
+#--------|---------|---------|---------|---------|---------|---------|
+What's John Wayne's real name?
+#--------|---------|
+Marion Morrison
+Antonio Cursilia
+Reginald Petersmith
+Dwight Hicks
+
+# Question number 222
+#--------|---------|---------|---------|---------|---------|---------|
+What's Elton John's real name?
+#--------|---------|
+Reginald Dwight
+Elementon Jochsbrow
+John Tennyson
+Elenor Johnston
+
+# Question number 223
+#--------|---------|---------|---------|---------|---------|---------|
+Who was the banker in "The Beverly Hillbillies"?
+#--------|---------|
+Mr. Drysdale
+Mr. Shumway
+Mr. Hathaway
+Mr. Hackett
+
+# Question number 224
+#--------|---------|---------|---------|---------|---------|---------|
+Who played astronaut Tony Nelson on TV's "I Dream of Jeannie"?
+#--------|---------|
+Larry Hagman
+Bud York
+Dick York
+Darren McGavin
+
+# Question number 225
+#--------|---------|---------|---------|---------|---------|---------|
+Mel Brooks is married to what other personality?
+#--------|---------|
+Anne Bancroft
+Cloris Leachman
+Terri Garr
+Madeleine Kahn
+
+# Question number 226
+#--------|---------|---------|---------|---------|---------|---------|
+Hattie McDaniel, the first black to win an Oscar, was in what film?
+#--------|---------|
+Gone With the Wind
+Song of the South
+The Al Jolson Story
+My Little Chickadee
+
+# Question number 227
+#--------|---------|---------|---------|---------|---------|---------|
+In what 1959 film did Tony Curtis & Jack Lemmon appear in drag?
+#--------|---------|
+Some Like it Hot
+Fortune Cookie
+The Odd Couple
+The Choirboys
+
+# Question number 228
+#--------|---------|---------|---------|---------|---------|---------|
+What actor was onstage during the "streaking" of the Academy Awards?
+#--------|---------|
+David Niven
+John Wayne
+Dustin Hoffman
+Peter Sellers
+
+# Question number 229
+#--------|---------|---------|---------|---------|---------|---------|
+Who portrayed W.C. Fields in the film "W.C. Fields and Me"?
+#--------|---------|
+Rod Steiger
+Karl Malden
+Alan Hale
+Robin Williams
+
+# Question number 230
+#--------|---------|---------|---------|---------|---------|---------|
+Who "blamed it on the Bossa Nova"?
+#--------|---------|
+Edie Gorme
+Leslie Gore
+Patty Duke
+Steve Lawrence
+
+# Question number 231
+#--------|---------|---------|---------|---------|---------|---------|
+Who song the title song to the film "Goldfinger"?
+#--------|---------|
+Shirley Bassey
+Shana Easton
+Carly Simon
+Barbra Streisand
+
+# Question number 232
+#--------|---------|---------|---------|---------|---------|---------|
+Who portrayed the skipper on "Gilligan's Island"?
+#--------|---------|
+Alan Hale
+Jim Backus
+Jim Hale
+Bob Denver
+
+# Question number 233
+#--------|---------|---------|---------|---------|---------|---------|
+Who sang "Do the Locomotion"?
+#--------|---------|
+Little Eva
+Aretha Franklin
+Tina Turner
+Billy Holliday
+
+# Question number 234
+#--------|---------|---------|---------|---------|---------|---------|
+Bob Newhart portrayed Dr. Hartley in what city?
+#--------|---------|
+Chicago
+Minneapolis
+New York
+St. Paul
+
+# Question number 235
+#--------|---------|---------|---------|---------|---------|---------|
+What TV show took place in New Rochelle, New York?
+#--------|---------|
+Dick Van Dyke Show
+All in the Family
+Maude
+Donna Reed Show
+
+# Question number 236
+#--------|---------|---------|---------|---------|---------|---------|
+Who asked the musical question, "Who's Sorry Now"?
+#--------|---------|
+Connie Francis
+Brenda Lee
+Doris Day
+Debbie Reynolds
+
+# Question number 237
+#--------|---------|---------|---------|---------|---------|---------|
+John Lennon and Paul McCartney each married a woman from which town?
+#--------|---------|
+Scarsdale, New York
+New York City
+San Francosco
+Cambridge, England
+
+# Question number 238
+#--------|---------|---------|---------|---------|---------|---------|
+In the movie "All the President's Men", who played `Deep Throat'?
+#--------|---------|
+Hal Holbrook
+Linda Lovelace
+Robert Redford
+Richard Widmark
+
+# Question number 239
+#--------|---------|---------|---------|---------|---------|---------|
+Who played the freckle-faced Will Robinson in "Lost in Space"?
+#--------|---------|
+Bill Mumy
+Ron Howard
+Rodney Alan Rippy
+Rusty Williams
+
+# Question number 240
+#--------|---------|---------|---------|---------|---------|---------|
+Who played Victoria Barkley on the TV show, "The Big Valley"?
+#--------|---------|
+Barbara Stanwyck
+Linda Evans
+Michael Learned
+June Allison
+
+# Question number 241
+#--------|---------|---------|---------|---------|---------|---------|
+Who sang the theme song for the TV show, "Welcome Back, Kotter"?
+#--------|---------|
+John Sebastian
+Paul Anka
+Paul Williams
+The Loving Spoonful
+
+# Question number 242
+#--------|---------|---------|---------|---------|---------|---------|
+Who played Dr. Smith on the TV show "Lost in Space"?
+#--------|---------|
+Jonathan Harris
+Eddie Albert
+Zachary Taylor
+Michael Landon
+
+# Question number 243
+#--------|---------|---------|---------|---------|---------|---------|
+In what film is Cary Grant attacked by a low-flying cropduster?
+#--------|---------|
+North by Northwest
+Operation Petticoat
+North to Eden
+Dial M for Murder
+
+# Question number 244
+#--------|---------|---------|---------|---------|---------|---------|
+How many consecutive years was The Ed Sullivan Show on TV?
+#--------|---------|
+23
+18
+20
+13
+
+# Question number 245
+#--------|---------|---------|---------|---------|---------|---------|
+Which of the following HAS NOT played Captain Bligh of the Bounty?
+#--------|---------|
+Sydney Greenstreet
+Charles Laughton
+Trevor Howard
+Anthony Hopkins
+
+# Question number 246
+#--------|---------|---------|---------|---------|---------|---------|
+What was the Oscar-winning theme song for "Breakfast at Tiffany's"?
+#--------|---------|
+Moon River
+Que Sera, Que Sera
+White Christmas
+New York, New York
+
+# Question number 247
+#--------|---------|---------|---------|---------|---------|---------|
+Who played Uncle Martin on the TV show "My Favorite Martian"?
+#--------|---------|
+Ray Walston
+Jonathan Harris
+Bill Bixby
+Martin Balsam
+
+# Question number 248
+#--------|---------|---------|---------|---------|---------|---------|
+In the film "All the President's Men", who played Carl Bernstein?
+#--------|---------|
+Dustin Hoffman
+Hal Holbrook
+Robert Redford
+John Sirica
+
+# Question number 249
+#--------|---------|---------|---------|---------|---------|---------|
+Which was the first TV couple to share a bed on prime time?
+#--------|---------|
+Ozzie & Harriet
+Rob & Laura Petrie
+Archie & Edith
+J.R. and Sue Ellen
+
+# Question number 250
+#--------|---------|---------|---------|---------|---------|---------|
+How many films did Elvis Presley make in his lifetime?
+#--------|---------|
+33
+23
+13
+43

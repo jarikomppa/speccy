@@ -14,6 +14,9 @@
 unsigned char *data_ptr;
 unsigned char *screen_ptr;
 
+unsigned char max_intro;
+unsigned char max_question;
+
 unsigned short framecounter;
 
 unsigned short score[4];
@@ -202,6 +205,7 @@ void get_string(unsigned short stringno, unsigned char *dst)
 void get_question(unsigned short questionno)
 {
     questionno *= 5;
+    questionno += max_intro;
     get_string(questionno, tempq); questionno++;
     get_string(questionno, tempa1); questionno++;
     get_string(questionno, tempa2); questionno++;
@@ -407,137 +411,6 @@ void setanswerbright(unsigned char answer, char bright)
 char gamemode;
 char players;
 
-//1234567890123456
-static const char b1[] = 
-"Welcome to the\n"
-"QuizTron 48000,\n"
-"also known as\n"
-"QT48k.\n"
-"\n"
-"I'm your host,\n"
-"QuizTron.";
-static const char b2[] = 
-//1234567890123456
- "In this game you\n"
- "puny humans will\n"
- "answer questions\n"
- "and die.\n";
-static const char b3[] = 
-//1234567890123456
- "Correction,\n"
- "answer questions\n"
- "or die.\n";
-static const char b4[] = 
-//1234567890123456
- "My producer just\n"
- "informed me that\n"
- "dying is not\n"
- "part of the\n"
- "game.\n";
-static const char b5[] = 
-//1234567890123456
- "This is no doubt\n"
- "an error that\n"
- "will be\n"
- "corrected in\n"
- "subsequent\n"
- "versions of the\n"
- "game.\n";
-static const char b6[] = 
-//1234567890123456
- "Pick one of the\n"
- "options below\n"
- "so we can get\n"
- "on with this.\n";
-static const char b7[] = 
-//1234567890123456
- "Even though I\n"
- "am eternal\n"
- "unlike you puny\n"
- "meatbags, I\n"
- "still don't have\n"
- "all day.";
-static const char b8[] = 
-//1234567890123456
- "I suppose I\n"
- "should explain\n"
- "the different\n"
- "game modes as\n"
- "you're still\n"
- "having trouble\n"
- "choosing.";
-static const char b9[] = 
-//1234567890123456
- "There are two\n"
- "game modes for\n"
- "a lonely human\n"
- "and two modes\n"
- "for multiple\n"
- "humans.";
-static const char b10[] = 
-//1234567890123456
- "For a short game\n"
- "you can pick the\n"
- "12 round option,\n"
- "or to really\n"
- "waste time, pick\n"
- "the endless\n"
- "mode.";
-static const char b11[] = 
-//1234567890123456
- "For relaxed game\n"
- "with several\n"
- "humans, pick the\n"
- "hotseat mode.\n"
- "In that mode\n"
- "everybody gets\n"
- "their very own\n"
- "turn.";
-static const char b12[] = 
-//1234567890123456
- "In the blitz\n"
- "mode whoever \n"
- "is fastest to\n"
- "answer will get\n"
- "it. But if the\n"
- "answer is wrong,\n"
- "a point is lost.";
-static const char b13[] = 
-//1234567890123456
- "And that's it.\n";
-static const char b14[] = 
-//1234567890123456
- "Go ahead and\n"
- "pick your doom.\n"
- "\n"
- "...\n"
- "Wait, what?";
-static const char b15[] = 
-//1234567890123456
- "Right, right,\n"
- "there is no\n"
- "doom.";
-static const char b16[] = 
-//1234567890123456
- "...";
-static const char b17[] = 
-//1234567890123456
- "Getting bored\n"
- "here.\n";
-static const char b18[] = 
-//1234567890123456
- "Tell you what,\n"
- "I'll just reset\n"
- "myself and\n"
- "forget this ever\n"
- "happened.\n"
- "\n"
- "....*fzztk*";
- 
-
-#define MAX_BLURB 18
-static const char * const blurb[MAX_BLURB] = { b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18 };
-
 void mainmenu()
 {
     char keydown = 0;
@@ -555,6 +428,8 @@ void mainmenu()
     setplayerbright(1, 0);
     setplayerbright(2, 0);
     setplayerbright(3, 0);
+    
+    get_string(0, tempq);
     
     while (!done)
     {
@@ -657,8 +532,8 @@ void mainmenu()
 
         if (robotalk < 120)
         {
-            drawstringfancy(blurb[blurbno], 15, 1, 7, robotalk);
-            if (blurb[blurbno][robotalk] == 0)
+            drawstringfancy(tempq+1, 15, 1, 7, robotalk);
+            if (robotalk >= *tempq)
             {
                 robotalk = 170;
                 mouth(0x66);
@@ -668,7 +543,7 @@ void mainmenu()
             }
             else
             {
-                if (!mouth(blurb[blurbno][robotalk]))
+                if (!mouth(tempq[robotalk]))
                 {
                     do_halt();
                     do_halt();
@@ -689,8 +564,9 @@ void mainmenu()
             eyes(0);
             robotalk = 0;
             blurbno++;
-            if (blurbno == MAX_BLURB)
+            if (blurbno == max_intro)
                 blurbno = 0;
+            get_string(blurbno, tempq);
         }
         
         robotalk++;
@@ -789,7 +665,7 @@ void ingame()
 
         clearfields(1,1);
         q = xorshift16() & 255;
-        while (q >= 250) q = xorshift16() & 255;
+        while (q >= max_question) q = xorshift16() & 255;
         get_question(q);
         a[0] = tempa1;
         a[1] = tempa2;
@@ -1083,7 +959,11 @@ void main()
         *((char*)0x4000+i) = 0;
     for (i = 0; i < 32*24; i++)
         *((char*)0x4000+192*32+i) = 7;
-    dict[0] = (char*)(0x5b00 + (192*32+24*32));
+
+    max_intro = *(char*)(0x5b00 + (192*32+24*32) + 0);
+    max_question = *(char*)(0x5b00 + (192*32+24*32) + 1);
+
+    dict[0] = (char*)(0x5b00 + (192*32+24*32) + 2);
     for (i = 1; i < 120; i++)
     {
         dict[i] = dict[i-1] + *dict[i-1] + 1;

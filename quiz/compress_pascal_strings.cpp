@@ -3,14 +3,15 @@
 #include <string.h>
 
 
-struct Question
+struct String
 {
-    char * a[5];
-    char * c[5];
+    char * a;
+    char * c;
 };
 
-int maxquestion = 0;
-Question question[10000];
+int introstrings = 0;
+int maxstring = 0;
+String string[10000];
 int maxsubstring = 0;
 #define MAXSUBSTRING 1000000
 char *substring[MAXSUBSTRING];
@@ -21,31 +22,6 @@ int substringlen[MAXSUBSTRING];
 int substringvalue[MAXSUBSTRING];
 
 #define ROR(x, v) ((unsigned)(x) >> (v)) | ((unsigned)(x) << (32-(v)))
-
-void parsefield(char *in, char *out, int len)
-{
-    int i;
-    for (i = 0; i < len; i++)
-    {
-        if (i != 0 && *in == ' ' && *(out-1) == ' ')
-        {
-            // skip
-            in++;
-        }
-        else
-        {
-            *out = *in;
-            out++;
-            in++;
-        }
-    }
-    *out = 0;
-    while (*(out-1) == ' ')
-    {
-        out--;
-        *out = 0;
-    }
-}
 
 char * mystrdup(char * a)
 {
@@ -58,37 +34,54 @@ char * mystrdup(char * a)
     return str;
 }
 
+void readrawline(char *buf, FILE * f)
+{
+    int i = 0;
+    int c;
+    do
+    {
+        c = fgetc(f);
+        if (c == '\r')
+            c = fgetc(f);
+        buf[i] = c;
+        if (!feof(f) && c != '\n')
+            i++;
+    }
+    while (!feof(f) && c > 31);
+    buf[i] = 0;
+}
+
+void readline(char *buf, FILE * f)
+{
+    do
+    {
+        readrawline(buf, f);
+    }
+    while (!feof(f) && buf[0] == '#' && buf[0] > 31);
+}
+
 int parse(char * aFilename)
 {
     char buf[256];
-    char out[256];
     FILE * f = fopen(aFilename, "rb");
     if (!f)
         return 0;
+    
     while (!feof(f))
     {
         memset(buf, 0, 256);
-        fread(buf, 155, 1, f);
+        readline(buf,f);
         if (buf[0])
-        {
-            parsefield(buf, out, 72);
-            question[maxquestion].a[0] = mystrdup(out);
-            parsefield(buf+72+20*0, out, 20);
-            question[maxquestion].a[1] = mystrdup(out);
-            parsefield(buf+72+20*1, out, 20);
-            question[maxquestion].a[2] = mystrdup(out);
-            parsefield(buf+72+20*2, out, 20);
-            question[maxquestion].a[3] = mystrdup(out);
-            parsefield(buf+72+20*3, out, 20);
-            question[maxquestion].a[4] = mystrdup(out);
-            int correct = buf[152] - '0';
-            if (correct != 1)
+        {            
+            if (buf[0] == '/')
             {
-                char *temp = question[maxquestion].a[1];
-                question[maxquestion].a[1] = question[maxquestion].a[correct];
-                question[maxquestion].a[correct] = temp;
+                introstrings = maxstring;
             }
-            maxquestion++;            
+            else
+            {                
+                string[maxstring].a = mystrdup(buf);
+                maxstring++;            
+            }
         }
     }
     fclose(f);  
@@ -112,18 +105,19 @@ void writepascalstring(FILE *f, char *aAsciiZString)
 void save(char *aFilename)
 {
     FILE * f = fopen(aFilename, "wb");
+    unsigned char d;
+    d = introstrings;
+    fwrite(&d, 1, 1, f);
+    d = (maxstring - introstrings) / 5;
+    fwrite(&d, 1, 1, f);
     
     int i, j;
     for (i = 0; i < 120; i++)
         writepascalstring(f, substring[substringorder[i]]);
     
-    for (i = 0; i < maxquestion; i++)
+    for (i = 0; i < maxstring; i++)
     {
-        for (j = 0; j < 5; j++)
-        {
-    //        writepascalstring(f, question[i].a[j]);
-            writepascalstring(f,  question[i].c[j]);
-        }
+        writepascalstring(f,  string[i].c);
     }
     fclose(f);
 }
@@ -199,24 +193,21 @@ void calcvalues()
 void compress()
 {
     printf("Generating substrings..\n");
-    int i, j, k, n, p;
-    for (i = 0; i < maxquestion; i++)
+    int i, k, n, p;
+    for (i = 0; i < maxstring; i++)
     {
-        for (j = 0; j < 5; j++)
+        char * str = string[i].a;
+        int    len = strlen(str);
+        for (k = 0; k < len - 1; k++)
         {
-            char * str = question[i].a[j];
-            int    len = strlen(str);
-            for (k = 0; k < len - 1; k++)
+            int max = len + 1 - k;
+            if (max > KEYWORD_MAX) max = KEYWORD_MAX;
+            for (n = KEYWORD_MIN; n < max; n++)
             {
-                int max = len + 1 - k;
-                if (max > KEYWORD_MAX) max = KEYWORD_MAX;
-                for (n = KEYWORD_MIN; n < max; n++)
-                {
-                    add_substring(str + k, n);
-                }
+                add_substring(str + k, n);
             }
         }
-        printf("\r%3d questions, %6d substrings", i+1, maxsubstring);
+        printf("\r%3d strings, %6d substrings", i+1, maxsubstring);
     }
     printf("\n\n");
     
@@ -251,54 +242,51 @@ void compress()
 
         lastmax = total;
         int collisions = 0;
-        for (i = 0; i < maxquestion; i++)
+        for (i = 0; i < maxstring; i++)
         {
-            for (j = 0; j < 5; j++)
+            int len = strlen(string[i].a);
+            for (k = 0; k < len - 1;)
             {
-                int len = strlen(question[i].a[j]);
-                for (k = 0; k < len - 1;)
+                int max = len + 1 - k - 1;
+                if (max > KEYWORD_MAX) max = KEYWORD_MAX;
+                char *str = string[i].a + k; 
+                int h[64];
+                hashrun(str, h, max);
+                
+                p = 0;
+                int found = 0;
+                do
                 {
-                    int max = len + 1 - k - 1;
-                    if (max > KEYWORD_MAX) max = KEYWORD_MAX;
-                    char *str = question[i].a[j] + k; 
-                    int h[64];
-                    hashrun(str, h, max);
+                    char *pstr =     substring[substringorder[p]];
+                    int plen   =  substringlen[substringorder[p]];
+                    int phash  = substringhash[substringorder[p]];
                     
-                    p = 0;
-                    int found = 0;
-                    do
+                    if (plen <= max && plen-1 > 0 && phash == h[plen-1])
                     {
-                        char *pstr =     substring[substringorder[p]];
-                        int plen   =  substringlen[substringorder[p]];
-                        int phash  = substringhash[substringorder[p]];
-                        
-                        if (plen <= max && plen-1 > 0 && phash == h[plen-1])
+                        found = 1;
+                        int x;
+                        for (x = 0; found && x < plen; x++)
                         {
-                            found = 1;
-                            int x;
-                            for (x = 0; found && x < plen; x++)
+                            if (pstr[x] != str[x])
                             {
-                                if (pstr[x] != str[x])
-                                {
-                                    found = 0;
-                                    collisions++;
-                                }
+                                found = 0;
+                                collisions++;
                             }
                         }
-                        
-                        if (found)
-                        {
-                            substringhit[substringorder[p]]++;
-                            k += substringlen[substringorder[p]];
-                        }
-                        
-                        p++;
                     }
-                    while (!found && p < maxsubstring);
                     
-                    if (!found)
-                        k++;
+                    if (found)
+                    {
+                        substringhit[substringorder[p]]++;
+                        k += substringlen[substringorder[p]];
+                    }
+                    
+                    p++;
                 }
+                while (!found && p < maxsubstring);
+                
+                if (!found)
+                    k++;
             }
         }
         printf("\n");
@@ -314,7 +302,7 @@ void compress()
             total += substringvalue[substringorder[i]];
         }
         
-        printf("Actual order, top 10: (savings in bytes) - total projected savings %d\n", total);
+        printf("Final order, top 10: (savings in bytes) - total projected savings %d\n", total);
         for (i = 0; i < 10; i++)
         {
             printf("%2d:%6d:\"%s\" \t(%d) x%d\n", 
@@ -327,62 +315,59 @@ void compress()
     }
     
     printf("Final compression pass..\n");
-    for (i = 0; i < maxquestion; i++)
+    for (i = 0; i < maxstring; i++)
     {
-        for (j = 0; j < 5; j++)
+        char temp[128];
+        int outidx = 0;
+        int len = strlen(string[i].a);
+        for (k = 0; k < len;)
         {
-            char temp[128];
-            int outidx = 0;
-            int len = strlen(question[i].a[j]);
-            for (k = 0; k < len;)
+            int max = len + 1 - k - 1;
+            if (max > KEYWORD_MAX) max = KEYWORD_MAX;
+            char *str = string[i].a + k; 
+            int h[64];
+            hashrun(str, h, max);
+            
+            p = 0;
+            int found = 0;
+            do
             {
-                int max = len + 1 - k - 1;
-                if (max > KEYWORD_MAX) max = KEYWORD_MAX;
-                char *str = question[i].a[j] + k; 
-                int h[64];
-                hashrun(str, h, max);
+                char *pstr =     substring[substringorder[p]];
+                int plen   =  substringlen[substringorder[p]];
+                int phash  = substringhash[substringorder[p]];
                 
-                p = 0;
-                int found = 0;
-                do
+                if (plen <= max && phash == h[plen-1])
                 {
-                    char *pstr =     substring[substringorder[p]];
-                    int plen   =  substringlen[substringorder[p]];
-                    int phash  = substringhash[substringorder[p]];
-                    
-                    if (plen <= max && phash == h[plen-1])
+                    found = 1;
+                    int x;
+                    for (x = 0; found && x < plen; x++)
                     {
-                        found = 1;
-                        int x;
-                        for (x = 0; found && x < plen; x++)
+                        if (pstr[x] != str[x])
                         {
-                            if (pstr[x] != str[x])
-                            {
-                                found = 0;
-                            }
+                            found = 0;
                         }
                     }
-                    
-                    if (found)
-                    {
-                        temp[outidx++] = p+128;
-                        substringhit[substringorder[p]]++;
-                        k += substringlen[substringorder[p]];
-                    }
-                    
-                    p++;
                 }
-                while (!found && p < 120);
                 
-                if (!found)
-                {   
-                    temp[outidx++] = *str;
-                    k++;
+                if (found)
+                {
+                    temp[outidx++] = p+128;
+                    substringhit[substringorder[p]]++;
+                    k += substringlen[substringorder[p]];
                 }
+                
+                p++;
             }
-            temp[outidx] = 0;
-            question[i].c[j] = strdup(temp);            
+            while (!found && p < 120);
+            
+            if (!found)
+            {   
+                temp[outidx++] = *str;
+                k++;
+            }
         }
+        temp[outidx] = 0;
+        string[i].c = strdup(temp);            
     }
     printf("\n");            
 }
@@ -533,12 +518,13 @@ void wrapstring(char *str, int len, int maxrows)
 void wordwrap()
 {
     int i, j;
-    for (i = 0; i < maxquestion; i++)
+    for (i = 0; i < maxstring; i++)
     {
-        for (j = 0; j < 5; j++)
-        {            
-            wrapstring(question[i].a[j], (j==0)? 16 : 12, (j==0)?9:2);
-        }
+        int q = (((i - introstrings) % 5) == 0) || (i < introstrings);
+        wrapstring(
+            string[i].a, 
+            q ? 16 : 12, 
+            q ? 9 : 2);
     }
 }
 
@@ -569,6 +555,24 @@ int main(int parc, char **pars)
     save(pars[2]);    
     
     printf("All done.\n");
+ 
+    if (introstrings == 0 || introstrings > 255)
+    {
+        printf("Warning: Invalid number of intro strings (%d)\n", introstrings);
+    }
+    
+    if ((maxstring - introstrings) / 5 == 0 || (maxstring - introstrings) / 5 > 255)
+    {
+        printf("Warning: Invalid number of questions (%d)\n", (maxstring - introstrings) / 5);
+    }
+    
+    printf("Stats:\n"
+           "Intro strings: %d\n"
+           "Questions    : %d\n"
+           "Sanity       : %s\n",
+           introstrings,
+           (maxstring - introstrings) / 5,
+           (((maxstring - introstrings) / 5) * 5 + introstrings == maxstring) ? "Yep" : "Nope, expect trouble");
     
     return 0;
 }
