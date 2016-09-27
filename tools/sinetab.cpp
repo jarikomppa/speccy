@@ -15,12 +15,22 @@
 int main(int parc, char ** pars)
 {
     int i;
-    FILE * f = fopen("sinetab.h", "w");
-
-    fprintf(f, "const unsigned short sinofs[256] = {\n");
-    for (i = 0; i < 256; i++)
+    
+    if (parc < 5)
     {
-        fprintf(f, "%4d%s", (int)floor(((sin(i * 2 * M_PI / 256.0f)+1)/2) * 192), (i==255)?"":",");
+        printf("%s <filename> <tabname> <amplitude> <width>\nExample: %s sinetab.h sinofs 192 256\n", pars[0], pars[0]);
+        return 0;
+    }
+    
+    int amp = atoi(pars[3]);
+    int width = atoi(pars[4]);
+    
+    FILE * f = fopen(pars[1], "w");
+
+    fprintf(f, "const unsigned short %s[%d] = {\n", pars[2], width);
+    for (i = 0; i < width; i++)
+    {
+        fprintf(f, "%4d%s", (int)floor(((sin(i * 2 * M_PI / (float)width)+1)/2) * amp), (i==width-1)?"":",");
         if (i % 16 == 15)
             fprintf(f, "\n");
     }
