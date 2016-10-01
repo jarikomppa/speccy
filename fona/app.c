@@ -21,42 +21,33 @@ unsigned short framecounter = 0;
 
 #define COLOR(BLINK, BRIGHT, PAPER, INK) (((BLINK) << 7) | ((BRIGHT) << 6) | ((PAPER) << 3) | (INK))
 
-void drawstring_dumb(unsigned char *s, unsigned char x, unsigned char y)
+void drawstring(unsigned char *aS, unsigned char aX, unsigned char aY)
 {
-    unsigned char i;
-    while (*s)
+    unsigned char i, *s, *d, sx, x;
+    unsigned char *datap = (unsigned char*)(int*)test_data - 32*8;
+    unsigned char *widthp = (unsigned char*)(int*)test_width - 32;
+    for (i = 0; i < 8; i++)
     {
-        for (i = 0; i < 8; i++)
+        s = aS;
+        sx = 0;
+        x = aX;
+        d = (unsigned char*)yofs[aY];
+        while (*s)
         {
-            *(unsigned char *)(yofs[y+i]+x) |= test_data[(*s-32)*8+i];
-        }
-        s++;
-        x++;
-    }
-}
-
-
-void drawstring(unsigned char *s, unsigned char x, unsigned char y)
-{
-    unsigned char i;
-    char sx = 0;
-    while (*s)
-    {
-        for (i = 0; i < 8; i++)
-        {
-            *(unsigned char *)(yofs[y+i]+x) |= test_data[(*s-32)*8+i] >> sx;                        
-        }
-        sx += test_width[*s-32];
-        if (sx > 8)
-        {
-            x++;
-            sx -= 8;
-            for (i = 0; i < 8; i++)
+            unsigned char data = datap[*s * 8];
+            unsigned char width = widthp[*s];
+            *d |= data >> sx;
+            sx += width;
+            if (sx > 8)
             {
-                *(unsigned char *)(yofs[y+i]+x) |= test_data[(*s-32)*8+i] << (test_width[*s-32]-sx);
+                d++;
+                sx -= 8;
+                *d |= data << (width - sx);
             }
+            s++;
         }
-        s++;
+        aY++;
+        datap++;
     }
 }
 
@@ -77,10 +68,12 @@ void main()
     {
         framecounter++;
         do_halt(); // halt waits for interrupt - or vertical retrace
+        for (i = 0; i < 600; i++);
 
         port254(1);
-        drawstring("What a proportional world it is!", 0, 0);
-        drawstring_dumb("What a fixed world it is!", 0, 9);
+        drawstring("Test", 0, 0);
+        //drawstring("Quick Brown Fox Jumped Over The Lazy Dog.", 0, 0);
+        //drawstring_dumb("What a fixed world it is!", 0, 9);
         port254(0);
     }
 }
