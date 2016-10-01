@@ -7,10 +7,12 @@
 #define LETTER_SPACING 1
 #define SPACE_WIDTH 4
 
+int pixheight = 8;
+
 struct CharData
 {
     int xmin, xmax;
-    unsigned char pixdata[8];
+    unsigned char pixdata[20];
 };
 
 CharData chardata[94];
@@ -20,7 +22,7 @@ void scan(unsigned int *data, CharData &parsed)
     parsed.xmin = 8;
     parsed.xmax = 0;
     int i, j;
-    for (i = 0; i < 8; i++)
+    for (i = 0; i < pixheight; i++)
     {        
         parsed.pixdata[i] = 0;
         for (j = 0; j < 8; j++)
@@ -43,15 +45,15 @@ void scan(unsigned int *data, CharData &parsed)
 void output(char *filename, char *varname)
 {
     FILE * f = fopen(filename, "w");
-    fprintf(f, "const unsigned char %s_data[94*8] = {\n", varname);
+    fprintf(f, "const unsigned char %s_data[94*%d] = {\n", varname, pixheight);
     int i, j;
     for (i = 0; i < 94; i++)
     {
-        for (j = 0; j < 8; j++)
+        for (j = 0; j < pixheight; j++)
         {
             fprintf(f, "0x%02x", chardata[i].pixdata[j]);
-            if (i != 93 || j != 7) fprintf(f, ","); else fprintf(f, " ");
-            if (j != 7) fprintf(f, " "); else fprintf(f, " // '%c'\n", i+32);
+            if (i != 93 || j != (pixheight-1)) fprintf(f, ","); else fprintf(f, " ");
+            if (j != (pixheight-1)) fprintf(f, " "); else fprintf(f, " // '%c'\n", i+32);
         }
     }
     fprintf(f,"};\n\n");
@@ -73,7 +75,7 @@ void shift()
     int i, j;
     for (i = 0; i < 94; i++)
     {
-        for (j = 0; j < 8; j++)
+        for (j = 0; j < pixheight; j++)
         {
             chardata[i].pixdata[j] <<= chardata[i].xmin;
         }
@@ -96,15 +98,17 @@ int main(int parc, char ** pars)
         return -1;
     }
     printf("%s image dimensions: %dx%d\n", pars[1], x, y);
-    if (x != 8 || y < 752)
+    if (x != 8 || y < 752 || y % 94)
     {
-        printf("Bad image dimensions; width should be 8, height should be at least 752 (94x8)\n");
+        printf("Bad image dimensions; width should be 8, height should be at least 752 (94xX), divisible by 94\n");
         return -1;
     }
     
+    pixheight = y / 94;
+    
     for (n = 0; n < 94; n++)
     {
-        scan(data+8*8*n, chardata[n]);
+        scan(data+8*pixheight*n, chardata[n]);
     }
     
     shift();

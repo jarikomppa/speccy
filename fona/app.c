@@ -15,18 +15,20 @@ unsigned char *screen_ptr;
 unsigned char port254tonebit;
 unsigned short framecounter = 0;
 
+#define FONTHEIGHT 12
+
 #include "yofstab.h"
 #include "hwif.c"
-#include "test.h"
+#include "test12.h"
 
 #define COLOR(BLINK, BRIGHT, PAPER, INK) (((BLINK) << 7) | ((BRIGHT) << 6) | ((PAPER) << 3) | (INK))
 
 void drawstring(unsigned char *aS, unsigned char aX, unsigned char aY)
 {
     unsigned char i, *s, *d, sx, x;
-    unsigned char *datap = (unsigned char*)(int*)test_data - 32*8;
+    unsigned char *datap = (unsigned char*)(int*)test_data - 32*FONTHEIGHT;
     unsigned char *widthp = (unsigned char*)(int*)test_width - 32;
-    for (i = 0; i < 8; i++)
+    for (i = 0; i < FONTHEIGHT; i++)
     {
         s = aS;
         sx = 0;
@@ -34,7 +36,7 @@ void drawstring(unsigned char *aS, unsigned char aX, unsigned char aY)
         d = (unsigned char*)yofs[aY];
         while (*s)
         {
-            unsigned char data = datap[*s * 8];
+            unsigned char data = datap[*s * FONTHEIGHT];
             unsigned char width = widthp[*s];
             *d |= data >> sx;
             sx += width;
@@ -71,8 +73,8 @@ void main()
         for (i = 0; i < 600; i++);
 
         port254(1);
-        drawstring("Test", 0, 0);
-        //drawstring("Quick Brown Fox Jumped Over The Lazy Dog.", 0, 0);
+        //drawstring("Test", 0, 0);
+        drawstring("Quick Brown Fox Jumped Over The Lazy Dog.", 0, 0);
         //drawstring_dumb("What a fixed world it is!", 0, 9);
         port254(0);
     }
