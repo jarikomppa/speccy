@@ -46,7 +46,7 @@ void drawstring(unsigned char *aS, unsigned char aX, unsigned char aY)
             {
                 d++;
                 sx -= 8;
-                *d |= data << (width - sx);
+                *d = data << (width - sx);
             }
             s++;
         }
@@ -84,7 +84,7 @@ void drawstring_lr(unsigned char *s, unsigned char x, unsigned char y)
             for (i = 0; i < 8; i++, chp++)
             {
                 yp[i]++;
-                *(yp[i]) |= *chp << (wd - sx);
+                *(yp[i]) = *chp << (wd - sx);
             }
         }
         s++;
