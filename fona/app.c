@@ -39,14 +39,20 @@ void drawstring(unsigned char *aS, unsigned char aX, unsigned char aY)
             unsigned char ch = *s;
             unsigned char data = datap[ch * FONTHEIGHT];
             unsigned char width = widthp[ch];
+            if (data)
+            {
             *d |= data >> sx;
+            }
             
             sx += width;
             if (sx > 8)
             {
                 d++;
                 sx -= 8;
+                if (data)
+                {
                 *d = data << (width - sx);
+            }
             }
             s++;
         }
@@ -54,6 +60,7 @@ void drawstring(unsigned char *aS, unsigned char aX, unsigned char aY)
         datap++;
     }
 }
+
 
 void drawstring_lr(unsigned char *s, unsigned char x, unsigned char y)
 {
@@ -72,19 +79,35 @@ void drawstring_lr(unsigned char *s, unsigned char x, unsigned char y)
         unsigned char ch = *s;
         unsigned char wd = widthp[ch];
         unsigned char *chp = datap + ch * FONTHEIGHT;
+        if (*s != 32)
+        {
         for (i = 0; i < 8; i++, chp++)
         {
-            *(yp[i]) |= *chp >> sx;                        
+                unsigned char data = *chp;
+                if (data)
+                {
+                    *(yp[i]) |= data >> sx;                        
+                }
+            }
         }
+        else
+        {
+            chp += 8;
+        }
+        
         sx += wd;
         if (sx > 8)
         {
-            chp -= 8;
             sx -= 8;
+            chp -= 8;            
             for (i = 0; i < 8; i++, chp++)
             {
+                unsigned char data = *chp;
                 yp[i]++;
-                *(yp[i]) = *chp << (wd - sx);
+                if (data)
+                {
+                    *(yp[i]) = data << (wd - sx);
+                }
             }
         }
         s++;
