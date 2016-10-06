@@ -14,11 +14,11 @@ $O !key light
 You see a key here.
 $O key
 You have the key.
-$O neon
+$O neon ext:2
 Outside the window, neon sign is red.
-$O !neon
+$O !neon ext:1
 Outside the window, neon sign is blue.
-$O rnd:10 set:lightning
+$O rnd:10 set:lightning ext:6
 Lightning flashes in the window.
 
 
@@ -37,7 +37,7 @@ Enter
 $A start !lightning
 Wait
 
-$Q end
+$Q end ext:7
 The end.
 $O light
 You left the lights on.
