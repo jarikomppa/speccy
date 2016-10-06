@@ -13,16 +13,34 @@ unsigned char *data_ptr;
 unsigned char *screen_ptr;
 
 unsigned char port254tonebit;
-unsigned short framecounter = 0;
 
 #define FONTHEIGHT 8
+#define COLOR(BLINK, BRIGHT, PAPER, INK) (((BLINK) << 7) | ((BRIGHT) << 6) | ((PAPER) << 3) | (INK))
 
 #include "yofstab.h"
+#define HWIF_IMPLEMENTATION
 #include "hwif.c"
 #include "propfont.h"
 #include "drawstring.c"
 
-#define COLOR(BLINK, BRIGHT, PAPER, INK) (((BLINK) << 7) | ((BRIGHT) << 6) | ((PAPER) << 3) | (INK))
+
+enum opcodeval
+{
+    OP_HAS,
+    OP_NOT,
+    OP_SET,
+    OP_CLR,
+    OP_XOR,
+    OP_RND,
+    OP_ATTR,
+    OP_EXT
+};
+
+unsigned char state[256]; // game state
+unsigned char y8; // prg state
+unsigned char *answer[16];
+unsigned char answers;
+unsigned char attrib;
 
 unsigned char * find_room(unsigned short id)
 {
@@ -51,8 +69,6 @@ unsigned char * find_room(unsigned short id)
     }
 }
 
-unsigned char state[256];
-unsigned char y8;
 unsigned char xorshift8(void) 
 {
     y8 ^= (y8 << 7);
@@ -82,29 +98,34 @@ void toggle_bit(unsigned short id)
 
 void set_attr(unsigned short id)
 {
-    id;// tbd
+    attrib = id;
 }
 
 void set_ext(unsigned short id)
 {
-    id;// tbd
+    switch (id)
+    {
+        case 0:
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+            port254(id);
+            break;
+        case 8:
+            // cls
+            break;                    
+    }
 }
 
-enum opcodeval
-{
-    OP_HAS,
-    OP_NOT,
-    OP_SET,
-    OP_CLR,
-    OP_XOR,
-    OP_RND,
-    OP_ATTR,
-    OP_EXT
-};
 
 void exec(unsigned char *dataptr)
 {
     unsigned char c = *dataptr;
+    
     switch (dataptr[1])
     {
         case 'I':
@@ -118,6 +139,7 @@ void exec(unsigned char *dataptr)
             c -= 1; 
             break;
     }
+    
     while (c)
     {
         // ignore predicate ops
@@ -149,6 +171,7 @@ unsigned char pred(unsigned char *dataptr)
 {
     unsigned char c = *dataptr;
     unsigned char ret = 1;
+    
     switch (dataptr[1])
     {
         case 'I':
@@ -198,9 +221,12 @@ void image(unsigned char *dataptr, unsigned char *yofs)
     }
 }
 
-void answer(unsigned char *dataptr)
+void add_answer(unsigned char *dataptr)
 {
-    dataptr; // TODO
+    answer[answers] = dataptr;
+    answers++;
+    if (answers == 16)
+        answers = 15;
 }
 
 void render_room(unsigned short room_id)
@@ -220,8 +246,15 @@ void render_room(unsigned short room_id)
         {
             case 'Q': 
                 if (!output_enable) // the next room
+                {
                     return;
-                if (pred(dataptr)) exec(dataptr); break;
+                }
+                if (pred(dataptr)) 
+                {
+                    exec(dataptr); 
+                }
+                answers = 0;
+                break;
             case 'I': image(dataptr, &yofs); break;
             case 'O': 
                 if (pred(dataptr)) 
@@ -235,7 +268,7 @@ void render_room(unsigned short room_id)
                 }
                 break;
             case 'A':
-                answer(dataptr);
+                add_answer(dataptr);
                 output_enable = 0;
                 break;
         }
@@ -252,14 +285,20 @@ void render_room(unsigned short room_id)
         }
         dataptr++;
     }
+    // if we get here, this was the last room in the data
 }
 
 void main()
 {
     unsigned short i;
     unsigned short current_room = 0;    
+    unsigned char current_answer = 0;
+    unsigned char selecting;
 
     y8 = 1;
+    answers = 0;
+    attrib = 7 << 3;
+    port254(7);
 
     for (i = 0; i < 256; i++)
         state[i] = 0;
@@ -269,9 +308,6 @@ void main()
     for (i = 0; i < 24*32; i++)
         *(unsigned char*)(0x5800+i) = 7 << 3;
 
-    framecounter = 0;
-
-    port254(7);
     
     for (i = 0; i < 192*32; i++)
       *(unsigned char*)(0x4000+i) = 0;
@@ -282,7 +318,6 @@ void main()
     {
         unsigned char * dataptr = (unsigned char*)0x5b00;
 
-        framecounter++;
         //do_halt(); // halt waits for interrupt - or vertical retrace
   
         /*
@@ -293,21 +328,16 @@ void main()
         
         render_room(current_room);
 
-/*        
-        i = 0;
-        while (*dataptr)
+        selecting = 1;
+        while (selecting)
         {
-            
-            dataptr += *dataptr + 1;            
-            while (*dataptr != 0)
-            {
-                drawstring_lr_pascal(dataptr, 0, i);
-                i += 8;
-                dataptr += *dataptr + 1;                
-            }
-            dataptr++;       
-        }        
-*/        
-        xorshift8();
+            unsigned char *dataptr = answer[current_answer];
+            dataptr += *dataptr + 1;
+            drawstring_lr_pascal(dataptr, 0, 21*8);
+            readkeyboard();
+            if (KEYDOWN(ENTER))
+                selecting = 0;
+            xorshift8();    
+        }                       
     }
 }
