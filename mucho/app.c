@@ -116,7 +116,7 @@ void set_ext(unsigned short id)
             port254(id);
             break;
         case 8:
-            // cls
+            // TODO:cls
             break;                    
     }
 }
@@ -268,7 +268,10 @@ void render_room(unsigned short room_id)
                 }
                 break;
             case 'A':
-                add_answer(dataptr);
+                if (pred(dataptr))
+                {
+                    add_answer(dataptr);
+                }
                 output_enable = 0;
                 break;
         }
@@ -288,6 +291,36 @@ void render_room(unsigned short room_id)
     // if we get here, this was the last room in the data
 }
 
+void clearbottom()
+{
+    unsigned short i, j;
+
+    for (j = 20*8; j < 24*8; j++)
+        for (i = 0; i < 32; i++)
+            *(unsigned char*)(yofs[j]+i) = 0;
+}
+
+
+void reset()
+{
+    unsigned short i;
+
+    for (i = 0; i < 256; i++)
+        state[i] = 0;
+
+    for (i = 0; i < 192*32; i++)
+        *(unsigned char*)(0x4000+i) = 0;
+    
+    for (i = 0; i < 24*32; i++)
+        *(unsigned char*)(0x5800+i) = 7 << 3; 
+
+    port254(7);
+
+    y8 = 1;
+    answers = 0;
+    attrib = 7 << 3;
+}
+
 void main()
 {
     unsigned short i;
@@ -295,31 +328,10 @@ void main()
     unsigned char current_answer = 0;
     unsigned char selecting;
 
-    y8 = 1;
-    answers = 0;
-    attrib = 7 << 3;
-    port254(7);
-
-    for (i = 0; i < 256; i++)
-        state[i] = 0;
-
-    for (i = 0; i < 192*32; i++)
-        *(unsigned char*)(0x4000+i) = 0;
-    for (i = 0; i < 24*32; i++)
-        *(unsigned char*)(0x5800+i) = 7 << 3;
-
-    
-    for (i = 0; i < 192*32; i++)
-      *(unsigned char*)(0x4000+i) = 0;
-      
-    
-    
+    reset();     
+        
     while(1)
-    {
-        unsigned char * dataptr = (unsigned char*)0x5b00;
-
-        //do_halt(); // halt waits for interrupt - or vertical retrace
-  
+    { 
         /*
         - code string
         - 0..n strings
@@ -328,16 +340,94 @@ void main()
         
         render_room(current_room);
 
-        selecting = 1;
-        while (selecting)
+        if (answers == 0)
         {
-            unsigned char *dataptr = answer[current_answer];
-            dataptr += *dataptr + 1;
-            drawstring_lr_pascal(dataptr, 0, 21*8);
-            readkeyboard();
-            if (KEYDOWN(ENTER))
-                selecting = 0;
-            xorshift8();    
-        }                       
+            unsigned short t;
+            clearbottom();
+            // delay..
+            for (t = 0; t < 30000; t++);
+            for (t = 0; t < 30000; t++);
+            for (t = 0; t < 30000; t++);
+            for (t = 0; t < 30000; t++);
+            
+            drawstring("[The end. Press enter to restart]", 3, 21*8);
+            
+            readkeyboard();            
+            while (KEYUP(ENTER))
+            {
+                readkeyboard();
+            }            
+            while (KEYDOWN(ENTER))
+            {
+                readkeyboard();
+            }            
+            
+            current_room = 0;
+            current_answer = 0;
+            reset();            
+        }
+        else
+        {
+    
+            if (current_answer >= answers)
+                current_answer = 0;
+                
+            selecting = 1;
+            while (selecting)
+            {
+                clearbottom();
+                for (i = 0; i < 3; i++)
+                {
+                    if (current_answer + i < answers)
+                    {
+                        unsigned char *dataptr = answer[current_answer + i];
+                        unsigned char roll = 0;
+                        dataptr += *dataptr + 1;
+                        drawstring_lr_pascal(dataptr, 3, 21*8 + i * 8);
+                    }
+                }
+                                                    
+                readkeyboard();
+                while (KEYUP(Q) && KEYUP(A) && KEYUP(ENTER))
+                {
+                    drawstring(">>>", 0, 21*8);
+                    
+                    readkeyboard();
+                }
+                if (KEYDOWN(ENTER))
+                {
+                    unsigned char *dataptr = answer[current_answer];
+                    unsigned short id = ((unsigned short)dataptr[3] << 8) | dataptr[2];
+                    while (KEYDOWN(ENTER))
+                    {
+                        readkeyboard();
+                    }
+                    selecting = 0;
+                    exec(answer[current_answer]);
+                    if (current_room != id)
+                        current_answer = 0;
+                    current_room = id;
+                }
+                if (KEYDOWN(Q))
+                {
+                    while (KEYDOWN(Q))
+                    {
+                        readkeyboard();
+                    }
+                    if (current_answer > 0)
+                        current_answer--;
+                }
+                if (KEYDOWN(A))
+                {
+                    while (KEYDOWN(A))
+                    {
+                        readkeyboard();
+                    }
+                    if (current_answer+1 < answers)
+                        current_answer++;
+                }
+                xorshift8();    
+            }
+        }
     }
 }
