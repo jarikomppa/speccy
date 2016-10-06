@@ -1,0 +1,205 @@
+<html>
+<head>
+<title>MuCho - multiple choise adventure engine</title>
+</head>
+<body>
+    <h1>What?</h1>
+<p>MuCho is a multiple choise adventure engine, or choose your adventure engine, or gamebook engine, for the ZX Spectrum.</p>
+<p>This document describes the story definition language.</p>
+<h1>Basic structure</h1>
+<p>In MuCho, every "room" consists of the room description and one or more options for the player to pick from. Each option then sends the player to another "room".</p>
+<p>The syntax for the basic structure is as follows:</p>
+<table border=0 cellspacing=0 cellpadding=12><tr><td bgcolor=#eeeeee><pre>
+# The lines starting with # are comments
+# and will be ignored when compiling.
+$Q roomname
+Room description taking as many lines
+as is deemed necessary. The engine will
+automatically remove any whitespace and
+word-wrap the text.
+
+If a line break is desired, an empty line
+is needed in the source.
+$A nextroom
+Text for the first option
+$A anotherroom
+Text for the second option
+$A yetanotherroom
+Text for the third option
+</pre></td></tr></table>
+<h1>Statement Lines</h1>
+<p>Lines starting with a $ are "statement" lines. Currently, there are four different statement lines.</p>
+<table border=0 cellspacing=0 cellpadding=12><tr><td bgcolor=#eeeeee><pre>
+$Q roomname
+</pre></td></tr></table>
+<p>The $Q statement begins a room description. Its first parameter is the room's identifier, which must
+be unique among rooms, and must not contain spaces or colons (the ':' character). The identifier is only
+used while compiling, and will turn into a number inside the compiled data.</p>
+<table border=0 cellspacing=0 cellpadding=12><tr><td bgcolor=#eeeeee><pre>
+$A roomname
+</pre></td></tr></table>
+<p>The $A statement begins a player option description. Its first parameter is the room identifier the 
+option sends the player to. Think of this as "if you want to go west, turn to page 347".</p>
+<table border=0 cellspacing=0 cellpadding=12><tr><td bgcolor=#eeeeee><pre>
+$I sunset.scr
+</pre></td></tr></table>
+<p>The $I statement includes a picture in the story where it is placed. To be used inside the page description, not in answer description. The first parameter is the source image name.</p>
+<table border=0 cellspacing=0 cellpadding=12><tr><td bgcolor=#eeeeee><pre>
+$O flag
+</pre></td></tr></table>
+<p>The $O statement starts an optional paragraph, that will be shown if the flags match the current state.</p>
+<h1>Images</h1>
+<p>The $I statement can be used to include images in the story. If the same image is used several times, its data will still only be stored once. Any empty space on the bottom of the image is trimmed. The maximum height of an image is 20*8=160 pixels. Images are always full width, but empty space compresses well if a smaller square image is desired.</p>
+<h1>Flags</h1>
+<p>In addition to the first parameters mentioned earlier, the statements also take additional, optional parameters that manipulate and query the state of flags. These commands are split into two categories, predicates and executives. Predicates are used to figure out whether something should happen, and executives alter the game's state in some way.</p>
+<p>The engine can handle up to 2048 flags, which should be enough for even the most crazy things you can fit in the zx spectrum.</p>
+<h1>Predicates</h1>
+<p>Currently, there are three predicate commands.</p>
+<table border=0 cellspacing=0 cellpadding=12><tr><td bgcolor=#eeeeee><pre>
+$O roomname
+</pre></td></tr></table>
+<p>The simplest predicate checks if some flag is on. Whenever a room is entered, the room name flag is turned on, so to check if player has been to some place and then print out some text if they have, you could do the following:</p>
+<table border=0 cellspacing=0 cellpadding=12><tr><td bgcolor=#eeeeee><pre>
+$O cave
+This place reminds me of the cave you were in recently.
+</pre></td></tr></table>
+<p>If you wish, you can also write the flag-checking command as has:flagname.</p>
+<p>Alternatively, you can check if some flag is not on by prefixing the flag with !.</p>
+<table border=0 cellspacing=0 cellpadding=12><tr><td bgcolor=#eeeeee><pre>
+$O !roomname
+</pre></td></tr></table>
+<p>The alternate form of flag-not-set check is not:flagname.</p>
+<p>The third predicate is random:</p>
+<table border=0 cellspacing=0 cellpadding=12><tr><td bgcolor=#eeeeee><pre>
+$O rnd:127
+</pre></td></tr></table>
+<p>The range is 1..255, so a value of 128 gives about 50% chance, 64 gives 25%, 32 gives 12.5%, etc.</p>
+<p>Use random with care, as it may lead to undue frustration.</p>
+<p>The predicates can be used to hide optional text blocks with $O, images with $I, and player options with $A. You can have a maximum of about 80 commands on one line, which means you can create rather complicated behaviors if need be.</p>
+<h1>Executives</h1>
+<p>Most of the executive commands alter the state of the flags.</p>
+<table border=0 cellspacing=0 cellpadding=12><tr><td bgcolor=#eeeeee><pre>
+$O set:flagname
+</pre></td></tr></table>
+<p>The set command sets a flag. Remember that entering a room sets the flag for the room name automatically.</p>
+<table border=0 cellspacing=0 cellpadding=12><tr><td bgcolor=#eeeeee><pre>
+$O clear:flagname
+</pre></td></tr></table>
+<p>The clear command clears a flag. It can also clear the flag that is automatically set when entering a room.</p>
+<table border=0 cellspacing=0 cellpadding=12><tr><td bgcolor=#eeeeee><pre>
+$O toggle:flagname
+</pre></td></tr></table>
+<p>The toggle command toggles the state of a flag. If it's on, it's turned off, and vice versa.</p>
+<table border=0 cellspacing=0 cellpadding=12><tr><td bgcolor=#eeeeee><pre>
+$O attr:7
+</pre></td></tr></table>
+<p>The attr command changes the color attribute to be used for text from now on.<p>
+<table border=0>
+<tr><td>Color</td><td>Ink</td><td>Paper</td></tr>
+<tr><td>Black</td><td>0</td><td>0</td></tr>
+<tr><td>Blue</td><td>1</td><td>8</td></tr>
+<tr><td>Red</td><td>2</td><td>16</td></tr>
+<tr><td>Magenta</td><td>3</td><td>24</td></tr>
+<tr><td>Green</td><td>4</td><td>32</td></tr>
+<tr><td>Cyan</td><td>5</td><td>40</td></tr>
+<tr><td>Yellow</td><td>6</td><td>48</td></tr>
+<tr><td>White</td><td>7</td><td>56</td></tr>
+</table>
+<p>So, for red on yellow background, you'd have 2+48=50, or attr:50. For bright, add 64, and for blinking, add 128.</p>
+<table border=0 cellspacing=0 cellpadding=12><tr><td bgcolor=#eeeeee><pre>
+$O ext:0
+</pre></td></tr></table>
+<p>The ext command is meant for additional things, like sound. Codes 0 through 7 set border color, 8 clears the screen.</p>
+<h1>Execution order</h1>
+<p>The executive commands are only executed if the predicates succeed. Other than that, commands are executed in order
+they appear.</p>
+<table border=0 cellspacing=0 cellpadding=12><tr><td bgcolor=#eeeeee><pre>
+$O set:flaggy flaggy clear:flaggy toggle:flaggy
+</pre></td></tr></table>
+<p>In the convoluted example above, the engine first runs through the commands checking the predicate commands,
+and if they fail, the rest of the commands is NOT executed. If the flag "flaggy" was on, the commands are executed in order. First the flag is set, then it's cleared, and then toggled, setting it back on.</p>
+<h1>Examples</h1>
+<table border=0 cellspacing=0 cellpadding=12><tr><td bgcolor=#eeeeee><pre>
+$Q room
+$O !light
+Light is off
+$O light
+Light is on
+$A room toggle:light
+Toggle light
+</pre></td></tr></table>
+<p>This example has a single room with a light that can be on or off. The player's option always points back to the same room, and the optional text blocks show whether the light is on or off.</p>
+<table border=0 cellspacing=0 cellpadding=12><tr><td bgcolor=#eeeeee><pre>
+$Q start
+Go to cave or forest?
+$A cave
+Go to cave
+$A forest
+Go to forest
+
+$Q cave
+Well, go on..
+$A end
+Exit cave
+
+$Q forest
+Well, go on..
+$A end
+Exit forest
+
+$Q end
+$O cave clr:cave
+As you exit the cave, you find...
+$O forest clr:forest
+As you exit the forest, you find...
+$O
+...the end of the example.
+$A start
+Restart
+</pre></td></tr></table>
+<p>This example shows two different routes to a room, and the room's description reacts to where you came from.</p>
+
+<table border=0 cellspacing=0 cellpadding=12><tr><td bgcolor=#eeeeee><pre>
+$Q room
+You're in a room with a door.
+# If the 'key' flag is not on, tell player there's a key here.
+$O !key
+There is a key here.
+# If the 'open' flag is on, tell player the foor is open.
+$O open
+The door is open.
+# If the 'key' flag is not on, let player pick the key, 
+# and if they do, set the key flag.
+$A room !key set:key
+Get key
+# If the player has key, and the door is not unlocked,
+# let player unlock the door, setting the flag.
+$A room key !unlocked set:unlocked 
+Unlock door
+# If the door is not open and not unlocked, show an option
+# to open the door which sends player to the "locked" room,
+# below.
+$A locked !unlocked !open
+Open door
+# If the door is not open, but it's unlocked, let player
+# open it, setting the open flag on.
+$A room unlocked !open set:open
+Open door
+# If the door is open, let player exit.
+$A end open
+Exit
+
+# This little "room" is here just to tell player their
+# door-opening attempt failed.
+$Q locked
+The door is locked.
+$A room
+Dang it!
+
+# This is the end screen. There are no options; the game ends.
+$Q end
+You went through the door.
+</pre></td></tr></table>
+
+</body>
+</html>
