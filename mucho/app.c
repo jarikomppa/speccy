@@ -49,9 +49,14 @@ unsigned char * find_room(unsigned short id)
 {
     // dest = 0xd000, ~4k of scratch. A bit tight?
     
-    unsigned short v = (((unsigned short)*(unsigned char*)(0x5b00 + id*2+1)) << 8) | *(unsigned char*)(0x5b00 + id*2);
+    unsigned short v;
 
+    for (v = 0; v < 4096; v++)
+        *((unsigned char*)0xd000 + v) = 0;
+
+    v = (((unsigned short)*(unsigned char*)(0x5b00 + id*2+1)) << 8) | *(unsigned char*)(0x5b00 + id*2);
     zx7_unpack((unsigned char*)v);
+    
 
     return (unsigned char*)0xd000;
 }
@@ -216,16 +221,38 @@ void add_answer(unsigned char *dataptr)
         answers = 15;
 }
 
+void hitkeytocontinue()
+{
+    drawstring("[Press enter to continue]", 3, 21*8);
+    
+    readkeyboard();            
+    while (KEYUP(ENTER))
+    {
+        readkeyboard();
+    }            
+    while (KEYDOWN(ENTER))
+    {
+        readkeyboard();
+    }                
+}
+
+void cls()
+{
+    unsigned short i;
+    for (i = 0; i < 192*32; i++)
+      *(unsigned char*)(0x4000+i) = 0;
+
+}
+
 void render_room(unsigned short room_id)
 {
     unsigned char *dataptr = find_room(room_id);
     unsigned char output_enable = 1;
     unsigned char yofs = 0;
-    unsigned short i;
+
     set_bit(room_id);
 
-    for (i = 0; i < 192*32; i++)
-      *(unsigned char*)(0x4000+i) = 0;
+    cls();
     
     while (*dataptr)
     {       
@@ -270,7 +297,12 @@ void render_room(unsigned short room_id)
             {
                 drawstring_lr_pascal(dataptr, 0, yofs);
                 yofs += 8;
-                if (yofs > 20*8) yofs = 0;                
+                if (yofs > 20*8) 
+                {
+                    hitkeytocontinue();
+                    cls();
+                    yofs = 0;                
+                }
             }
             dataptr += *dataptr + 1;
         }
@@ -296,8 +328,7 @@ void reset()
     for (i = 0; i < 256; i++)
         state[i] = 0;
 
-    for (i = 0; i < 192*32; i++)
-        *(unsigned char*)(0x4000+i) = 0;
+    cls();
     
     for (i = 0; i < 24*32; i++)
         *(unsigned char*)(0x5800+i) = 7 << 3; 
