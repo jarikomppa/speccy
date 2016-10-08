@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "propfont.h"
+#include "../common/pack.h"
+#include "../common/zx7pack.h"
 
 
 struct Symbol
@@ -14,11 +16,46 @@ struct Symbol
 int symbols = 0;
 Symbol symbol[MAX_SYMBOLS];
 
+int verbose = 0;
+int quiet = 0;
+
 unsigned char commandbuffer[1024];
 int commandptr = 0;
 
-char databuf[64*1024];
+int line = 0;
+
+char outbuf[1024*1024];
+int outlen = 0;
+
+char databuf[1024*1024];
 int datalen = 0;
+
+char scratch[64 * 1024];
+char stringlit[64 * 1024];
+int stringptr;
+int lits = 0;
+
+void patchword(unsigned short w, int pos)
+{
+    outbuf[pos*2] = w & 0xff;
+    outbuf[pos*2+1] = w >> 8;
+}
+
+void outbyte(unsigned char d)
+{
+    outbuf[outlen] = d;
+    outlen++;    
+}
+
+void outdata(unsigned char *d, int len)
+{
+    while (len)
+    {
+        outbyte(*d);
+        len--;
+        d++;
+    }
+}
 
 void putbyte(unsigned char d)
 {
@@ -92,14 +129,10 @@ void readline(char *buf, FILE * f)
     do
     {
         readrawline(buf, f);
+        line++;
     }
     while (!feof(f) && buf[0] == '#' && buf[0] > 31);
 }
-
-char scratch[4096];
-char stringlit[4096];
-int stringptr;
-int lits = 0;
 
 void token(int n, char *src, char *dst)
 {    
@@ -118,28 +151,48 @@ void token(int n, char *src, char *dst)
     *dst = 0;
 }
 
+ZX7Pack pack;
+
+int roomno = 0;
+
+void flush_room()
+{
+    if (datalen)
+    {
+        pack.mMax = 0;
+        pack.pack((unsigned char*)&databuf[0], datalen);
+        patchword(0x5b00 + outlen, roomno);
+
+        if (!quiet)
+            printf("%40s zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", symbol[roomno].name, datalen, pack.mMax, (pack.mMax*100.0f)/datalen, 0x5b00+outlen);
+        outdata(pack.mPackedData, pack.mMax);
+        datalen = 0;       
+        roomno++;
+    }        
+}
 
 void flush_sect()
 {
-    printf("End of section\n");
+    if (verbose) printf("End of section\n");
     if (datalen)  // skip end if we're in the beginning
     {
         putbyte(0);
     }
+    
 }
 
 void flush_cmd()
 {
     if (commandptr)
     {
-        printf("  Command buffer '%c' with %d bytes payload (about %d ops)\n", 
+        if (verbose)printf("  Command buffer '%c' with %d bytes payload (about %d ops)\n", 
             commandbuffer[0], 
             commandptr-1, 
             (commandptr-1) / 3);
             
         if (commandptr > 255)
         {
-            printf("Syntax error - too many operations on one statement\n");
+            printf("Syntax error - too many operations on one statement, line %d\n", line);
             exit(-1);
         }
         putbuf(commandbuffer, commandptr);
@@ -199,19 +252,19 @@ enum opcodeval
 
 void set_op(int opcode, int value)
 {
-    printf("    Opcode: ");
+    if (verbose) printf("    Opcode: ");
     switch(opcode)
     {
-        case OP_HAS: printf("HAS(%s)", symbol[value].name); break;
-        case OP_NOT: printf("NOT(%s)", symbol[value].name); break;
-        case OP_SET: printf("SET(%s)", symbol[value].name); break;
-        case OP_CLR: printf("CLR(%s)", symbol[value].name); break;
-        case OP_XOR: printf("XOR(%s)", symbol[value].name); break;
-        case OP_RND: printf("RND(%d)", value); break;
-        case OP_ATTR: printf("ATTR(%d)", value); break;
-        case OP_EXT: printf("EXT(%d)", value); break;
+        case OP_HAS: if (verbose) printf("HAS(%s)", symbol[value].name); break;
+        case OP_NOT: if (verbose) printf("NOT(%s)", symbol[value].name); break;
+        case OP_SET: if (verbose) printf("SET(%s)", symbol[value].name); break;
+        case OP_CLR: if (verbose) printf("CLR(%s)", symbol[value].name); break;
+        case OP_XOR: if (verbose) printf("XOR(%s)", symbol[value].name); break;
+        case OP_RND: if (verbose) printf("RND(%d)", value); break;
+        case OP_ATTR: if (verbose) printf("ATTR(%d)", value); break;
+        case OP_EXT: if (verbose) printf("EXT(%d)", value); break;
     }
-    printf("\n");
+    if (verbose) printf("\n");
     store_cmd(opcode, value);
 }
 
@@ -220,12 +273,12 @@ void parse_op(char *op)
     // Op may be of form "foo" "!foo" or "foo:bar"
     if (op[0] == 0)
     {
-        printf("Syntax error (op=null)\n");
+        printf("Syntax error (op=null), line %d\n", line);
         exit(-1);
     }
     if (op[0] == ':')
     {
-        printf("Syntax error (op starting with ':') \"%s\"\n", op);
+        printf("Syntax error (op starting with ':') \"%s\", line %d\n", op, line);
         exit(-1);
     }
 
@@ -240,7 +293,7 @@ void parse_op(char *op)
 
     if (colons > 1)
     {
-        printf("Syntax error (op with more than one ':') \"%s\"\n", op);
+        printf("Syntax error (op with more than one ':') \"%s\", line %d\n", op, line);
         exit(-1);
     }
     
@@ -285,11 +338,13 @@ void parse_op(char *op)
         if (stricmp(cmd, "color") == 0) set_op(OP_ATTR, atoi(sym)); else
         if (stricmp(cmd, "ext") == 0) set_op(OP_EXT, atoi(sym)); else
         {
-            printf("Syntax error: unknown operation \"%s\"\n", cmd);
+            printf("Syntax error: unknown operation \"%s\", line %d\n", cmd, line);
             exit(-1);
         }                
     }
 }
+
+int previous_section = 0;
 
 void parse()
 {
@@ -300,31 +355,46 @@ void parse()
     switch (scratch[1])
     {
     case 'Q':
+        flush_room(); // flush previous room
         token(1, scratch, t);
         i = get_symbol_id(t);
         first_token = 2;      
         store_section('Q', i);  
-        printf("Room: \"%s\" (%d)\n", t, i);
+        if (verbose) printf("Room: \"%s\" (%d)\n", t, i);
+        previous_section = 'Q';
         break;
     case 'A':
         token(1, scratch, t);
         i = get_symbol_id(t);
         first_token = 2;      
         store_section('A', i);          
-        printf("Choise: %s (%d)\n", t, i);
+        if (verbose) printf("Choise: %s (%d)\n", t, i);
+        previous_section = 'Q';
         break;
     case 'O':
+        if (previous_section == 'A')
+        {
+            printf("Syntax error - statement O may not be included in statement A, line %d\n", line);
+            exit(-1);
+        }
         store_section('O');
-        printf("Predicated section\n");
+        if (verbose) printf("Predicated section\n");
+        previous_section = 'O';
         break;
     case 'I':
+        if (previous_section == 'A')
+        {
+            printf("Syntax error - statement I may not be included in statement A, line %d\n", line);
+            exit(-1);
+        }
         token(1, scratch, t);
         first_token = 2;   
         store_section('I', 0); // TODO: store images & image id:s     
-        printf("Image: \"%s\"\n", t);
+        if (verbose) printf("Image: \"%s\"\n", t);
+        previous_section = 'I';
         break;
     default:
-        printf("Syntax error: unknown statement \"%s\"\n", scratch);
+        printf("Syntax error: unknown statement \"%s\", line %d\n", scratch, line);
         exit(-1);            
     }
     
@@ -342,7 +412,7 @@ void store(char *lit)
 {
     flush_cmd();
     putstring(lit);
-    printf("  lit %d: \"%s\"\n", lits++, lit);
+    if (verbose) printf("  lit %d: \"%s\"\n", lits++, lit);
 }
 
 void process()
@@ -430,15 +500,9 @@ void capture()
     stringlit[stringptr] = 0;
 }
 
-
-int main(int parc, char **pars)
-{    
-    if (parc < 3)
-    {
-        printf("%s <input> <output>\n", pars[0]);
-        return -1;
-    }
-    FILE * f = fopen(pars[1], "rb");
+void scan(char *aFilename)
+{
+    FILE * f = fopen(aFilename, "rb");
     
     
     stringptr = 0;
@@ -467,18 +531,123 @@ int main(int parc, char **pars)
     flush_sect();
     // end with empty section
     flush_sect();
+    flush_room(); 
     fclose(f);
-    
+}
+
+void scan_rooms(char *aFilename)
+{
+    FILE * f = fopen(aFilename, "rb");
+            
+    while (!feof(f))
+    {
+        readline(scratch, f);
+        if (scratch[0] == '$' && scratch[1] == 'Q')
+        {
+            int i;
+            char t[256];
+            token(1, scratch, t);
+            i = get_symbol_id(t);
+            if (symbol[i].hits > 1)
+            {
+                printf("syntax error: room id \"%s\" used more than once, line %d\n", t, line);
+                exit(-1);
+            }
+            symbol[i].hits--; // clear the hit, as it'll be scanned again
+        }
+    }
+    fclose(f);
+}
+
+
+void report()
+{
     int i;
     printf("Token Hits Symbol\n");
     for (i = 0; i < symbols; i++)
     {
         printf("%5d %4d \"%s\"\n", i, symbol[i].hits, symbol[i].name);
     }
+}
 
-    f = fopen(pars[2], "wb");
-    fwrite(databuf, 1, datalen, f);
+void output(char *aFilename)
+{
+    FILE * f = fopen(aFilename, "wb");
+    fwrite(outbuf, 1, outlen, f);
     fclose(f);
+}
+
+int main(int parc, char **pars)
+{    
+    if (parc < 3)
+    {
+        printf(
+            "%s <input> <output> [flags]\n"
+            "Optional flags:\n"
+            "  -v   verbose (useful for debugging)\n"
+            "  -q   quiet (minimal output)\n",
+            pars[0]);
+        return -1;
+    }
+    int infile = -1;
+    int outfile = -1;
+    int i;
+    for (i = 1; i < parc; i++)
+    {
+        if (pars[i][0] == '-')
+        {
+            switch (pars[i][1])
+            {
+                case 'v':
+                case 'V':
+                    verbose = 1;
+                    break;
+                case 'q':
+                case 'Q':
+                    quiet = 1;
+                    verbose = 0;
+                    break;
+                default:
+                    printf("Unknown parameter \"%s\"\n", pars[i]);
+                    exit(-1);
+            }
+        }
+        else
+        {
+            if (infile == -1) 
+            {
+                infile = i; 
+            }
+            else
+            {    
+                if (outfile == -1) 
+                {
+                    outfile = i; 
+                }
+                else
+                {
+                    printf("Invalid parameter \"%s\" (input and output files already defined)\n", pars[i]);
+                    exit(-1);
+                }
+            }
+        }
+    }
+    
+    if (outfile == -1)
+    {
+        printf("Invalid parameters (run without params for help\n");
+        exit(-1);
+    }
+
+    line = 0;    
+    scan_rooms(pars[infile]);
+    outlen = symbols * 2;
+    line = 0;    
+    scan(pars[infile]);
+    if (!quiet)
+        report();
+    output(pars[outfile]);
+
     
     return 0;
 }

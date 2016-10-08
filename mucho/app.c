@@ -23,6 +23,9 @@ unsigned char port254tonebit;
 #include "propfont.h"
 #include "drawstring.c"
 
+//extern void zx7_unpack(unsigned char *src, unsigned char *dst) __z88dk_callee __z88dk_fastcall;
+extern void zx7_unpack(unsigned char *src)  __z88dk_fastcall;
+
 
 enum opcodeval
 {
@@ -44,29 +47,13 @@ unsigned char attrib;
 
 unsigned char * find_room(unsigned short id)
 {
-    unsigned char * dataptr = (unsigned char*)0x5b00;
-        /*
-        - code string
-        - 0..n strings
-        - 0        
-        */
-    while (1)
-    {
-        if (dataptr[1] == 'Q')
-        {
-            if (dataptr[2] == (id & 0xff) &&
-                dataptr[3] == (id >> 8))
-            {
-                return dataptr;
-            }
-        }
-        dataptr += *dataptr + 1;
-        while (*dataptr)
-        {
-            dataptr += *dataptr + 1;
-        }
-        dataptr++;
-    }
+    // dest = 0xd000, ~4k of scratch. A bit tight?
+    
+    unsigned short v = (((unsigned short)*(unsigned char*)(0x5b00 + id*2+1)) << 8) | *(unsigned char*)(0x5b00 + id*2);
+
+    zx7_unpack((unsigned char*)v);
+
+    return (unsigned char*)0xd000;
 }
 
 unsigned char xorshift8(void) 
@@ -283,6 +270,7 @@ void render_room(unsigned short room_id)
             {
                 drawstring_lr_pascal(dataptr, 0, yofs);
                 yofs += 8;
+                if (yofs > 20*8) yofs = 0;                
             }
             dataptr += *dataptr + 1;
         }
