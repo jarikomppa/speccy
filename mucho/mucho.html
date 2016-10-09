@@ -49,7 +49,7 @@ $O flag
 </pre></td></tr></table>
 <p>The $O statement starts an optional paragraph, that will be shown if the flags match the current state.</p>
 <h1>Images</h1>
-<p>The $I statement can be used to include images in the story. If the same image is used several times, its data will still only be stored once. Any empty space on the bottom of the image is trimmed. The maximum height of an image is 20*8=160 pixels. Images are always full width, but empty space compresses well if a smaller square image is desired.</p>
+<p>The $I statement can be used to include images in the story. If the same image is used several times, its data will still only be stored once. Any empty space on the bottom of the image is trimmed. The maximum height of an image is 14*8=112 pixels. If more is needed, just draw several images. Images are always full width, but empty space compresses well if a smaller square image is desired.</p>
 <h1>Flags</h1>
 <p>In addition to the first parameters mentioned earlier, the statements also take additional, optional parameters that manipulate and query the state of flags. These commands are split into two categories, predicates and executives. Predicates are used to figure out whether something should happen, and executives alter the game's state in some way.</p>
 <p>The engine can handle up to 2048 flags, which should be enough for even the most crazy things you can fit in the zx spectrum.</p>
@@ -250,6 +250,12 @@ Dang it!
 $Q end
 You went through the door.
 </pre></td></tr></table>
+
+<h1>Limits</h1>
+<p>A compiled room must not take more than 4096 bytes. The MuCho compiler will tell you when you cross the limit.</p>
+<p>Images may be up to 112 pixels high. If more is needed, split images in pieces.</p>
+<p>Maximum of 2048 flags.</p>
+<p>Maximum of 16 active options at the same time.</p>
 
 </body>
 </html>
