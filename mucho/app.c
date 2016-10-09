@@ -45,7 +45,7 @@ unsigned char *answer[16];
 unsigned char answers;
 unsigned char attrib;
 
-unsigned char * find_room(unsigned short id)
+unsigned char * unpack_resource(unsigned short id)
 {
     // dest = 0xd000, ~4k of scratch. A bit tight?
     
@@ -95,22 +95,11 @@ void set_attr(unsigned short id)
 
 void set_ext(unsigned short id)
 {
-    switch (id)
+    if (id < 8)
     {
-        case 0:
-        case 1:
-        case 2:
-        case 3:
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-            port254(id);
-            break;
-        case 8:
-            // TODO:cls
-            break;                    
+        port254(id);
     }
+    // todo: sound?
 }
 
 
@@ -202,17 +191,6 @@ unsigned char pred(unsigned char *dataptr)
     return ret;
 }
 
-void image(unsigned char *dataptr, unsigned char *yofs)
-{
-    if (pred(dataptr))
-    {
-        exec(dataptr);
-        *yofs += 8;
-        drawstring("[image]", 0, *yofs); // TODO
-        *yofs += 16;
-    }
-}
-
 void add_answer(unsigned char *dataptr)
 {
     answer[answers] = dataptr;
@@ -241,12 +219,43 @@ void cls()
     unsigned short i;
     for (i = 0; i < 192*32; i++)
       *(unsigned char*)(0x4000+i) = 0;
-
 }
+
+void image(unsigned char *dataptr, unsigned char *aYOfs)
+{
+    unsigned short id = ((unsigned short)dataptr[3] << 8) | dataptr[2];
+    unsigned short yp;
+    unsigned char x, y;
+    
+    dataptr = unpack_resource(id);
+    id = *dataptr;
+    yp = *aYOfs;
+    
+    if (id + yp > 20*8) 
+    {
+        hitkeytocontinue();
+        cls();
+        yp = 0;
+    }
+    
+    dataptr++;
+    for (y = 0; y < id; y++, yp++)
+    {
+        unsigned char * dst = (unsigned char*)yofs[yp];
+        for (x = 0; x < 32; x++)
+        {
+            *dst = *dataptr;
+            dataptr++;
+            dst++;
+        }
+    }        
+    *aYOfs = yp;
+}
+
 
 void render_room(unsigned short room_id)
 {
-    unsigned char *dataptr = find_room(room_id);
+    unsigned char *dataptr = unpack_resource(room_id);
     unsigned char output_enable = 1;
     unsigned char yofs = 0;
 
@@ -269,7 +278,14 @@ void render_room(unsigned short room_id)
                 }
                 answers = 0;
                 break;
-            case 'I': image(dataptr, &yofs); break;
+            case 'I': 
+                if (pred(dataptr))
+                {
+                    exec(dataptr);
+                    image(dataptr, &yofs); 
+                    unpack_resource(room_id); // re-load the room data
+                }
+                break;
             case 'O': 
                 if (pred(dataptr)) 
                 {

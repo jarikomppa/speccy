@@ -4,7 +4,7 @@
 #include "propfont.h"
 #include "../common/pack.h"
 #include "../common/zx7pack.h"
-
+#include "yofstab.h"
 
 struct Symbol
 {
@@ -15,6 +15,8 @@ struct Symbol
 #define MAX_SYMBOLS (8*256) // 2k symbols should be enough for everybody
 int symbols = 0;
 Symbol symbol[MAX_SYMBOLS];
+int images = 0;
+Symbol image[MAX_SYMBOLS];
 
 int verbose = 0;
 int quiet = 0;
@@ -23,6 +25,7 @@ unsigned char commandbuffer[1024];
 int commandptr = 0;
 
 int line = 0;
+int image_id_start = 0;
 
 char outbuf[1024*1024];
 int outlen = 0;
@@ -159,12 +162,19 @@ void flush_room()
 {
     if (datalen)
     {
+        putbyte(0); // add a zero byte for good measure.
         pack.mMax = 0;
+        if (datalen > 4096)
+        {
+            printf("Room %s data too large; max 4096 bytes, has %d bytes\n", symbol[roomno].name, datalen);
+            exit(-1);
+        }
         pack.pack((unsigned char*)&databuf[0], datalen);
         patchword(0x5b00 + outlen, roomno);
+        
 
         if (!quiet)
-            printf("%40s zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", symbol[roomno].name, datalen, pack.mMax, (pack.mMax*100.0f)/datalen, 0x5b00+outlen);
+            printf("%30s zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", symbol[roomno].name, datalen, pack.mMax, (pack.mMax*100.0f)/datalen, 0x5b00+outlen);
         outdata(pack.mPackedData, pack.mMax);
         datalen = 0;       
         roomno++;
@@ -236,6 +246,23 @@ int get_symbol_id(char * s)
     symbol[symbols].hits = 1;
     symbols++;
     return symbols-1;            
+}
+
+int get_image_id(char * s)
+{
+    int i;
+    for (i = 0; i < images; i++)
+    {
+        if (stricmp(image[i].name, s) == 0)
+        {
+            image[i].hits++;
+            return i + image_id_start;
+        }
+    }
+    image[images].name = strdup(s);
+    image[images].hits = 1;
+    images++;
+    return images - 1 + image_id_start;            
 }
 
 enum opcodeval
@@ -389,7 +416,7 @@ void parse()
         }
         token(1, scratch, t);
         first_token = 2;   
-        store_section('I', 0); // TODO: store images & image id:s     
+        store_section('I', get_image_id(t)); // TODO: store images & image id:s     
         if (verbose) printf("Image: \"%s\"\n", t);
         previous_section = 'I';
         break;
@@ -420,10 +447,15 @@ void process()
     if (stringptr != 0)
     {
         char temp[256];
-        temp[0] = 0;
+//        temp[0] = 0;
         int c = 0;
         int width = 0;
         char *s = stringlit;
+        temp[0] = ' ';
+        temp[1] = ' ';
+        temp[2] = 0;
+        c = 2;
+        width = propfont_width[0] * 2;
         while (*s)
         {
             temp[c] = *s;
@@ -542,18 +574,27 @@ void scan_rooms(char *aFilename)
     while (!feof(f))
     {
         readline(scratch, f);
-        if (scratch[0] == '$' && scratch[1] == 'Q')
+        if (scratch[0] == '$')
         {
-            int i;
             char t[256];
             token(1, scratch, t);
-            i = get_symbol_id(t);
-            if (symbol[i].hits > 1)
+            if (scratch[1] == 'Q')
             {
-                printf("syntax error: room id \"%s\" used more than once, line %d\n", t, line);
-                exit(-1);
+                int i;
+                i = get_symbol_id(t);
+                if (symbol[i].hits > 1)
+                {
+                    printf("syntax error: room id \"%s\" used more than once, line %d\n", t, line);
+                    exit(-1);
+                }
+                symbol[i].hits--; // clear the hit, as it'll be scanned again
             }
-            symbol[i].hits--; // clear the hit, as it'll be scanned again
+            if (scratch[1] == 'I')
+            {
+                int i;
+                i = get_image_id(t);
+                image[i].hits--; // clear the hit, as it'll be scanned again
+            }
         }
     }
     fclose(f);
@@ -567,6 +608,106 @@ void report()
     for (i = 0; i < symbols; i++)
     {
         printf("%5d %4d \"%s\"\n", i, symbol[i].hits, symbol[i].name);
+    }
+
+    printf("Token Hits Image\n");
+    for (i = 0; i < images; i++)
+    {
+        printf("%5d %4d \"%s\"\n", i, image[i].hits, image[i].name);
+    }
+}
+
+int scan_row(int row, unsigned char*d)
+{
+    int i, j;
+    int ret = 0;
+    int ref = 0;
+    if (d[yofs[row*8]-0x4000] == 0xff)
+        ref = 0xff;
+    for (j = 0; j < 32; j++)
+    {
+        int hit = 0;
+        for (i = 0; i < 8; i++)
+        {
+            if (d[(yofs[row*8+i]-0x4000)+j] != ref)
+            {
+                hit = 1;
+            }
+        }
+        if (hit)
+        {
+            ret = 1;
+            if (verbose)
+                printf("*");
+        }
+        else
+        {
+            if (verbose)
+                printf(" ");
+        }                
+    }
+    if (verbose)
+        printf(" row %d, live %d\n", row, ret);
+    return ret;
+}
+
+void process_images()
+{
+    int i;
+    unsigned char t[6912];
+    for (i = 0; i < images; i++)
+    {
+        FILE * f = fopen(image[i].name, "rb");
+        if (!f)
+        {
+            printf("Image \"&s\" not found.\n", image[i].name);
+            exit(-1);
+        }
+        fseek(f,0,SEEK_END);
+        if (ftell(f) != 6912)
+        {
+            printf("Image \"&s\" wrong size (has to be 6912 bytes).\n", image[i].name);
+            exit(-1);
+        }
+        fseek(f,0,SEEK_SET);
+        fread(t,1,6912,f);
+        fclose(f);
+        int j = 0;
+        int maxlive = 0;
+        for (j = 0; j < 24; j++)
+        {
+            if (scan_row(j, t))
+            {
+                maxlive = j;
+            }
+        }
+        if (maxlive > 14)
+        {
+            printf("Warning: image \"%s\" has %d live character rows, 14 used.\n", image[i].name, maxlive);
+            maxlive = 14;
+        }
+        maxlive++;
+        datalen = 0;
+        putbyte(maxlive*8);
+        int k;
+        for (j = 0; j < 8*maxlive; j++)
+            for (k = 0; k < 32; k++)
+                putbyte(t[yofs[j]-0x4000 + k]);
+        for (j = 0; j < 32*maxlive; j++)
+            putbyte(t[j + 192*32]);
+
+        pack.mMax = 0;
+        if (datalen > 4096)
+        {
+            printf("Image %s data too large; max 4096 bytes, has %d bytes (%d lines)\n", image[i].name, datalen, maxlive);
+            exit(-1);
+        }
+        pack.pack((unsigned char*)&databuf[0], datalen);
+        patchword(0x5b00 + outlen, i + image_id_start);        
+
+        if (!quiet)
+            printf("%25s (%02d) zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", image[i].name, maxlive, datalen, pack.mMax, (pack.mMax*100.0f)/datalen, 0x5b00+outlen);
+        outdata(pack.mPackedData, pack.mMax);            
     }
 }
 
@@ -641,9 +782,11 @@ int main(int parc, char **pars)
 
     line = 0;    
     scan_rooms(pars[infile]);
-    outlen = symbols * 2;
+    image_id_start = symbols + 1;
+    outlen = symbols * 2 + images * 2 + 2;
     line = 0;    
     scan(pars[infile]);
+    process_images();
     if (!quiet)
         report();
     output(pars[outfile]);
