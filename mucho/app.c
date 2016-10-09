@@ -25,6 +25,7 @@ unsigned char port254tonebit;
 
 //extern void zx7_unpack(unsigned char *src, unsigned char *dst) __z88dk_callee __z88dk_fastcall;
 extern void zx7_unpack(unsigned char *src)  __z88dk_fastcall;
+extern void playfx(unsigned short fx) __z88dk_fastcall;  
 
 
 enum opcodeval
@@ -133,7 +134,10 @@ void set_ext(unsigned short id)
     {
         clearbottom();
     }
-    // todo: sound?
+    if (id >= 100 && id <= 155)
+    {
+        playfx(id-100);
+    }
 }
 
 #define SET_BIT(x) state[(x) & 0xff] |= 1 << ((x) >> 8)
