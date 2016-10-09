@@ -138,7 +138,6 @@ void set_ext(unsigned short id)
 
 #define SET_BIT(x) state[(x) & 0xff] |= 1 << ((x) >> 8)
 
-
 void exec(unsigned char *dataptr)
 {
     unsigned char c = *dataptr;
@@ -245,7 +244,7 @@ void add_answer(unsigned char *dataptr)
 void hitkeytocontinue()
 {
     clearbottom();
-    drawstring("[Press enter to continue]", 3, 21*8);
+    drawstring("[Press enter to continue]", 6, 22*8);
     
     readkeyboard();            
     while (KEYUP(ENTER))
@@ -441,7 +440,7 @@ void main()
             for (t = 0; t < 30000; t++);
             for (t = 0; t < 30000; t++);
             
-            drawstring("[The end. Press enter to restart]", 3, 21*8);
+            drawstring("[The end. Press enter to restart]", 6, 22*8);
             
             readkeyboard();            
             while (KEYUP(ENTER))
@@ -466,22 +465,32 @@ void main()
             selecting = 1;
             while (selecting)
             {
+                unsigned char answer_ofs;
                 clearbottom();
+                answer_ofs = current_answer;
+                if (current_answer > 0)
+                    answer_ofs -= 1;
+                if (current_answer == answers-1)
+                    answer_ofs -= 1;
+                if (answers < 4) answer_ofs = 0;
                 for (i = 0; i < 3; i++)
                 {
-                    if (current_answer + i < answers)
+                    if (answer_ofs + i < answers)
                     {
-                        unsigned char *dataptr = answer[current_answer + i];
+                        unsigned char *dataptr = answer[answer_ofs + i];
                         unsigned char roll = 0;
                         dataptr += *dataptr + 1;
-                        drawstring_lr_pascal(dataptr, 3, 21*8 + i * 8);
+                        drawstring_lr_pascal(dataptr, 1, 21*8 + i * 8);
                     }
                 }
                                                     
                 readkeyboard();
                 while (KEYUP(Q) && KEYUP(A) && KEYUP(ENTER))
-                {
-                    drawstring(">>>", 0, 21*8);
+                {            
+                    i = 22*8;
+                    if (current_answer == 0) i = 21*8;
+                    if (current_answer == answers-1 && answers > 2) i = 23*8;
+                    drawstring(">>>", 0, i);
                     
                     readkeyboard();
                 }
