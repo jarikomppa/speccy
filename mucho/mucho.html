@@ -94,6 +94,11 @@ $O toggle:flagname
 $O attr:7
 </pre></td></tr></table>
 <p>The attr command changes the color attribute to be used for text from now on.<p>
+<p>To set the color of the whole screen, in the $Q statement set attr and then use ext command to clear the screen, like:</p>
+<table border=0 cellspacing=0 cellpadding=12><tr><td bgcolor=#eeeeee><pre>
+$Q dark_room attr:7 ext:9
+</pre></td></tr></table>
+<p>Here's a table of colors for your convenience:</p>
 <table border=0>
 <tr><td>Color</td><td>Ink</td><td>Paper</td></tr>
 <tr><td>Black</td><td>0</td><td>0</td></tr>
@@ -107,9 +112,20 @@ $O attr:7
 </table>
 <p>So, for red on yellow background, you'd have 2+48=50, or attr:50. For bright, add 64, and for blinking, add 128.</p>
 <table border=0 cellspacing=0 cellpadding=12><tr><td bgcolor=#eeeeee><pre>
+$O iattr:7 dattr:7
+</pre></td></tr></table>
+<p>The iattr and dattr commands change the attributes for the interface (iattr) and the divider (dattr). The attributes 
+change the next time the interface is cleared.</p>
+<table border=0 cellspacing=0 cellpadding=12><tr><td bgcolor=#eeeeee><pre>
 $O ext:0
 </pre></td></tr></table>
-<p>The ext command is meant for additional things, like sound. Codes 0 through 7 set border color, 8 clears the screen.</p>
+<p>The ext command is meant for miscellaneous things that don't require a 8 bit parameter.</p>
+<ul>
+    <li>0 through 7 set border color (see table above)</li>
+    <li>8 clears the screen and the interface</li>
+    <li>9 clears the screen</li>
+    <li>10 clears the interface</li>
+</ul>
 <h1>Execution order</h1>
 <p>The executive commands are only executed if the predicates succeed. Other than that, commands are executed in order
 they appear.</p>

@@ -274,7 +274,9 @@ enum opcodeval
     OP_XOR,
     OP_RND,
     OP_ATTR,
-    OP_EXT
+    OP_EXT,
+    OP_IATTR,
+    OP_DATTR
 };
 
 void set_op(int opcode, int value)
@@ -290,6 +292,8 @@ void set_op(int opcode, int value)
         case OP_RND: if (verbose) printf("RND(%d)", value); break;
         case OP_ATTR: if (verbose) printf("ATTR(%d)", value); break;
         case OP_EXT: if (verbose) printf("EXT(%d)", value); break;
+        case OP_IATTR: if (verbose) printf("IATTR(%d)", value); break;
+        case OP_DATTR: if (verbose) printf("DATTR(%d)", value); break;
     }
     if (verbose) printf("\n");
     store_cmd(opcode, value);
@@ -361,7 +365,11 @@ void parse_op(char *op)
         if (stricmp(cmd, "rand") == 0) set_op(OP_RND, atoi(sym)); else
         if (stricmp(cmd, "rnd") == 0) set_op(OP_RND, atoi(sym)); else
         if (stricmp(cmd, "attr") == 0) set_op(OP_ATTR, atoi(sym)); else
+        if (stricmp(cmd, "iattr") == 0) set_op(OP_IATTR, atoi(sym)); else
+        if (stricmp(cmd, "dattr") == 0) set_op(OP_DATTR, atoi(sym)); else
         if (stricmp(cmd, "attrib") == 0) set_op(OP_ATTR, atoi(sym)); else
+        if (stricmp(cmd, "iattrib") == 0) set_op(OP_IATTR, atoi(sym)); else
+        if (stricmp(cmd, "dattrib") == 0) set_op(OP_DATTR, atoi(sym)); else
         if (stricmp(cmd, "color") == 0) set_op(OP_ATTR, atoi(sym)); else
         if (stricmp(cmd, "ext") == 0) set_op(OP_EXT, atoi(sym)); else
         {
@@ -660,7 +668,7 @@ void process_images()
         FILE * f = fopen(image[i].name, "rb");
         if (!f)
         {
-            printf("Image \"&s\" not found.\n", image[i].name);
+            printf("Image \"%s\" not found.\n", image[i].name);
             exit(-1);
         }
         fseek(f,0,SEEK_END);

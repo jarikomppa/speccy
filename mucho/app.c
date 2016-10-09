@@ -36,14 +36,55 @@ enum opcodeval
     OP_XOR,
     OP_RND,
     OP_ATTR,
-    OP_EXT
+    OP_EXT,
+    OP_IATTR,
+    OP_DATTR
 };
 
 unsigned char state[256]; // game state
 unsigned char y8; // prg state
 unsigned char *answer[16];
 unsigned char answers;
-unsigned char attrib;
+unsigned char attrib, iattrib, dattrib;
+
+void cls()
+{
+    unsigned short i, j;
+
+    for (j = 0; j < 20*8; j++)
+        for (i = 0; i < 32; i++)
+            *(unsigned char*)(yofs[j]+i) = 0;
+    for (i = 0; i < 20*32; i++)
+        *(unsigned char*)(0x5800+i) = attrib; 
+}
+   
+const unsigned char pattern[8] = 
+{ 
+    0x00, 
+    0xC1, 
+    0x32, 
+    0x18, 
+    0x0C, 
+    0x26, 
+    0xC1, 
+    0x00  
+};
+
+void clearbottom()
+{
+    unsigned short i, j;
+
+    for (j = 20*8; j < 21*8; j++)
+        for (i = 0; i < 32; i++)
+            *(unsigned char*)(yofs[j]+i) = pattern[j & 7];
+    for (j = 21*8; j < 24*8; j++)
+        for (i = 0; i < 32; i++)
+            *(unsigned char*)(yofs[j]+i) = 0;
+    for (i = 20*32; i < 21*32; i++)
+        *(unsigned char*)(0x5800+i) = dattrib; 
+    for (i = 21*32; i < 24*32; i++)
+        *(unsigned char*)(0x5800+i) = iattrib; 
+}
 
 unsigned char * unpack_resource(unsigned short id)
 {
@@ -73,34 +114,29 @@ unsigned char get_bit(unsigned short id)
     return !!(state[id & 0xff] & 1 << (id >> 8));
 }
 
-void set_bit(unsigned short id)
-{
-    state[id & 0xff] |= 1 << (id >> 8);
-}
-
-void clear_bit(unsigned short id)
-{
-    state[id & 0xff] &= (1 << (id >> 8))^0xff;
-}
-
-void toggle_bit(unsigned short id)
-{
-    state[id & 0xff] ^= 1 << (id >> 8);
-}
-
-void set_attr(unsigned short id)
-{
-    attrib = id;
-}
-
 void set_ext(unsigned short id)
 {
     if (id < 8)
     {
         port254(id);
     }
+    if (id == 8)
+    {
+        cls();
+        clearbottom();
+    }
+    if (id == 9)
+    {
+        cls();
+    }
+    if (id == 10)
+    {
+        clearbottom();
+    }
     // todo: sound?
 }
+
+#define SET_BIT(x) state[(x) & 0xff] |= 1 << ((x) >> 8)
 
 
 void exec(unsigned char *dataptr)
@@ -128,17 +164,23 @@ void exec(unsigned char *dataptr)
         switch (*dataptr)
         {
             case OP_SET:
-                set_bit(id);
+                SET_BIT(id);
                 break;
             case OP_CLR:
-                clear_bit(id);
+                state[id & 0xff] &= (1 << (id >> 8))^0xff;
                 break;
             case OP_XOR:
-                toggle_bit(id);
+                state[id & 0xff] ^= 1 << (id >> 8);
                 break;
             case OP_ATTR:
-                set_attr(id);
+                attrib = id;
                 break;
+            case OP_IATTR:
+                iattrib = id;
+                break;
+            case OP_DATTR:
+                dattrib = id;
+                break;                
             case OP_EXT:
                 set_ext(id);
                 break;
@@ -199,8 +241,10 @@ void add_answer(unsigned char *dataptr)
         answers = 15;
 }
 
+
 void hitkeytocontinue()
 {
+    clearbottom();
     drawstring("[Press enter to continue]", 3, 21*8);
     
     readkeyboard();            
@@ -212,24 +256,20 @@ void hitkeytocontinue()
     {
         readkeyboard();
     }                
+    clearbottom();
 }
 
-void cls()
-{
-    unsigned short i;
-    for (i = 0; i < 192*32; i++)
-      *(unsigned char*)(0x4000+i) = 0;
-}
 
 void image(unsigned char *dataptr, unsigned char *aYOfs)
 {
     unsigned short id = ((unsigned short)dataptr[3] << 8) | dataptr[2];
-    unsigned short yp;
+    unsigned char * dst;
+    unsigned short yp, ayp;
     unsigned char x, y;
     
     dataptr = unpack_resource(id);
-    id = *dataptr;
-    yp = *aYOfs;
+    id = *dataptr; // scanlines
+    yp = *aYOfs;    
     
     if (id + yp > 20*8) 
     {
@@ -238,20 +278,44 @@ void image(unsigned char *dataptr, unsigned char *aYOfs)
         yp = 0;
     }
     
+    ayp = yp * 4; // yp / 8 * 32 -> yp * 4
+    
     dataptr++;
     for (y = 0; y < id; y++, yp++)
     {
-        unsigned char * dst = (unsigned char*)yofs[yp];
+        dst = (unsigned char*)yofs[yp];
         for (x = 0; x < 32; x++)
         {
             *dst = *dataptr;
             dataptr++;
             dst++;
         }
-    }        
+    }
+    id /= 8;
+    dst = (unsigned char*)(0x5800 + ayp);
+    for (y = 0; y < id; y++)
+    {
+        
+        for (x = 0; x < 32; x++)
+        {
+            *dst = *dataptr;
+            dataptr++;
+            dst++;
+        }
+    }
     *aYOfs = yp;
 }
 
+void drawattrib(unsigned char yofs)
+{
+    unsigned char * dst = (unsigned char*)(0x5800 + yofs * 4);
+    unsigned char i;
+    for (i = 0; i < 32; i++)
+    {
+        *dst = attrib;
+        dst++;
+    }
+}
 
 void render_room(unsigned short room_id)
 {
@@ -259,7 +323,7 @@ void render_room(unsigned short room_id)
     unsigned char output_enable = 1;
     unsigned char yofs = 0;
 
-    set_bit(room_id);
+    SET_BIT(room_id);
 
     cls();
     
@@ -312,6 +376,7 @@ void render_room(unsigned short room_id)
             if (output_enable)
             {
                 drawstring_lr_pascal(dataptr, 0, yofs);
+                drawattrib(yofs);
                 yofs += 8;
                 if (yofs > 20*8) 
                 {
@@ -327,15 +392,6 @@ void render_room(unsigned short room_id)
     // if we get here, this was the last room in the data
 }
 
-void clearbottom()
-{
-    unsigned short i, j;
-
-    for (j = 20*8; j < 24*8; j++)
-        for (i = 0; i < 32; i++)
-            *(unsigned char*)(yofs[j]+i) = 0;
-}
-
 
 void reset()
 {
@@ -344,16 +400,16 @@ void reset()
     for (i = 0; i < 256; i++)
         state[i] = 0;
 
+    attrib = 7 << 3;
+    iattrib = (7 << 3) | 1;
+    dattrib = (7 << 3) | 2;
     cls();
+    clearbottom();
     
-    for (i = 0; i < 24*32; i++)
-        *(unsigned char*)(0x5800+i) = 7 << 3; 
-
     port254(7);
 
     y8 = 1;
     answers = 0;
-    attrib = 7 << 3;
 }
 
 void main()
@@ -361,7 +417,7 @@ void main()
     unsigned short i;
     unsigned short current_room = 0;    
     unsigned char current_answer = 0;
-    unsigned char selecting;
+    unsigned char selecting;    
 
     reset();     
         
