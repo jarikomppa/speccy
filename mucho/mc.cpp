@@ -744,6 +744,7 @@ void output(char *aFilename)
 
 int main(int parc, char **pars)
 {    
+    printf("MuCho compiler, by Jari Komppa http://iki.fi/sol/\n");
     if (parc < 3)
     {
         printf(
