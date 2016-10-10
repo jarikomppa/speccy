@@ -5,6 +5,21 @@
 #include "../common/pack.h"
 #include "../common/zx7pack.h"
 #include "yofstab.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "../common/stb_image.h"
+#include "../common/ihxtools.h"
+
+const unsigned char divider_pattern[8] = 
+{ 
+    0x00, 
+    0xC1, 
+    0x32, 
+    0x18, 
+    0x0C, 
+    0x26, 
+    0xC1, 
+    0x00  
+};
 
 struct Symbol
 {
@@ -17,6 +32,10 @@ int symbols = 0;
 Symbol symbol[MAX_SYMBOLS];
 int images = 0;
 Symbol image[MAX_SYMBOLS];
+
+unsigned char *propfont_data = (unsigned char *)&builtin_data[0];
+unsigned char *propfont_width = (unsigned char *)&builtin_width[0];
+unsigned char *divider_data = (unsigned char*)&divider_pattern[0];
 
 int verbose = 0;
 int quiet = 0;
@@ -742,13 +761,188 @@ void output(char *aFilename)
     fclose(f);
 }
 
+int find_data(unsigned char *buf, int start, const unsigned char *data, int bytes)
+{
+    int i;
+    for (i = 0; i < (65535 - start - bytes); i++)
+    {
+        int found = 1;
+        int j;
+        for (j = 0; found && j < bytes; j++)
+        {
+            if (buf[start + i + j] != data[j])
+            {
+                found = 0;
+            }
+        }
+        if (found)
+        {
+            return i + start;            
+        }
+    }
+    printf("Can't find data to patch in crt0.ihx!\n");
+    exit(-1);
+    return 0;
+}
+
+void patch_data(unsigned char *buf, int start, const unsigned char *data, int bytes)
+{
+    memcpy(buf + start, data, bytes);
+}
+
+void patch_ihx()
+{
+    FILE * f;
+    
+    f = fopen("crt0.ihx", "rb");
+    if (!f)
+    {
+        printf("crt0.ihx not found");
+        exit(-1);
+    }
+    fseek(f,0,SEEK_END);
+    int len = ftell(f);
+    fseek(f,0,SEEK_SET);
+    unsigned char *ihx = new unsigned char[len+1];
+    fread(ihx, 1, len, f);
+    fclose(f);
+    
+    unsigned char codebuf[65536];
+    int start, end;
+    decode_ihx(ihx, len, codebuf, start, end);
+    
+    int ofs = find_data(codebuf, start, builtin_data, 94*8);
+    patch_data(codebuf, ofs, propfont_data, 94*8);
+    
+    ofs = find_data(codebuf, start, builtin_width, 94);
+    patch_data(codebuf, ofs, propfont_width, 94);
+    
+    ofs = find_data(codebuf, start, divider_pattern, 8);
+    patch_data(codebuf, ofs, divider_data, 8);
+    
+    write_ihx("patched.ihx", codebuf, start, end);
+}
+
+struct CharData
+{
+    int xmin, xmax;
+    unsigned char pixdata[20];
+};
+
+CharData chardata[94];
+
+void shift()
+{
+    int i, j;
+    for (i = 0; i < 94; i++)
+    {
+        for (j = 0; j < 8; j++)
+        {
+            chardata[i].pixdata[j] <<= chardata[i].xmin;
+        }
+    }
+}
+
+void scan_glyph(unsigned int *data, CharData &parsed)
+{
+    parsed.xmin = 8;
+    parsed.xmax = 0;
+    int i, j;
+    for (i = 0; i < 8; i++)
+    {        
+        parsed.pixdata[i] = 0;
+        for (j = 0; j < 8; j++)
+        {
+            if (data[i*8+j] & 0xffffff)
+            {
+                if (parsed.xmin > j) parsed.xmin = j;
+                if (parsed.xmax < j) parsed.xmax = j;
+                parsed.pixdata[i] |= 0x80 >> j;
+            }            
+        }
+    }
+    if (parsed.xmin > parsed.xmax)
+    {
+        parsed.xmin = 0;
+        parsed.xmax = 4-1;
+    }
+}
+
+
+void scan_font(char *aFilename)
+{   
+    int x,y,n;
+    unsigned int *data = (unsigned int*)stbi_load(aFilename, &x, &y, &n, 4);
+    if (!data)
+    {
+        printf("unable to load \"%s\"\n", aFilename);
+        exit(-1);
+    }
+    printf("%s image dimensions: %dx%d\n", aFilename, x, y);
+    if (x != 8 || y < 752 || y % 94)
+    {
+        printf("Bad image dimensions; should be 8x752 (found %dx%d)\n", x, y);
+        exit(-1);
+    }
+    
+    for (n = 0; n < 94; n++)
+    {
+        scan_glyph(data+8*8*n, chardata[n]);
+    }
+    
+    shift();
+
+    propfont_data = new unsigned char[94*8];
+    propfont_width = new unsigned char[94];
+    
+    int i, j, c;
+    for (i = 0, c = 0; i < 94; i++)
+    {
+        for (j = 0; j < 8; j++, c++)
+        {
+            propfont_data[c] = chardata[i].pixdata[j];
+        }
+    }
+
+    for (i = 0; i < 94; i++)
+    {
+        propfont_width[i] = chardata[i].xmax-chardata[i].xmin+1+1;
+    }
+}
+
+void scan_div(char *aFilename)
+{
+    int x,y,n,i,j;
+    unsigned int *data = (unsigned int*)stbi_load(aFilename, &x, &y, &n, 4);
+    if (!data)
+    {
+        printf("unable to load \"%s\"\n", aFilename);
+        exit(-1);
+    }
+    if (x != 8 || y != 8)
+    {
+        printf("Divider pattern image not 8x8 (found %dx%d)\n", x, y);
+        exit(-1);
+    }
+    divider_data = new unsigned char[8];
+    for (i = 0; i < 8; i++)
+    {
+        for (j = 0; j < 8; j++)
+        {
+            divider_data[i] <<= 1;
+            divider_data[i] |= (data[i * 8 + j] & 0xff) ? 1 : 0;
+        }
+    }              
+}
+
+
 int main(int parc, char **pars)
 {    
     printf("MuCho compiler, by Jari Komppa http://iki.fi/sol/\n");
     if (parc < 3)
     {
         printf(
-            "%s <input> <output> [flags]\n"
+            "%s <input> <output> [font image [divider image]] [flags]\n"
             "Optional flags:\n"
             "  -v   verbose (useful for debugging)\n"
             "  -q   quiet (minimal output)\n",
@@ -757,6 +951,8 @@ int main(int parc, char **pars)
     }
     int infile = -1;
     int outfile = -1;
+    int fontfile = -1;
+    int divfile = -1;
     int i;
     for (i = 1; i < parc; i++)
     {
@@ -792,8 +988,22 @@ int main(int parc, char **pars)
                 }
                 else
                 {
-                    printf("Invalid parameter \"%s\" (input and output files already defined)\n", pars[i]);
-                    exit(-1);
+                    if (fontfile == -1) 
+                    {
+                        fontfile = i; 
+                    }
+                    else
+                    {
+                        if (divfile == -1) 
+                        {
+                            divfile = i; 
+                        }
+                        else
+                        {
+                            printf("Invalid parameter \"%s\" (input, output, font and divisor image files already defined)\n", pars[i]);
+                            exit(-1);
+                        }
+                    }
                 }
             }
         }
@@ -804,6 +1014,18 @@ int main(int parc, char **pars)
         printf("Invalid parameters (run without params for help\n");
         exit(-1);
     }
+
+    if (fontfile != -1)
+    {
+        scan_font(pars[fontfile]);
+    }
+
+    if (divfile != -1)
+    {
+        scan_div(pars[divfile]);
+    }
+
+    patch_ihx();
 
     line = 0;    
     scan_rooms(pars[infile]);

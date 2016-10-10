@@ -2,8 +2,8 @@
 void drawstring_pascal(unsigned char *aS, unsigned char aX, unsigned char aY)
 {
     unsigned char i, *s, *d, sx, x, c;
-    unsigned char *datap = (unsigned char*)(int*)propfont_data - 32 * FONTHEIGHT;
-    unsigned char *widthp = (unsigned char*)(int*)propfont_width - 32;
+    unsigned char *datap = (unsigned char*)(int*)builtin_data - 32 * FONTHEIGHT;
+    unsigned char *widthp = (unsigned char*)(int*)builtin_width - 32;
     for (i = 0; i < FONTHEIGHT; i++)
     {
         s = aS+1;
@@ -61,8 +61,8 @@ void drawstring_lr_pascal(unsigned char *s, unsigned char x, unsigned char y)
     unsigned char c;
     char sx = 0;
     unsigned char *yp[8];
-    unsigned char *datap = (unsigned char*)(int*)propfont_data - 32 * FONTHEIGHT;
-    unsigned char *widthp = (unsigned char*)(int*)propfont_width - 32;
+    unsigned char *datap = (unsigned char*)(int*)builtin_data - 32 * FONTHEIGHT;
+    unsigned char *widthp = (unsigned char*)(int*)builtin_width - 32;
     for (i = 0; i < 8; i++)
     {
         yp[i] = (unsigned char*)yofs[y + i] + x;
