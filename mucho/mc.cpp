@@ -543,6 +543,11 @@ void capture()
 void scan(char *aFilename)
 {
     FILE * f = fopen(aFilename, "rb");
+    if (!f)
+    {
+        printf("File \"%s\" not found.\n", aFilename);
+        exit(-1);
+    }
     
     
     stringptr = 0;
@@ -578,6 +583,11 @@ void scan(char *aFilename)
 void scan_rooms(char *aFilename)
 {
     FILE * f = fopen(aFilename, "rb");
+    if (!f)
+    {
+        printf("File \"%s\" not found.\n", aFilename);
+        exit(-1);
+    }
             
     while (!feof(f))
     {
@@ -722,6 +732,12 @@ void process_images()
 void output(char *aFilename)
 {
     FILE * f = fopen(aFilename, "wb");
+    if (!f)
+    {
+        printf("Can't open \"%s\" for writing.\n", aFilename);
+        exit(-1);
+    }
+
     fwrite(outbuf, 1, outlen, f);
     fclose(f);
 }
