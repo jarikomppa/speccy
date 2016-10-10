@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "../common/stb_image.h"
 
 #define LETTER_SPACING 1
 #define SPACE_WIDTH 4
@@ -17,7 +17,7 @@ struct CharData
 
 CharData chardata[94];
 
-void scan(unsigned int *data, CharData &parsed)
+void scanfont(unsigned int *data, CharData &parsed)
 {
     parsed.xmin = 8;
     parsed.xmax = 0;
