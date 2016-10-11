@@ -274,7 +274,7 @@ void image(unsigned char *dataptr, unsigned char *aYOfs)
     id = *dataptr; // scanlines
     yp = *aYOfs;    
     
-    if (id + yp > 20*8) 
+    if (id + yp >= 20*8) 
     {
         hitkeytocontinue();
         cls();
@@ -381,7 +381,7 @@ void render_room(unsigned short room_id)
                 drawstring_lr_pascal(dataptr, 0, yofs);
                 drawattrib(yofs);
                 yofs += 8;
-                if (yofs > 20*8) 
+                if (yofs >= 20*8) 
                 {
                     hitkeytocontinue();
                     cls();
