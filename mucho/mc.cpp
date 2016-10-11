@@ -790,11 +790,19 @@ void patch_data(unsigned char *buf, int start, const unsigned char *data, int by
     memcpy(buf + start, data, bytes);
 }
 
-void patch_ihx()
+void patch_ihx(char *path)
 {
     FILE * f;
     
     f = fopen("crt0.ihx", "rb");
+    if (!f)
+    {
+        char temp[1024];
+        strcpy(temp, path);
+        char *d = strrchr(temp, '\\');
+        strcpy(d+1, "crt0.ihx");
+        f = fopen(temp, "rb");
+    }
     if (!f)
     {
         printf("crt0.ihx not found");
@@ -878,7 +886,6 @@ void scan_font(char *aFilename)
         printf("unable to load \"%s\"\n", aFilename);
         exit(-1);
     }
-    printf("%s image dimensions: %dx%d\n", aFilename, x, y);
     if (x != 8 || y < 752 || y % 94)
     {
         printf("Bad image dimensions; should be 8x752 (found %dx%d)\n", x, y);
@@ -1025,7 +1032,7 @@ int main(int parc, char **pars)
         scan_div(pars[divfile]);
     }
 
-    patch_ihx();
+    patch_ihx(pars[0]);
 
     line = 0;    
     scan_rooms(pars[infile]);
