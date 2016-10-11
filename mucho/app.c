@@ -27,6 +27,9 @@ unsigned char port254tonebit;
 extern void zx7_unpack(unsigned char *src)  __z88dk_fastcall;
 extern void playfx(unsigned short fx) __z88dk_fastcall;  
 
+#define KEY_PRESSED_UP (KEYDOWN(9) || KEYDOWN(Q) || KEYDOWN(W) || KEYDOWN(E) || KEYDOWN(R) || KEYDOWN(T) || KEYDOWN(Y) || KEYDOWN(U) || KEYDOWN(I) || KEYDOWN(O) || KEYDOWN(P))
+#define KEY_PRESSED_DOWN (KEYDOWN(8) || KEYDOWN(A) || KEYDOWN(S) || KEYDOWN(D) || KEYDOWN(F) || KEYDOWN(G) || KEYDOWN(H) || KEYDOWN(J) || KEYDOWN(K) || KEYDOWN(L))
+#define KEY_PRESSED_FIRE (KEYDOWN(0) || KEYDOWN(ENTER) || KEYDOWN(SPACE))
 
 enum opcodeval
 {
@@ -251,11 +254,11 @@ void hitkeytocontinue()
     drawstring("[Press enter to continue]", 6, 22*8);
     
     readkeyboard();            
-    while (KEYUP(ENTER))
+    while (!KEY_PRESSED_FIRE)
     {
         readkeyboard();
     }            
-    while (KEYDOWN(ENTER))
+    while (KEY_PRESSED_FIRE)
     {
         readkeyboard();
     }                
@@ -273,13 +276,13 @@ void image(unsigned char *dataptr, unsigned char *aYOfs)
     dataptr = unpack_resource(id);
     id = *dataptr; // scanlines
     yp = *aYOfs;    
-    
-    if (id + yp >= 20*8) 
+        
+    if (id + yp > 20*8)
     {
         hitkeytocontinue();
         cls();
         yp = 0;
-    }
+    }   
     
     ayp = yp * 4; // yp / 8 * 32 -> yp * 4
     
@@ -378,15 +381,16 @@ void render_room(unsigned short room_id)
         {
             if (output_enable)
             {
-                drawstring_lr_pascal(dataptr, 0, yofs);
-                drawattrib(yofs);
-                yofs += 8;
-                if (yofs >= 20*8) 
+                if (yofs + 8 > 20*8) 
                 {
                     hitkeytocontinue();
                     cls();
                     yofs = 0;                
-                }
+                } 
+
+                drawstring_lr_pascal(dataptr, 0, yofs);
+                drawattrib(yofs);
+                yofs += 8;
             }
             dataptr += *dataptr + 1;
         }
@@ -447,11 +451,11 @@ void main()
             drawstring("[The end. Press enter to restart]", 6, 22*8);
             
             readkeyboard();            
-            while (KEYUP(ENTER))
+            while (!KEY_PRESSED_FIRE)
             {
                 readkeyboard();
             }            
-            while (KEYDOWN(ENTER))
+            while (KEY_PRESSED_FIRE)
             {
                 readkeyboard();
             }            
@@ -489,7 +493,8 @@ void main()
                 }
                                                     
                 readkeyboard();
-                while (KEYUP(Q) && KEYUP(A) && KEYUP(ENTER))
+
+                while (!KEY_PRESSED_UP && !KEY_PRESSED_DOWN && !KEY_PRESSED_FIRE)
                 {            
                     i = 22*8;
                     if (current_answer == 0) i = 21*8;
@@ -498,11 +503,11 @@ void main()
                     
                     readkeyboard();
                 }
-                if (KEYDOWN(ENTER))
+                if (KEY_PRESSED_FIRE)
                 {
                     unsigned char *dataptr = answer[current_answer];
                     unsigned short id = ((unsigned short)dataptr[3] << 8) | dataptr[2];
-                    while (KEYDOWN(ENTER))
+                    while (KEY_PRESSED_FIRE)
                     {
                         readkeyboard();
                     }
@@ -512,18 +517,18 @@ void main()
                         current_answer = 0;
                     current_room = id;
                 }
-                if (KEYDOWN(Q))
+                if (KEY_PRESSED_UP)
                 {
-                    while (KEYDOWN(Q))
+                    while (KEY_PRESSED_UP)
                     {
                         readkeyboard();
                     }
                     if (current_answer > 0)
                         current_answer--;
                 }
-                if (KEYDOWN(A))
+                if (KEY_PRESSED_DOWN)
                 {
-                    while (KEYDOWN(A))
+                    while (KEY_PRESSED_DOWN)
                     {
                         readkeyboard();
                     }
