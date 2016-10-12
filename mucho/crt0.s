@@ -1,19 +1,17 @@
-		;;	crt0.c
 		;;	zx spectrum ram startup code
-		;;
-		;;	tomaz stih sun may 20 2012
 		.module crt0
 		.globl _heap
 		.globl _stack
 
 		.area _HEADER(ABS)
 	
-		ld sp,#_stack
+		ld sp, #0xffff ;#_stack
 
-		call gsinit			; init static vars (sdcc style)
+		;call gsinit			; init static vars (sdcc style)
 
 		;; start the os
-		call _main			
+		;call _main			
+		jp _main
 
 		;;	(linker documentation:) where specific ordering is desired - 
 		;;	the first linker input file should have the area definitions 
@@ -33,14 +31,14 @@
         	.area _GSINIT
 gsinit:	
         	.area _GSFINAL
-        	ret
+        	;ret
 
 		.area _DATA
 
 		.area _BSS
 
 		;; 2048 bytes of operating system stack
-		.ds	1024
+		;.ds	1024
 _stack::
 		.area _HEAP
 _heap::
