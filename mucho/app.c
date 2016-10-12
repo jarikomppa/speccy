@@ -49,17 +49,17 @@ unsigned char state[256]; // game state
 unsigned char y8; // prg state
 unsigned char *answer[16];
 unsigned char answers;
-unsigned char attrib, iattrib, dattrib;
+unsigned char attrib, iattrib, dattrib, attrib_c;
 
 void cls()
 {
     unsigned short i, j;
 
+    for (i = 0; i < 20*32; i++)
+        *(unsigned char*)(0x5800+i) = attrib_c; 
     for (j = 0; j < 20*8; j++)
         for (i = 0; i < 32; i++)
             *(unsigned char*)(yofs[j]+i) = 0;
-    for (i = 0; i < 20*32; i++)
-        *(unsigned char*)(0x5800+i) = attrib; 
 }
    
 const unsigned char pattern[8] = 
@@ -81,11 +81,14 @@ void clearbottom()
     for (j = 20*8; j < 21*8; j++)
         for (i = 0; i < 32; i++)
             *(unsigned char*)(yofs[j]+i) = pattern[j & 7];
+
     for (j = 21*8; j < 24*8; j++)
         for (i = 0; i < 32; i++)
             *(unsigned char*)(yofs[j]+i) = 0;
+
     for (i = 20*32; i < 21*32; i++)
         *(unsigned char*)(0x5800+i) = dattrib; 
+
     for (i = 21*32; i < 24*32; i++)
         *(unsigned char*)(0x5800+i) = iattrib; 
 }
@@ -180,6 +183,7 @@ void exec(unsigned char *dataptr)
                 break;
             case OP_ATTR:
                 attrib = id;
+                attrib_c = (id & 070) | (id >> 3);                
                 break;
             case OP_IATTR:
                 iattrib = id;
@@ -266,18 +270,30 @@ void hitkeytocontinue()
     clearbottom();
 }
 
+void drawattrib(unsigned char yofs, unsigned char attrib)
+{
+    unsigned char * dst = (unsigned char*)(0x5800 + yofs * 4);
+    unsigned char i;
+    for (i = 0; i < 32; i++)
+    {
+        *dst = attrib;
+        dst++;
+    }
+}
 
 void image(unsigned char *dataptr, unsigned char *aYOfs)
 {
     unsigned short id = ((unsigned short)dataptr[3] << 8) | dataptr[2];
     unsigned char * dst;
     unsigned short yp, ayp;
-    unsigned char x, y;
+    unsigned char x, y, rows;
     
     dataptr = unpack_resource(id);
     id = *dataptr; // scanlines
-    yp = *aYOfs;    
-        
+    yp = *aYOfs;
+    rows = id / 8;
+    for (y = 0; y < rows; y++)
+        drawattrib(yp + y, attrib_c);
     if (id + yp > 20*8)
     {
         hitkeytocontinue();
@@ -298,9 +314,9 @@ void image(unsigned char *dataptr, unsigned char *aYOfs)
             dst++;
         }
     }
-    id /= 8;
+    
     dst = (unsigned char*)(0x5800 + ayp);
-    for (y = 0; y < id; y++)
+    for (y = 0; y < rows; y++)
     {
         
         for (x = 0; x < 32; x++)
@@ -311,17 +327,6 @@ void image(unsigned char *dataptr, unsigned char *aYOfs)
         }
     }
     *aYOfs = yp;
-}
-
-void drawattrib(unsigned char yofs)
-{
-    unsigned char * dst = (unsigned char*)(0x5800 + yofs * 4);
-    unsigned char i;
-    for (i = 0; i < 32; i++)
-    {
-        *dst = attrib;
-        dst++;
-    }
 }
 
 void render_room(unsigned short room_id)
@@ -389,8 +394,9 @@ void render_room(unsigned short room_id)
                     yofs = 0;                
                 } 
 
+                drawattrib(yofs, attrib_c);
                 drawstring_lr_pascal(dataptr, 0, yofs);
-                drawattrib(yofs);
+                drawattrib(yofs, attrib);
                 yofs += 8;
             }
             dataptr += *dataptr + 1;
@@ -408,9 +414,10 @@ void reset()
     for (i = 0; i < 256; i++)
         state[i] = 0;
 
-    attrib = 7 << 3;
-    iattrib = (7 << 3) | 1;
-    dattrib = (7 << 3) | 2;
+    attrib = 070;
+    attrib_c = 077;
+    iattrib = 071;
+    dattrib = 072;
     cls();
     clearbottom();
     
@@ -500,7 +507,7 @@ void main()
                     i = 22*8;
                     if (current_answer == 0) i = 21*8;
                     if (current_answer == answers-1 && answers > 2) i = 23*8;
-                    drawstring_lr_pascal("\0x03>>>", 0, i);
+                    drawstring_lr_pascal("\x03>>>", 0, i);
                     
                     readkeyboard();
                 }
