@@ -255,8 +255,8 @@ void add_answer(unsigned char *dataptr)
 void hitkeytocontinue()
 {
     clearbottom();
-    //                       0123456789ABCDEF0123456789ABCDEF01
-    drawstring_lr_pascal("\x19[Press enter to continue]", 6, 22*8);
+    //              0123456789ABCDEF0123456789ABCDEF01
+    drawstring("\x19[Press enter to continue]", 6, 22*8);
     
     readkeyboard();            
     while (!KEY_PRESSED_FIRE)
@@ -395,7 +395,7 @@ void render_room(unsigned short room_id)
                 } 
 
                 drawattrib(yofs, attrib_c);
-                drawstring_lr_pascal(dataptr, 0, yofs);
+                drawstring(dataptr, 0, yofs);
                 drawattrib(yofs, attrib);
                 yofs += 8;
             }
@@ -455,8 +455,8 @@ void main()
             for (t = 0; t < 30000; t++);
             for (t = 0; t < 30000; t++);
             for (t = 0; t < 30000; t++);
-            //                       0123456789ABCDEF0123456789ABCDEF01
-            drawstring_lr_pascal("\x21[The end. Press enter to restart]", 6, 22*8);
+            //              0123456789ABCDEF0123456789ABCDEF01
+            drawstring("\x21[The end. Press enter to restart]", 6, 22*8);
             
             readkeyboard();            
             while (!KEY_PRESSED_FIRE)
@@ -496,7 +496,7 @@ void main()
                         unsigned char *dataptr = answer[answer_ofs + i];
                         unsigned char roll = 0;
                         dataptr += *dataptr + 1;
-                        drawstring_lr_pascal(dataptr, 1, 21*8 + i * 8);
+                        drawstring(dataptr, 1, 21*8 + i * 8);
                     }
                 }
                                                     
@@ -507,7 +507,7 @@ void main()
                     i = 22*8;
                     if (current_answer == 0) i = 21*8;
                     if (current_answer == answers-1 && answers > 2) i = 23*8;
-                    drawstring_lr_pascal("\x03>>>", 0, i);
+                    drawstring("\x03>>>", 0, i);
                     
                     readkeyboard();
                 }

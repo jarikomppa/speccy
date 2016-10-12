@@ -1,5 +1,5 @@
-/*
-void drawstring_pascal(unsigned char *aS, unsigned char aX, unsigned char aY)
+// 282 bytes as of c7f5295
+void drawstring(unsigned char *aS, unsigned char aX, unsigned char aY)
 {
     unsigned char i, *s, *d, sx, x, c;
     unsigned char *datap = (unsigned char*)(int*)builtin_data - 32 * FONTHEIGHT;
@@ -39,23 +39,9 @@ void drawstring_pascal(unsigned char *aS, unsigned char aX, unsigned char aY)
     }
 }
 
+/*
+// 410 bytes (as of c7f5295)
 void drawstring(unsigned char *s, unsigned char x, unsigned char y)
-{
-    unsigned char temp[128];
-    unsigned char *p;
-    temp[0] = 0;
-    p = temp + 1;
-    while (*s)
-    {
-        *p = *s;
-        p++;
-        s++;
-        temp[0]++;
-    }
-    drawstring_pascal(temp, x, y);
-}
-*/
-void drawstring_lr_pascal(unsigned char *s, unsigned char x, unsigned char y)
 {
     unsigned char i;
     unsigned char c;
@@ -108,21 +94,5 @@ void drawstring_lr_pascal(unsigned char *s, unsigned char x, unsigned char y)
         s++;
         c--;
     }
-}
-/*
-void drawstring(unsigned char *s, unsigned char x, unsigned char y)
-{
-    unsigned char temp[128];
-    unsigned char *p;
-    temp[0] = 0;
-    p = temp + 1;
-    while (*s)
-    {
-        *p = *s;
-        p++;
-        s++;
-        temp[0]++;
-    }
-    drawstring_lr_pascal(temp, x, y);
 }
 */
