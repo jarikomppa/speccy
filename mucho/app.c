@@ -74,6 +74,18 @@ const unsigned char pattern[8] =
     0x00  
 };
 
+const unsigned char selectpattern[8] = 
+{ 
+    0x00, 
+    0x88, 
+    0xcc, 
+    0xee, 
+    0xcc, 
+    0x88, 
+    0x00, 
+    0x00  
+};
+
 void clearbottom()
 {
     unsigned short i, j;
@@ -428,6 +440,25 @@ void reset()
     answers = 0;
 }
 
+unsigned char roller;
+
+void drawselector(unsigned char y)
+{    
+    unsigned char i;   
+    unsigned char v;
+    roller++;
+    v = (roller >> 5) & 7;
+    for (i = 0; i < 8; i++,y++)
+    {
+        unsigned char p = 
+            (selectpattern[i & 7] >> v) | (selectpattern[i & 7] << (8-v));
+        *(unsigned char*)(yofs[y]+0) = p & 0x1f;
+        *(unsigned char*)(yofs[y]+1) = p & 0xf8;
+            
+            //pattern[i & 7];
+    }
+}
+
 void main()
 {
     unsigned short i;
@@ -519,7 +550,8 @@ void main()
                     i = 22*8;
                     if (current_answer == 0) i = 21*8;
                     if (current_answer == answers-1 && answers > 2) i = 23*8;
-                    drawstring("\x03>>>", 0, i);
+                    //drawstring("\x03>>>", 0, i);
+                    drawselector(i);
                     
                     readkeyboard();
                 }
