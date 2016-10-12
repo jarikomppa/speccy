@@ -21,6 +21,18 @@ const unsigned char divider_pattern[8] =
     0x00  
 };
 
+const unsigned char selector_pattern[8] = 
+{ 
+    0x00, 
+    0x88, 
+    0xcc, 
+    0xee, 
+    0xcc, 
+    0x88, 
+    0x00, 
+    0x00  
+};
+
 struct Symbol
 {
     char * name;
@@ -36,6 +48,7 @@ Symbol image[MAX_SYMBOLS];
 unsigned char *propfont_data = (unsigned char *)&builtin_data[0];
 unsigned char *propfont_width = (unsigned char *)&builtin_width[0];
 unsigned char *divider_data = (unsigned char*)&divider_pattern[0];
+unsigned char *selector_data = (unsigned char*)&selector_pattern[0];
 
 int verbose = 0;
 int quiet = 0;
@@ -827,6 +840,9 @@ void patch_ihx(char *path)
     
     ofs = find_data(codebuf, start, divider_pattern, 8);
     patch_data(codebuf, ofs, divider_data, 8);
+
+    ofs = find_data(codebuf, start, selector_pattern, 8);
+    patch_data(codebuf, ofs, selector_data, 8);
     
     write_ihx("patched.ihx", codebuf, start, end);
 }
@@ -942,6 +958,31 @@ void scan_div(char *aFilename)
     }              
 }
 
+void scan_sel(char *aFilename)
+{
+    int x,y,n,i,j;
+    unsigned int *data = (unsigned int*)stbi_load(aFilename, &x, &y, &n, 4);
+    if (!data)
+    {
+        printf("unable to load \"%s\"\n", aFilename);
+        exit(-1);
+    }
+    if (x != 8 || y != 8)
+    {
+        printf("Selector pattern image not 8x8 (found %dx%d)\n", x, y);
+        exit(-1);
+    }
+    selector_data = new unsigned char[8];
+    for (i = 0; i < 8; i++)
+    {
+        for (j = 0; j < 8; j++)
+        {
+            selector_data[i] <<= 1;
+            selector_data[i] |= (data[i * 8 + j] & 0xff) ? 1 : 0;
+        }
+    }              
+}
+
 
 int main(int parc, char **pars)
 {    
@@ -949,7 +990,7 @@ int main(int parc, char **pars)
     if (parc < 3)
     {
         printf(
-            "%s <input> <output> [font image [divider image]] [flags]\n"
+            "%s <input> <output> [font image [divider image [selector image]]] [flags]\n"
             "Optional flags:\n"
             "  -v   verbose (useful for debugging)\n"
             "  -q   quiet (minimal output)\n",
@@ -960,6 +1001,7 @@ int main(int parc, char **pars)
     int outfile = -1;
     int fontfile = -1;
     int divfile = -1;
+    int selfile = -1;
     int i;
     for (i = 1; i < parc; i++)
     {
@@ -1007,8 +1049,15 @@ int main(int parc, char **pars)
                         }
                         else
                         {
-                            printf("Invalid parameter \"%s\" (input, output, font and divisor image files already defined)\n", pars[i]);
-                            exit(-1);
+                            if (selfile == -1) 
+                            {
+                                selfile = i; 
+                            }
+                            else
+                            {
+                                printf("Invalid parameter \"%s\" (input, output, font, divisor and selector image files already defined)\n", pars[i]);
+                                exit(-1);
+                            }
                         }
                     }
                 }
@@ -1030,6 +1079,11 @@ int main(int parc, char **pars)
     if (divfile != -1)
     {
         scan_div(pars[divfile]);
+    }
+
+    if (selfile != -1)
+    {
+        scan_sel(pars[selfile]);
     }
 
     patch_ihx(pars[0]);
