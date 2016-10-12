@@ -1,7 +1,7 @@
 // 282 bytes as of c7f5295
 void drawstring(unsigned char *aS, unsigned char aX, unsigned char aY)
 {
-    unsigned char i, *s, *d, sx, x, c;
+    unsigned char i, *s, *d, sx, c;
     unsigned char *datap = (unsigned char*)(int*)builtin_data - 32 * FONTHEIGHT;
     unsigned char *widthp = (unsigned char*)(int*)builtin_width - 32;
     for (i = 0; i < FONTHEIGHT; i++)
@@ -9,8 +9,7 @@ void drawstring(unsigned char *aS, unsigned char aX, unsigned char aY)
         s = aS+1;
         c = *aS;
         sx = 0;
-        x = aX;
-        d = (unsigned char*)yofs[aY];
+        d = (unsigned char*)yofs[aY] + aX;
         while (c)
         {
             unsigned char ch = *s;
