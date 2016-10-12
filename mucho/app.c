@@ -49,7 +49,7 @@ unsigned char state[256]; // game state
 unsigned char y8; // prg state
 unsigned char *answer[16];
 unsigned char answers;
-unsigned char attrib, iattrib, dattrib, attrib_c;
+unsigned char attrib, iattrib, dattrib, attrib_c, iattrib_c;
 
 void cls()
 {
@@ -78,19 +78,17 @@ void clearbottom()
 {
     unsigned short i, j;
 
-    for (j = 20*8; j < 21*8; j++)
-        for (i = 0; i < 32; i++)
-            *(unsigned char*)(yofs[j]+i) = pattern[j & 7];
+    for (i = 21*32; i < 24*32; i++)
+        *(unsigned char*)(0x5800+i) = iattrib_c; 
+
+    for (i = 20*32; i < 21*32; i++)
+        *(unsigned char*)(0x5800+i) = dattrib; 
 
     for (j = 21*8; j < 24*8; j++)
         for (i = 0; i < 32; i++)
             *(unsigned char*)(yofs[j]+i) = 0;
 
-    for (i = 20*32; i < 21*32; i++)
-        *(unsigned char*)(0x5800+i) = dattrib; 
 
-    for (i = 21*32; i < 24*32; i++)
-        *(unsigned char*)(0x5800+i) = iattrib; 
 }
 
 unsigned char * unpack_resource(unsigned short id)
@@ -187,6 +185,7 @@ void exec(unsigned char *dataptr)
                 break;
             case OP_IATTR:
                 iattrib = id;
+                iattrib_c = (id & 070) | (id >> 3);                
                 break;
             case OP_DATTR:
                 dattrib = id;
@@ -251,12 +250,23 @@ void add_answer(unsigned char *dataptr)
         answers = 15;
 }
 
+void drawattrib(unsigned char yofs, unsigned char attrib)
+{
+    unsigned char * dst = (unsigned char*)(0x5800 + yofs * 4);
+    unsigned char i;
+    for (i = 0; i < 32; i++)
+    {
+        *dst = attrib;
+        dst++;
+    }
+}
 
 void hitkeytocontinue()
 {
     clearbottom();
     //              0123456789ABCDEF0123456789ABCDEF01
     drawstring("\x19[Press enter to continue]", 6, 22*8);
+    drawattrib(22*8, iattrib);
     
     readkeyboard();            
     while (!KEY_PRESSED_FIRE)
@@ -270,16 +280,6 @@ void hitkeytocontinue()
     clearbottom();
 }
 
-void drawattrib(unsigned char yofs, unsigned char attrib)
-{
-    unsigned char * dst = (unsigned char*)(0x5800 + yofs * 4);
-    unsigned char i;
-    for (i = 0; i < 32; i++)
-    {
-        *dst = attrib;
-        dst++;
-    }
-}
 
 void image(unsigned char *dataptr, unsigned char *aYOfs)
 {
@@ -417,6 +417,7 @@ void reset()
     attrib = 070;
     attrib_c = 077;
     iattrib = 071;
+    iattrib_c = 077;
     dattrib = 072;
     cls();
     clearbottom();
@@ -430,11 +431,16 @@ void reset()
 void main()
 {
     unsigned short i;
+    unsigned char j;
     unsigned short current_room = 0;    
     unsigned char current_answer = 0;
     unsigned char selecting;    
 
     reset();     
+
+    for (j = 20*8; j < 21*8; j++)
+        for (i = 0; i < 32; i++)
+            *(unsigned char*)(yofs[j]+i) = pattern[j & 7];
         
     while(1)
     { 
@@ -443,7 +449,7 @@ void main()
         - 0..n strings
         - 0        
         */
-        
+        clearbottom();        
         render_room(current_room);
 
         if (answers == 0)
@@ -457,6 +463,7 @@ void main()
             for (t = 0; t < 30000; t++);
             //              0123456789ABCDEF0123456789ABCDEF01
             drawstring("\x21[The end. Press enter to restart]", 6, 22*8);
+            drawattrib(22*8, iattrib);
             
             readkeyboard();            
             while (!KEY_PRESSED_FIRE)
@@ -482,6 +489,7 @@ void main()
             while (selecting)
             {
                 unsigned char answer_ofs;
+                unsigned char yofs;
                 clearbottom();
                 answer_ofs = current_answer;
                 if (current_answer > 0)
@@ -489,16 +497,20 @@ void main()
                 if (current_answer == answers-1)
                     answer_ofs -= 1;
                 if (answers < 4) answer_ofs = 0;
-                for (i = 0; i < 3; i++)
+                yofs = 21*8;
+                for (i = 0; i < 3; i++, yofs += 8)
                 {
                     if (answer_ofs + i < answers)
                     {
                         unsigned char *dataptr = answer[answer_ofs + i];
                         unsigned char roll = 0;
                         dataptr += *dataptr + 1;
-                        drawstring(dataptr, 1, 21*8 + i * 8);
+                        drawstring(dataptr, 1, yofs);
                     }
                 }
+                drawattrib(21*8, iattrib);
+                drawattrib(22*8, iattrib);
+                drawattrib(23*8, iattrib);
                                                     
                 readkeyboard();
 
