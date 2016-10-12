@@ -109,7 +109,7 @@ void drawstring_lr_pascal(unsigned char *s, unsigned char x, unsigned char y)
         c--;
     }
 }
-
+/*
 void drawstring(unsigned char *s, unsigned char x, unsigned char y)
 {
     unsigned char temp[128];
@@ -125,3 +125,4 @@ void drawstring(unsigned char *s, unsigned char x, unsigned char y)
     }
     drawstring_lr_pascal(temp, x, y);
 }
+*/

@@ -7,12 +7,12 @@
 
 #include <string.h>
 
-unsigned char fbcopy_idx;
+//unsigned char fbcopy_idx;
 
-unsigned char *data_ptr;
-unsigned char *screen_ptr;
+//unsigned char *data_ptr;
+//unsigned char *screen_ptr;
 
-unsigned char port254tonebit;
+//unsigned char port254tonebit;
 
 #define FONTHEIGHT 8
 #define COLOR(BLINK, BRIGHT, PAPER, INK) (((BLINK) << 7) | ((BRIGHT) << 6) | ((PAPER) << 3) | (INK))
@@ -251,7 +251,8 @@ void add_answer(unsigned char *dataptr)
 void hitkeytocontinue()
 {
     clearbottom();
-    drawstring("[Press enter to continue]", 6, 22*8);
+    //                       0123456789ABCDEF0123456789ABCDEF01
+    drawstring_lr_pascal("\x19[Press enter to continue]", 6, 22*8);
     
     readkeyboard();            
     while (!KEY_PRESSED_FIRE)
@@ -447,8 +448,8 @@ void main()
             for (t = 0; t < 30000; t++);
             for (t = 0; t < 30000; t++);
             for (t = 0; t < 30000; t++);
-            
-            drawstring("[The end. Press enter to restart]", 6, 22*8);
+            //                       0123456789ABCDEF0123456789ABCDEF01
+            drawstring_lr_pascal("\x21[The end. Press enter to restart]", 6, 22*8);
             
             readkeyboard();            
             while (!KEY_PRESSED_FIRE)
@@ -499,7 +500,7 @@ void main()
                     i = 22*8;
                     if (current_answer == 0) i = 21*8;
                     if (current_answer == answers-1 && answers > 2) i = 23*8;
-                    drawstring(">>>", 0, i);
+                    drawstring_lr_pascal("\0x03>>>", 0, i);
                     
                     readkeyboard();
                 }
