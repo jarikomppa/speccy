@@ -346,6 +346,7 @@ void render_room(unsigned short room_id)
     unsigned char *dataptr = unpack_resource(room_id);
     unsigned char output_enable = 1;
     unsigned char yofs = 0;
+    unsigned char p = 0;
 
     SET_BIT(room_id);
 
@@ -353,6 +354,7 @@ void render_room(unsigned short room_id)
     
     while (*dataptr)
     {       
+        p = pred(dataptr);
         switch (dataptr[1])
         {
             case 'Q': 
@@ -360,14 +362,14 @@ void render_room(unsigned short room_id)
                 {
                     return;
                 }
-                if (pred(dataptr)) 
+                if (p) 
                 {
                     exec(dataptr); 
                 }
                 answers = 0;
                 break;
             case 'I': 
-                if (pred(dataptr))
+                if (p)
                 {
                     exec(dataptr);
                     image(dataptr, &yofs); 
@@ -375,7 +377,7 @@ void render_room(unsigned short room_id)
                 }
                 break;
             case 'O': 
-                if (pred(dataptr)) 
+                if (p) 
                 {
                     exec(dataptr);
                     output_enable = 1;
@@ -386,7 +388,7 @@ void render_room(unsigned short room_id)
                 }
                 break;
             case 'A':
-                if (pred(dataptr))
+                if (p)
                 {
                     add_answer(dataptr);
                 }
