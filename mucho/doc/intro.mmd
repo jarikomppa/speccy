@@ -1,0 +1,585 @@
+# Introduction
+
+MuCho is a engine for making multiple choise adventure games (also known as choose your own adventure (CYOA), or gamebook) for the 48k ZX Spectrum.
+
+Using the engine requires no actual programming, but having some tehchnical background may help.
+
+## Development Kit Contents
+
+The structure of the development kit is as follows:
+
+    divisors\    - Example custom divisor images
+    fonts\       - Example custom font images
+    manual\      - This MuCho manual in different formats
+    examples\    - Some example MuCho adventures
+    crt0.ihx     - The game engine itself, compiled z80 code
+    mc.exe       - MuCho compiler
+    mackarel.exe - Packager and .tap builder
+
+The MuCho compiler turns adventure text files into data usable by the engine.
+
+# MuCho Story Definition Language
+
+The MuCho story definition language may sound scary, but it is actually very simple. The MuCho scripts are plain text
+files, such as those that can be created with Windows Notepad, although the author recommends using something more
+advanced, such as UltraEdit, Sublime Text or Notepad++.
+
+## Structure
+
+Structure of a multiple choise adventure is based on pages (other used terms include rooms, locations, nodes). Each page consists of description part as well as zero or more choises for the user (also known as answers, selections, options).
+
+The script for a simple room looks like this:
+
+    $Q roomname
+    The description of the room
+    $A otherroomname
+    Go to other room
+    
+The choises link pages together. Here we'll describe three rooms and let the user travel between them:
+
+    $Q redroom
+    You're in the red room.
+    $A greenroom
+    Go to the green room
+    $A blueroom
+    Go to the blue room
+    
+    $Q greenroom
+    You're in the green room.
+    $A blueroom
+    Go to the blue room    
+    $A redroom
+    Go to the red room
+    
+    $Q blueroom
+    You're in the blue room.
+    $A greenroom
+    Go to the green room
+    $A redroom
+    Go to the red room
+    
+Everything between two $Q lines goes to a single page. The first word after the $Q and $A is the label of the room. In programming terms, you could think of it as GOTO label. Two rooms may not have the same label, but any number of $A lines may point to the same label.
+
+It is also perfectly legal for a room to have an choise which goes to the same page. This is actually rather useful.
+
+If a room has no $A lines, it is considered an "end node", and the adventure ends if player ends up on that page.
+
+### Text
+
+The text in the page descriptions is automatically formatted, removing any unneccessary "whitespace" like line breaks or additional spaces. To start a new paragraph, add an empty line in your text.
+
+    All of
+    these go
+    on the
+    same line.
+    
+    This is a new paragraph.
+    
+    Adding   more   spaces   does   nothing.
+
+### Comments
+
+You can add comments in the script which do not end up in your adventure file by starting a line with the hash character.
+
+    # This is a comment
+    This is not a comment
+
+### Images
+
+Images can be added to a page's description portion by using an $I line.
+
+    $Q fountain
+    You arrive at a pictoresque fountain.
+    $I fountain.scr
+    Water from the fountain sparkles in the sunlight.
+    
+The first word after the $I is considered to be a filename. The files should be standard spectrum screen files (6912 bytes).
+
+Empty space at the bottom of the .scr image is trimmed. A maximum of 14 character rows, or 112 pixels is used. If bigger images are desired, you have to use several images.
+
+If you use the same image several times in your adventure, the image data is still only stored once.
+
+Images can not be used after a $A line.
+
+## Flags
+
+In addition to the basic structure of the pages, flags can be used to introduce more complicated behavior. Every time the player goes to a page, the page's flag is turned on. Using a $O line (as in Oh, not 0, zero) an optional part can be added to a page's description.
+
+    $Q alleyway
+    You're in a dark alley. There's a door.
+    $O backyard
+    You remember seeing the bad guys inside when you were at the back yard.
+
+In this example the "You remember.." line is only shown if the player has visited the backyard page before ending up here.
+
+If you wish to have optional part of the text between two parts of text that is always shown, you can reset the optionality by using an empty $O line.
+
+    Text always shown
+    $O daytime
+    Text shown only during daytime
+    $O
+    Another text always shown
+
+### Checking Flags
+
+You can check if a flag is on by using its label. You can also check if a flag is not on by prefixing the flag's label with an exclamation point (!), like !backyard.
+
+    $O daytime
+    The sun is shining.
+    $O !daytime
+    The moon is bright tonight.
+    
+Alternate syntax for this is to use the has: and not: prefixes.
+
+    $O has:daytime
+    The sun is shining.
+    $O not:daytime
+    The moon is bright tonight.
+
+If you wish something to happen randomly, you can use the rnd: prefix with a value.
+
+    $O rnd:64
+    Thorin sits down and starts singing about gold.
+    
+The maximum value is 255, so a value of 128 gives about 50% chance, 64 gives 25%, 32 gives 12.5%, etc.
+
+The flag checks can also be used with the $Q, $I and $A lines.
+
+If flag check is used with the $I line, the image is only shown if the flag check succeeds.
+
+    $I sun.scr has:daytime
+    $I moon.scr not:daytime
+    
+If flag check is used with the $A line, the choise is only given to the player if the flag check succeeds.
+
+    $A mine has:cleared
+    Enter the mine through the cleared tunnel.
+
+If flag check is used with the $Q line, any other commands on that same line are only executed if the flag check is positive. (See below for the other commands).
+
+### Setting Flags
+
+To set a flag, use the set: prefix with a flag label.
+
+    $A alleyway set:trapped
+    Place the trap just outside the door.
+    
+If used with the $A line, the command is performed if the player picks the line. If used on a $Q, $I or $O line, the command is performed if the line's flag check succeeds. 
+
+Setting a flag that is already on is legal, but has no effect.
+
+### Clearing Flags
+
+You can also clear flags, including the ones set by visiting a page. This is done with the clear: or clr: command.
+
+    $A alleyway clear:trapped
+    Change your mind, and clear the trap from the door.
+    
+Clearing a flag that is not on is legal, but has no effect.
+    
+### Toggling Flags
+
+Flags can be toggled with the toggle: command. This way you don't need to know which state the flag is in, if you wish
+to switch between two states.
+
+    $Q busystreet toggle:trafficlights
+    $O trafficlights
+    The traffic lights are red.
+    $O !trafficlights
+    The traffic lights are green.
+
+    $A busystreet
+    Wait for a while
+    $A sleepytown !trafficlights
+    Cross the street
+    
+## Additional Commands
+
+In addition to manipulating and checking flags, there are commands to change attributes, border color, and even to play sound.
+
+### Text Attributes
+
+To change the color of text or background (PAPER and INK in spectrum terms), use the attr: command.
+
+| Color	| Ink | Paper |
+|:------|-----|-------|
+|Black	|0    | 0     |
+|Blue	|1    | 8     |
+|Red	|2    |16     |
+|Magenta|3    |24     |
+|Green	|4    |32     |
+|Cyan	|5    |40     |
+|Yellow	|6    |48     |
+|White	|7    |56     |
+
+You can also use the extra bits of the attribute for bright and flashing text:
+
+|Extra  |Value|
+|:------|-----|
+|Bright |64   |
+|Flash  |128  |
+
+Simply sum the values together that you desire. For bright white on black, use 7+64=71. For red on yellow background, 2+48=50.
+For blinking bright red, 2+64+128=194, etc.
+
+    $Q launchroom
+    The text on the console reads:
+    $O attr:194
+    SAFETY OFF - DO NOT PRESS THE BUTTON
+    $O attr:7
+    You wonder what to do. There's a button here.
+    
+Note that the attr: command sets the attribute for the next bit of text. To set the attribute for the whole screen, you need
+to clear the screen after setting the attribute. See cls:, later on.
+
+### Interface Attributes
+
+You can also change the color of the divider line (the line between the choises and the page text) as well as the 
+color of the interface (where the choises are listed).
+
+The divider attribute is set with dattr: command. It actually gets changed when the bottom is cleared the next time, which
+occurs when page is changed or when the bottom is cleared with and cls: command (see below).
+
+    $O dattr:5
+    
+The interface attribute is set with iattr: command.
+
+    $O iattr:56
+    
+### Clearing the Screen
+
+To clear the screen (primarily to set the color to the whole screen, as the screen is also cleared whenever a new page
+is drawn), use the cls: command.
+
+|What to clear |Value|
+|:-------------|-----|
+|Everything    |0    |
+|Page          |1    |
+|Inteface      |2    |
+
+In most cases you can just use cls:0.
+
+    $Q darkroom attr:2 cls:0
+    
+### Changing the Border Color
+
+The border color can be changed with the border: command.
+
+| Color	|Value|
+|:------|-----|
+|Black	|0    |
+|Blue	|1    |
+|Red	|2    |
+|Magenta|3    |
+|Green	|4    |
+|Cyan	|5    |
+|Yellow	|6    |
+|White	|7    |
+
+The color is changed instantly, so if you change the color several times during a page, the border color also changes
+multiple times. Playing sound may also change the border color.
+
+    $O trafficlight border:2
+    $O !trafficlight border:4
+    
+### Playing Sound Effects
+
+Playing sounds is done with the sound: command. The sounds are played wherever the command is, and some sounds are
+rather long, so if they are played at the middle of the page, the page drawing is paused while the sound is played.
+
+(The sound effects are basically most of the BeepFX v1.11 demo sounds, except those that take large amount of memory)
+
+|Id	    |Sound	     |Id |Sound       |
+|:------|:-----------|:--|:-----------|
+|0	    |Shot 1      |28 |Item 1      |
+|1	    |Shot 2      |29 |Item 2      |
+|2	    |Jump 1      |30 |Item 3      |
+|3	    |Jump 2      |31 |Item 4      |
+|4	    |Pick        |32 |Item 5      |
+|5	    |Drop 1      |33 |Item 6      |
+|6	    |Drop 2      |34 |Switch 1    |
+|7	    |Grab 1      |35 |Switch 2    |
+|8	    |Grab 2      |36 |Power off   |
+|9	    |Fat beep 1  |37 |Score       |
+|10	    |Fat beep 2  |38 |Clang       |
+|11	    |Fat beep 3  |39 |Water tap   |
+|12	    |Harsh beep 1|40 |Select 1    |
+|13	    |Harsh beep 2|41 |Select 2    |
+|14	    |Harsh beep 3|42 |Select 3    |
+|15	    |Hit 1       |43 |Select 4    |
+|16	    |Hit 2       |44 |Select 5    |
+|17	    |Hit 3       |45 |Select 6    |
+|18	    |Hit 4       |46 |Select 7    |
+|19	    |Jet burst   |47 |Alarm 1     |
+|20	    |Boom 1      |48 |Alarm 2     |
+|21	    |Boom 2      |49 |Alarm 3     |
+|22	    |Boom 3      |50 |Eat         |
+|23	    |Boom 4      |51 |Gulp        |
+|24	    |Boom 5      |52 |Roboblip    |
+|25	    |Boom 6      |53 |Nope        |
+|26	    |Boom 7      |54 |Uh-huh?     |
+|27	    |Boom 8      |55 |Old computer|
+
+## More Technically Speaking
+
+Here's some a bit more technical notes which may be useful in problematic cases.
+
+### Command Execution Order
+
+To get a little bit more nitty-gritty, here's a few words about command execution order.
+
+Commands are, generally speaking, executed in the order they're set. So, to clear the screen with a new attribute,
+first set the attribute, then clear the screen.
+
+    $O attr:7 cls:0
+    
+However, flag check is always performed first, and only if the whole flag check succeeds, the other commands
+are executed. Thus, if you write something as convoluted as:
+
+    $O set:flaggy flaggy clear:flaggy toggle:flaggy
+    
+what happens is:
+
+    If flaggy is on:
+        Set flaggy
+        Clear flaggy
+        Toggle flaggy
+        
+### Limits
+
+A compiled room must not take more than 4096 bytes. The MuCho compiler will tell you when you cross the limit.
+                                                      
+Images may be up to 112 pixels high. If more is needed, split images in pieces.                               
+                                                      
+There's a maximum of 2048 flags. You will most likely run out of space before running out of flags.
+                                                      
+Maximum of 16 active options at the same time. If there are more, the game will simply stop showing more options.
+
+## Examples
+
+Here's a few example snippets of more complicated behaviors that are possible with flag manipulation.
+
+### Button Toggle
+
+    $Q room
+    $O !light
+    Light is off
+    $O light
+    Light is on
+    $A room toggle:light
+    Toggle light
+
+This example has a single room with a light that can be on or off. The player's option always points back to the same room, and the optional text blocks show whether the light is on or off.
+
+The same flag could be used for other things, such as revealing other things to do if the light is on.
+
+### Using Room Flags to Change Flavor Text
+
+    $Q start
+    Go to cave or forest?
+    $A cave
+    Go to cave
+    $A forest
+    Go to forest
+    
+    $Q cave
+    Well, go on..
+    $A end
+    Exit cave
+    
+    $Q forest
+    Well, go on..
+    $A end
+    Exit forest
+    
+    $Q end
+    $O cave clr:cave
+    As you exit the cave, you find...
+    $O forest clr:forest
+    As you exit the forest, you find...
+    $O
+    ...the end of the example.
+    $A start
+    Restart
+
+This example shows two different routes to a room, and the room's description reacts to where you came from. Note that the room flags are also cleared when the flavor text is shown, so it won't be shown again, should the player end up back on the same page from some other direction later on.
+
+### Lock and Key
+
+    $Q room
+    You're in a room with a door.
+    $O !key
+    There is a key here.
+    $O open
+    The door is open.
+
+    $A room !key set:key
+    Get key
+    $A room key !unlocked set:unlocked 
+    Unlock door
+    $A locked !unlocked !open
+    Open door
+    $A room unlocked !open set:open
+    Open door
+    $A end open
+    Exit
+    
+    $Q locked
+    The door is locked.
+    $A room
+    Dang it!
+    
+    $Q end
+    You went through the door.
+
+In this example the player needs to take a key, unlock door, open door, and leave. When the player initially
+reaches this page, the view looks like this:
+
+    You're in a room with a door.
+    There is a key here.
+    ----
+    Get key
+    Open door
+
+The "open door" option shown here does not actually open the door, but sends the player to a page that just says
+"The door is locked" with the only option of returning back to the page.
+
+If the "Get key" option is picked, the player is sent back to the same page, but with the "key" flag enabled. Now
+the page looks like this:
+
+    You're in a room with a door.
+    ----
+    Unlock door
+    Open door
+
+The "Open door" option is still the same "The door is locked" option. Hitting the "Unlock" option again sends the
+player back to the same page, now with the "unlocked" flag on.
+
+    You're in a room with a door.
+    ----
+    Open door
+
+Now the "Open door" option does something different (it's a different "Open door", after all); sending the player
+back to the same page with the "open" flag on.
+
+    You're in a room with a door.
+    The door is open.
+    ----
+    Exit
+    
+Finally, the player is given the "Exit" option, which sends the player to the end node, where the game ends.
+
+### Separate Gate
+
+    $Q rivercrossing
+    River flows north to south. There's signs of people 
+    having crossed the river here.
+    $O !dam
+    The flow is too strong for you to pass.    
+    $A forestpath
+    Go north
+    $A end dam
+    Cross the river
+    
+    $Q forestpath
+    You're on a north-south forest path. There's a river
+    to the west.
+    $A rivercrossing
+    Go south
+    $A upstream
+    
+    $Q upstream
+    This is as far north as you can go. There's a forest 
+    path south, and a river to the west.
+    $O !dam
+    It seems you could easily roll a big stone to the river,
+    $O dam
+    Huge rock is blocking the river flow.
+    creating a dam.
+    $A forestpath
+    Go south
+    $A upstream set:dam
+    Roll that rock.
+    
+    $Q end
+    You crossed the river.
+    
+This example uses several locations. The player has to travel upstream to
+create a dam in order to be able to cross the river.
+
+### Dialog
+
+The description-choises structure can also describe dialogue with a non-player
+character.
+
+    $Q start
+    Well hello there. What do you want to know about?
+    $A name
+    Name
+    $A jobs
+    Jobs
+    $A virtue
+    Virtue
+    
+### Sticky Randoms
+
+In order to keep the result of a random decision, set the result in a flag.
+
+    $Q coinroom
+    $O !toss clr:result
+    $O !toss rnd:64 set:result
+    $O set:toss
+    $O result
+    The coin shows heads.
+    $O !result
+    The coin shows tails.
+    
+    $A coinroom
+    Look again.
+    $A coinroom clear:toss
+    Toss again.
+
+In pseudocode, the above becomes:
+
+    If "toss" is not set:
+        Clear "result"
+    If "toss" is not set, AND random is less than 64:
+        Set "result"
+    Set "toss"
+    If "result" is set
+        Print "The coin shows heads."
+    If "result" is not set:
+        Print "The coin shows tails."
+
+# Compiling Stories
+
+tbd
+
+## MuCho Compiler
+
+tbd
+
+## Mackarel Packager
+
+tbd
+
+# Advanced Topics
+
+tbd
+
+## Custom Fonts
+
+tbd
+
+## Custom Divider
+
+tbd
+
+## Custom Selector
+
+tbd
+
+## Custom Loading Screen
+
+tbd
+

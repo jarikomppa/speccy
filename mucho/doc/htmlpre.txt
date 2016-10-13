@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>MuCho - Multiple Choise Adventure Engine</title>
+		<link href="css/main.css" rel="stylesheet" type="text/css">
+		<link href="css/vs.css" rel="stylesheet" type="text/css">
+    <!-- c code highlighter -->
+    <script src="css/highlight.pack.js"></script>
+    <script>
+      hljs.tabReplace = '  ';
+      hljs.initHighlightingOnLoad();
+    </script>
+	</head>
+	<body>
+		<a href="index.html"><div class="logo"></div></a>
+		<div class="divider"></div>
+
+		<div class="menu">
+		
+<a href="index.html">Intro</a><br>
+<br>
+<hr>
+<a href="http://iki.fi/sol/">Author's site</a>
+</div>		  
+<div class="content">
