@@ -313,6 +313,11 @@ enum opcodeval
 
 void set_op(int opcode, int value)
 {
+    if (value > 255)
+    {
+        printf("Parameter value out of range, line %d\n", line);
+        exit(-1);
+    }
     if (verbose) printf("    Opcode: ");
     switch(opcode)
     {
@@ -329,6 +334,16 @@ void set_op(int opcode, int value)
     }
     if (verbose) printf("\n");
     store_cmd(opcode, value);
+}
+
+void set_eop(int value, int maxvalue)
+{
+    if (value > maxvalue)
+    {
+        printf("Parameter value out of range, line %d\n", line);
+        exit(-1);
+    }
+    set_op(OP_EXT, value);
 }
 
 void parse_op(char *op)
@@ -404,6 +419,10 @@ void parse_op(char *op)
         if (stricmp(cmd, "dattrib") == 0) set_op(OP_DATTR, atoi(sym)); else
         if (stricmp(cmd, "color") == 0) set_op(OP_ATTR, atoi(sym)); else
         if (stricmp(cmd, "ext") == 0) set_op(OP_EXT, atoi(sym)); else
+        if (stricmp(cmd, "border") == 0) set_eop(atoi(sym), 7); else
+        if (stricmp(cmd, "cls") == 0) set_eop(atoi(sym)+8, 10); else
+        if (stricmp(cmd, "sound") == 0) set_eop(atoi(sym)+100, 155); else
+        if (stricmp(cmd, "beep") == 0) set_eop(atoi(sym)+100, 155); else
         {
             printf("Syntax error: unknown operation \"%s\", line %d\n", cmd, line);
             exit(-1);
