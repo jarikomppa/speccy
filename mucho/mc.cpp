@@ -454,7 +454,7 @@ void parse()
         i = get_symbol_id(t);
         first_token = 2;      
         store_section('A', i);          
-        if (verbose) printf("Choise: %s (%d)\n", t, i);
+        if (verbose) printf("Choice: %s (%d)\n", t, i);
         previous_section = 'Q';
         break;
     case 'O':
@@ -782,12 +782,19 @@ void process_images()
 
 void output(char *aFilename)
 {
+    if (outlen > 29952)
+    {
+        printf("Total output size too large (29952 bytes max, %d found)\n", outlen);
+        exit(-1);
+    }
+
     FILE * f = fopen(aFilename, "wb");
     if (!f)
     {
         printf("Can't open \"%s\" for writing.\n", aFilename);
         exit(-1);
     }
+    
 
     fwrite(outbuf, 1, outlen, f);
     fclose(f);
