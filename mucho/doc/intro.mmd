@@ -1,29 +1,35 @@
 # Introduction
 
-MuCho is a engine for making multiple choise adventure games (also known as choose your own adventure (CYOA), or gamebook) for the 48k ZX Spectrum.
+MuCho is a engine for making multiple choice adventure games (also known as choose your own adventure (CYOA), or gamebook) for the 48k ZX Spectrum.
 
 Using the engine requires no actual programming, but having some tehchnical background may help.
+
+![Just a flow chart](images/justagraph)\ 
+
+Think of each box as a page in a book, and at the bottom of each page, "Turn to page 32 if you want to..".
+
+\newpage
 
 ## Development Kit Contents
 
 The structure of the development kit is as follows:
 
-    divisors\       - Example custom divisor images
+    divisors\           - Example custom divisor images
         divisor_checkerline.png
         divisor_crosser.png
         divisor_dither.png
         ...
-    fonts\          - Example custom font images
+    fonts\              - Example custom font images
         font_consolas.png
         font_courier_new.png
         font_lucida_console.png
         ...
-    manual\         - This MuCho manual in different formats
+    manual\             - This MuCho manual in different formats
         mucho.pdf
         mucho.html
         mucho.mobi
         mucho.epub
-    examples\       - Some example MuCho adventures
+    examples\           - Some example MuCho adventures
         simple\
             simple.txt
             build.bat
@@ -32,15 +38,91 @@ The structure of the development kit is as follows:
         dukes\
             ...
         ...
-    crt0.ihx        - The game engine itself, compiled z80 code
-    mc.exe          - MuCho compiler
-    mackarel.exe    - Packager and .tap builder
+    crt0.ihx            - The game engine itself, compiled z80 code
+    mc.exe              - MuCho compiler
+    mackarel.exe        - Packager and .tap builder
 
-The fonts directory also contains a photoshop template for fonts.
+The fonts directory also contains a photoshop template for fonts. The MuCho compiler turns adventure text files into data usable by the engine.
 
-The MuCho compiler turns adventure text files into data usable by the engine.
+The source code to the game engine can be found in github at:
 
-The source code to the game engine can be found in github at https://github.com/jarikomppa/speccy/tree/master/mucho
+<https://github.com/jarikomppa/speccy/tree/master/mucho>
+
+\newpage
+
+## Legalese
+
+TL;DR: MuCho is based on free software and is free software, feel free to use it
+however you see fit, including commercial usage.
+
+--
+
+MuCho was written in C and compiled with SDCC
+<http://sdcc.sourceforge.net/>
+
+--
+
+Uses BeepFX by Shiru, public domain
+<https://shiru.untergrund.net/software.shtml>
+
+--
+
+Uses ZX7 compression by Einar Saukas
+<http://www.worldofspectrum.org/infoseekid.cgi?id=0027996>
+
+ZX7 Copyright 2012 by Einar Saukas. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * The name of its author may not be used to endorse or promote products
+      derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+--
+
+The rest of MuCho is released under Unlicense, which is basically public domain.
+
+<https://github.com/jarikomppa/speccy/tree/master/mucho>
+
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <http://unlicense.org/>
 
 # MuCho Story Definition Language
 
@@ -50,7 +132,7 @@ advanced, such as UltraEdit, Sublime Text or Notepad++.
 
 ## Structure
 
-Structure of a multiple choise adventure is based on pages (other used terms include rooms, locations, nodes). Each page consists of description part as well as zero or more choises for the user (also known as answers, selections, options).
+Structure of a multiple choice adventure is based on pages (other used terms include rooms, locations, nodes). Each page consists of description part as well as zero or more choices for the user (also known as answers, selections, options).
 
 The script for a simple room looks like this:
 
@@ -59,7 +141,11 @@ The script for a simple room looks like this:
     $A otherroomname
     Go to other room
     
-The choises link pages together. Here we'll describe three rooms and let the user travel between them:
+The choices link pages together. Here we'll describe three rooms and let the user travel between them:
+
+\newpage
+
+![Flow chart of the rgbroom](images/rgbroom)\ 
 
     $Q redroom
     You're in the red room.
@@ -82,11 +168,14 @@ The choises link pages together. Here we'll describe three rooms and let the use
     $A redroom
     Go to the red room
     
+
 Everything between two $Q lines goes to a single page. The first word after the $Q and $A is the label of the room. In programming terms, you could think of it as GOTO label. Two rooms may not have the same label, but any number of $A lines may point to the same label. Labels may not include spaces (i.e, they need to be a single word).
 
-It is also perfectly legal for a room to have an choise which goes to the same page. This is actually rather useful.
+It is also perfectly legal for a room to have an choice which goes to the same page. This is actually rather useful.
 
 If a room has no $A lines, it is considered an "end node", and the adventure ends if player ends up on that page.
+
+\newpage
 
 ### Text
 
@@ -174,7 +263,7 @@ If flag check is used with the $I line, the image is only shown if the flag chec
     $I sun.scr has:daytime
     $I moon.scr not:daytime
     
-If flag check is used with the $A line, the choise is only given to the player if the flag check succeeds.
+If flag check is used with the $A line, the choice is only given to the player if the flag check succeeds.
 
     $A mine has:cleared
     Enter the mine through the cleared tunnel.
@@ -223,7 +312,7 @@ In addition to manipulating and checking flags, there are commands to change att
 
 ### Text Attributes
 
-To change the color of text or background (PAPER and INK in spectrum terms), use the attr: command.
+To change the color of text or background (INK and PAPER in spectrum terms), use the attr: command.
 
 | Color	| Ink | Paper |
 |:------|-----|-------|
@@ -258,8 +347,8 @@ to clear the screen after setting the attribute. See cls:, later on.
 
 ### Interface Attributes
 
-You can also change the color of the divider line (the line between the choises and the page text) as well as the 
-color of the interface (where the choises are listed).
+You can also change the color of the divider line (the line between the choices and the page text) as well as the 
+color of the interface (where the choices are listed).
 
 The divider attribute is set with dattr: command. It actually gets changed when the bottom is cleared the next time, which
 occurs when page is changed or when the bottom is cleared with and cls: command (see below).
@@ -344,6 +433,8 @@ rather long, so if they are played at the middle of the page, the page drawing i
 |26	    |Boom 7      |54 |Uh-huh?     |
 |27	    |Boom 8      |55 |Old computer|
 
+\newpage
+
 ## More Technically Speaking
 
 Here's some a bit more technical notes which may be useful in problematic cases.
@@ -382,7 +473,7 @@ There's a maximum of 2048 flags. You will most likely run out of space before ru
 Maximum of 16 active options at the same time. If there are more, the game will simply stop showing more options.
 
 
-## Examples
+## Example Snippets
 
 Here's a few example snippets of more complicated behaviors that are possible with flag manipulation.
 
@@ -400,7 +491,11 @@ This example has a single room with a light that can be on or off. The player's 
 
 The same flag could be used for other things, such as revealing other things to do if the light is on.
 
+\newpage
+
 ### Using Room Flags to Change Flavor Text
+
+![Flow chart of the flavor example](images/flavor)\ 
 
     $Q start
     Go to cave or forest?
@@ -431,7 +526,11 @@ The same flag could be used for other things, such as revealing other things to 
 
 This example shows two different routes to a room, and the room's description reacts to where you came from. Note that the room flags are also cleared when the flavor text is shown, so it won't be shown again, should the player end up back on the same page from some other direction later on.
 
+\newpage
+
 ### Lock and Key
+
+![Flow chart of the lock and key example](images/lockandkey)\ 
 
     $Q room
     You're in a room with a door.
@@ -496,7 +595,12 @@ back to the same page with the "open" flag on.
     
 Finally, the player is given the "Exit" option, which sends the player to the end node, where the game ends.
 
+\newpage
+
 ### Separate Gate
+
+
+![Flow chart of the separate gate example](images/separategate)\ 
 
     $Q rivercrossing
     River flows north to south. There's signs of people 
@@ -534,9 +638,9 @@ Finally, the player is given the "Exit" option, which sends the player to the en
 This example uses several locations. The player has to travel upstream to
 create a dam in order to be able to cross the river.
 
-### Dialog
+### Dialogue
 
-The description-choises structure can also describe dialogue with a non-player
+The description-choices structure can also describe dialogue with a non-player
 character.
 
     $Q start
@@ -551,6 +655,8 @@ character.
 ### Sticky Randoms
 
 In order to keep the result of a random decision, set the result in a flag.
+
+![Flow chart of the sticky randoms example](images/stickyrandoms)\ 
 
     $Q coinroom
     $O !toss clr:result
@@ -598,6 +704,43 @@ In order to exclusively-or two flags, you can use toggle.
     $O this toggle:thisxorthat
     $O that toggle:thisxorthat
 
+## Examples
+
+Here's short overview of the examplex included in the kit.
+
+### Simple
+
+![Flow chart of the Simple example](images/simple)\ 
+
+The simple example has four pages, with links between them. None of the more 
+advanced features of MuCho are used.
+
+### Complex
+
+![Flow chart of the Complex example](images/complex)\ 
+
+The complex example concentrates on the more advanced features of MuCho, including
+flag manipulation, attributes, colors, images and sound, and primarily has one
+heavily self-referential page.
+
+The player needs to put on a light in order to see a key, which the player must pick up,
+unlock a door, open the door, and then leave.
+
+While all of this is going on, the player sees the screen border change color based on 
+the neon lights blinking outdoors, the page attributes change based on whether the 
+light is on or off, and various actions trigger sound effects.
+
+### Dukes
+
+![Flow chart of the Dukes example](images/dukes)\ 
+
+The Dukes example's flow chart may look scary, but it's simply 29 pages in a chain,
+with the possibility to hop back to the beginning after each page, as well as possibility
+to hop to the start of any of the five chapters from the start page.
+
+The Dukes example is a stress test: it's Frederik Pohl's "The day of the boomer dukes" 
+novella (about 46kB of text, public domain) in MuCho format.
+
 # Compiling Stories
 
 In order to run your story on the ZX Spectrum (or, more likely, an emulator thereof),
@@ -613,7 +756,115 @@ everybody makes mistakes).
 
 ## MuCho Compiler
 
-tbd
+The MuCho compiler is meant to be run from the command line. It may be convenient
+to run it from a batch file directly from Windows, but then you'll miss any error 
+messages it may generate.
+
+### Getting Help On Parameters
+
+If you run mc.exe without parameters, it gives brief help:
+
+    C:\mucho>mc
+    MuCho compiler, by Jari Komppa http://iki.fi/sol/
+    mc <input> <output> [font image [divider image [selector image]]] [flags]
+    Optional flags:
+    -v   verbose (useful for debugging)
+    -q   quiet (minimal output)
+
+The help means that at minimum, the compiler expects input and output filenames as
+a parameter. In addition, you may include a custom font image, custom divider image,
+custom selector image, as well as one of the two optional flags.
+
+### Compiling a Story
+
+If we run the complex example through mc, we get the following output:
+
+    C:\mucho\examples\complex>..\..\mc complex.txt complex.dat
+    MuCho compiler, by Jari Komppa http://iki.fi/sol/
+                             start zx7:  801 ->  501 (62.547%), 0x5b0a
+                               end zx7:  116 ->   96 (82.759%), 0x5cff
+                     dark.scr (09) zx7: 2593 ->  537 (20.710%), 0x5d5f
+                    light.scr (10) zx7: 2881 ->  703 (24.401%), 0x5f78
+    Token Hits Symbol
+        0    7 "start"
+        1    2 "end"
+        2    3 "neon"
+        3   11 "light"
+        4    2 "lightning"
+        5    6 "open"
+        6    5 "key"
+        7    4 "unlocked"
+    Token Hits Image
+        0    1 "dark.scr"
+        1    1 "light.scr"
+
+
+The first four lines of output describe the items the MuCho compiler has compressed,
+how many bytes they take uncompressed, then compressed, and compression ratio. The
+hexadecimal number is for internal debugging, and you should never have to care about
+it. (It's the compressed block's start address in memory, if you have to know).
+
+The two rooms are 801 and 116 bytes uncompressed, and 501 and 96 bytes compressed.
+The larger the room, the more it will (probably) compress, so writing less doesn't
+neccessarily save you space.
+
+The two images follow, with number of character rows of their height; so the light.scr
+above is 80 pixels tall. Empty space tends to compress well, which explains the rather
+impressive compression ratio.
+
+Following this are two tables. First is table of symbols found in the script, their
+internal representation token number, how many times the symbol was referenced in 
+the script, and the symbol's name. If you ever typo a label, you'll probably find out
+on this table. Just look for symbols with only one hit.
+
+The second table is for images. In this game, each image is only used once, but you can
+use images as many times as you wish, they'll only be stored once.
+
+If the compiler finds something to complain about, like a clear mistake in the script,
+it will abort compilation and tell you the reason.
+
+### Further Debugging
+
+If you want to supress even this minimal information, use the -q flag. If, however, you
+need more information, you can use the -v flag. It will output massive amount of 
+information about your story. For the "complex" example the output is so large that
+it would make no sense to reproduce it here, but we'll take snippets and explain
+what they mean.
+
+If you're getting an error message and don't know what it refers to, running with the
+-v flag may help, as it shows what the compiler has been doing when it throws the error.
+
+    Predicated section
+        Opcode: HAS(light)
+      Command buffer 'O' with 3 bytes payload (about 1 ops)
+      lit 5: "  With the lights turned on, the room is not as opressive"
+      lit 6: "as it felt in the darkness."
+    End of section
+
+First part of the output is more detailed listing of what the compiler finds in the
+script, including opcodes and lines of text.
+
+             **************          row 0, live 1
+             **************          row 1, live 1
+             **************          row 2, live 1
+             **************          row 3, live 1
+             **************          row 4, live 1
+             *********** **          row 5, live 1
+              ********** **          row 6, live 1
+              ********** **          row 7, live 1
+             **************          row 8, live 1
+             **************          row 9, live 1
+                                     row 10, live 0
+                                     row 11, live 0
+                                     row 12, live 0
+                                     row 13, live 0
+                                     row 14, live 0
+                                     
+The second part shows analysis of the images (if any). If the compiler complains about
+your images being too tall, but you're sure the bottom is cleared out, this 
+representation may help you figure out what the compiler is seeing that you think
+it should not be seeing.
+
 
 ## Mackarel Packager
 
@@ -639,3 +890,107 @@ tbd
 
 tbd
 
+## Error messages
+
+Here's a list of MuCho compiler error messages, and short explanations of what
+they mean. 
+
+    Room ... data too large; max 4096 bytes, has ... bytes
+    
+One room, in uncompressed form, may take a maximum of 4096 bytes. You'll probably
+need to reduce text. Massive amounts of text need to be split into separate pages.
+    
+    Syntax error - too many operations on one statement, line ...
+    
+You've put a crazy amount of commands on one line. You should probably split
+them to several lines.
+    
+    Parameter value out of range, line ...
+    
+You've used a value that's out of range for some command, like doing cls:5, where
+the only legal values are 0, 1 and 2.
+    
+    Syntax error (op=null), line ...
+    
+This probably should never happen. But who knows!
+    
+    Syntax error (op starting with ':') "..."
+    
+Labels may not start with a ":". Probably a typo.
+    
+    Syntax error (op with more than one ':') "...", line ...
+    
+Again, probably a typo. The compiler found more than one ":" in one command.
+    
+    Syntax error: unknown operation "...", line ...
+    
+Likely a typo again, like using attr:7 instead of attr:7
+    
+    Syntax error - statement O may not be included in statement A, line ...
+
+The $O lines may only happen between $Q and $A lines, not after $A.
+
+    Syntax error - statement I may not be included in statement A, line ...
+
+The $I lines may only happen between $Q and $A lines, not after $A.
+    
+    Syntax error: unknown statement "...", line ...
+    
+Another probable typo. You've started a line with $, but followed up with a character
+that's not Q, A, I or O. Note that O is not the number zero, but uppercase o.
+    
+    File "..." not found.
+    
+You've probably mistyped the filename.
+    
+    syntax error: room id "..." used more than once, line ...
+    
+Rooms must have unique labels. Otherwise we have no idea which of the rooms you want
+to send the player to!
+    
+    Image "..." not found.
+    
+You've probably mistyped the filename.
+       
+    Image "..." wrong size (has to be 6912 bytes).
+    
+Only standard .scr files supported.
+    
+    Image ... data too large; max 4096 bytes, has ... bytes (... lines)
+    
+This also probably should never happen, as we crop the images, but hey, better
+safe than sorrier.
+    
+    Total output size too large (29952 bytes max, ... found)
+    
+You've been busy! You've hit the limit of how large a game in MuCho can be. Maybe trim
+some images?
+    
+    Can't open "..." for writing.
+    
+For some reason, MuCho can't open the destination filename. Is the directory read only?
+    
+    Can't find data to patch in crt0.ihx!
+
+The crt0.ihx is probably corrupted. Download a fresh copy.    
+
+    crt0.ihx not found
+
+The mc.exe can't find crt0.ihx in the current directory, nor in the directory where 
+it resides. mc.exe is confused and sad. Don't let mc.exe be confused and sad.
+    
+    unable to load "..."
+    
+You've probably typoed yet another filename.
+    
+    Bad image dimensions; should be 8x752 (found ...x...)
+
+We're rather picky about the font image size. 
+
+    Divider pattern image not 8x8 (found ...x...)
+    
+We're rather picky about the divider image size. 
+    
+    Selector pattern image not 8x8 (found ...x...)
+
+We're rather picky about the selector image size. 

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>MuCho - Multiple Choise Adventure Engine</title>
+		<title>MuCho - Multiple Choice Adventure Engine</title>
 		<link href="css/main.css" rel="stylesheet" type="text/css">
 		<link href="css/vs.css" rel="stylesheet" type="text/css">
     <!-- c code highlighter -->
