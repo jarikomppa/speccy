@@ -8,15 +8,39 @@ Using the engine requires no actual programming, but having some tehchnical back
 
 The structure of the development kit is as follows:
 
-    divisors\    - Example custom divisor images
-    fonts\       - Example custom font images
-    manual\      - This MuCho manual in different formats
-    examples\    - Some example MuCho adventures
-    crt0.ihx     - The game engine itself, compiled z80 code
-    mc.exe       - MuCho compiler
-    mackarel.exe - Packager and .tap builder
+    divisors\       - Example custom divisor images
+        divisor_checkerline.png
+        divisor_crosser.png
+        divisor_dither.png
+        ...
+    fonts\          - Example custom font images
+        font_consolas.png
+        font_courier_new.png
+        font_lucida_console.png
+        ...
+    manual\         - This MuCho manual in different formats
+        mucho.pdf
+        mucho.html
+        mucho.mobi
+        mucho.epub
+    examples\       - Some example MuCho adventures
+        simple\
+            simple.txt
+            build.bat
+        complex\
+            ...
+        dukes\
+            ...
+        ...
+    crt0.ihx        - The game engine itself, compiled z80 code
+    mc.exe          - MuCho compiler
+    mackarel.exe    - Packager and .tap builder
+
+The fonts directory also contains a photoshop template for fonts.
 
 The MuCho compiler turns adventure text files into data usable by the engine.
+
+The source code to the game engine can be found in github at https://github.com/jarikomppa/speccy/tree/master/mucho
 
 # MuCho Story Definition Language
 
@@ -58,7 +82,7 @@ The choises link pages together. Here we'll describe three rooms and let the use
     $A redroom
     Go to the red room
     
-Everything between two $Q lines goes to a single page. The first word after the $Q and $A is the label of the room. In programming terms, you could think of it as GOTO label. Two rooms may not have the same label, but any number of $A lines may point to the same label.
+Everything between two $Q lines goes to a single page. The first word after the $Q and $A is the label of the room. In programming terms, you could think of it as GOTO label. Two rooms may not have the same label, but any number of $A lines may point to the same label. Labels may not include spaces (i.e, they need to be a single word).
 
 It is also perfectly legal for a room to have an choise which goes to the same page. This is actually rather useful.
 
@@ -348,12 +372,15 @@ what happens is:
 ### Limits
 
 A compiled room must not take more than 4096 bytes. The MuCho compiler will tell you when you cross the limit.
+
+Maximum size for the compiled and compressed data is 29952 bytes (a bit over 29kB). All data is compressed, images are only stored once even if they are used several times, and labels are turned into numbers, so label length doesn't matter.
                                                       
 Images may be up to 112 pixels high. If more is needed, split images in pieces.                               
                                                       
 There's a maximum of 2048 flags. You will most likely run out of space before running out of flags.
                                                       
 Maximum of 16 active options at the same time. If there are more, the game will simply stop showing more options.
+
 
 ## Examples
 
@@ -551,9 +578,38 @@ In pseudocode, the above becomes:
     If "result" is not set:
         Print "The coin shows tails."
 
+### Nerdy Boolean Logic
+
+Freely ignore this if you don't consider yourself a nerd.
+
+In order to AND two flags, simply check both of them at the same time:
+
+    $O this that
+    
+In order to OR two flags, check them separately and set a third flag
+
+    $O this set:thisorthat
+    $O that set:thisorthat
+    $O thisorthat
+    
+In order to exclusively-or two flags, you can use toggle.
+
+    $O clr:thisxorthat
+    $O this toggle:thisxorthat
+    $O that toggle:thisxorthat
+
 # Compiling Stories
 
-tbd
+In order to run your story on the ZX Spectrum (or, more likely, an emulator thereof),
+you need to compile it. The compilation is performed in two steps. First, the MuCho 
+compiler, mc.exe, is used to translate the story script into a binary form that can
+be used by the game engine. Then the game engine is combined with the compiled data
+to generate a .TAP file, which can be either loaded to an emulator, or played as
+audio to an actual spectrum.
+
+The easiest way to make your own adventure is to modify one of the examples and
+use its build.bat file, but that won't help you if you make mistakes (and trust me,
+everybody makes mistakes).
 
 ## MuCho Compiler
 
