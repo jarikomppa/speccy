@@ -6,7 +6,8 @@ int decode_ihx(unsigned char *aSrc, int aLen, unsigned char *aDst, int &aStartAd
     int end = 0;
     int line = 0;
     int idx = 0;
-    while (aSrc[idx])
+    int done = 0;
+    while (aSrc[idx] && !done)
     {
         line++;
         int sum = 0;
@@ -46,7 +47,9 @@ int decode_ihx(unsigned char *aSrc, int aLen, unsigned char *aDst, int &aStartAd
         switch (recordtype)
         {
             case 0:
+                break;               
             case 1:
+                done = 1;
                 break;
             default:
                 printf("decode_ihx: Unsupported record type %d\n", recordtype);
