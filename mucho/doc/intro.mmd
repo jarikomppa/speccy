@@ -14,10 +14,12 @@ Think of each box as a page in a book, and at the bottom of each page, "Turn to 
 
 The structure of the development kit is as follows:
 
-    divisors\           - Example custom divisor images
-        divisor_checkerline.png
-        divisor_crosser.png
-        divisor_dither.png
+    dividers\           - Example custom divider images
+        divider_checkerline.png
+        divider_crosser.png
+        divider_dither.png
+        ...
+    selectors\
         ...
     fonts\              - Example custom font images
         font_consolas.png
@@ -730,6 +732,8 @@ While all of this is going on, the player sees the screen border change color ba
 the neon lights blinking outdoors, the page attributes change based on whether the 
 light is on or off, and various actions trigger sound effects.
 
+\newpage
+
 ### Dukes
 
 ![Flow chart of the Dukes example](images/dukes)\ 
@@ -774,6 +778,9 @@ If you run mc.exe without parameters, it gives brief help:
 The help means that at minimum, the compiler expects input and output filenames as
 a parameter. In addition, you may include a custom font image, custom divider image,
 custom selector image, as well as one of the two optional flags.
+
+For the font, divider and selector image, please see the advanced topics for custom
+fonts, dividers and selectors below.
 
 ### Compiling a Story
 
@@ -868,23 +875,166 @@ it should not be seeing.
 
 ## Mackarel Packager
 
-tbd
+TL;DR: Mackarel builds your .tap file.
+
+Mackarel is a tool that takes compiled z80 code (in intel hex, or .ihx) format, and turns
+them into ZX Spectrum .tap files, alongside additional data file. It also compresses
+everything (if possible) and handles loading screens, generating one if neccessary.
+
+To build the .tap file, the command line is a bit complicated, but most of the time
+you won't need to play around with it (unless you want to customize things).
+
+If you're curious, you can run mackarel without parameters to get parameter help.
+
+For example, to build the complex example, we would run:
+
+    mackarel patched.ihx complex.tap Complex -nosprestore -noei -lowblock complex.dat 0x5b00
+    
+To understand what this does, let's look at the parameters separately:
+
+    mackarel IHXFILE TAPFILE APPNAME -nosprestore -noei -lowblock GAMEDATA 0x5b00
+    
+The IHXFILE is either the crt0.ihx that hosts the game engine's compiled z80 code, or (like in this
+case) patched.ihx which the MuCho compiler produces when compiling the data. If you're not using
+custom fonts, selectors or dividers, it doesn't matter which one you use.
+
+The TAPFILE is the output filename.
+
+The APPNAME is the name the user first sees when running LOAD "". The APPNAME is also used in the
+generated loading screens.
+
+The -nosprestore -noei parameters are mandatory for MuCho games. They basically tell Mackarel
+that we're not going to return to BASIC and we don't want interrupts enabled. (Removing these
+won't make it possible to return to BASIC).
+
+The -lowblock GAMEDATA 0x5b00 parameters tell Mackarel that we want to load the GAMEDATA file
+to address 0x5b00.
+
+Typically you'll want to change the TAPFILE, APPNAME and GAMEDATA filenames when running
+Mackarel. 
+
+Unless something totally weird happens, Mackarel should always succeed in building MuCho .TAP files.
+However, it will give descriptive error messages if it notices something wrong (such as missing
+files).
+
+\newpage
+
+When run, Mackarel gives out the following kind of report, which you can largely ignore:
+
+    Mackarel 2.1 by Jari Komppa, http://iki.fi/sol
+    Progname set to "Complex   "
+    
+    "patched.ihx":
+            Exec address : 57344 (0xe000)
+            Image size   : 6644 bytes
+            Compressed to: 4273 bytes (64.314%) by ZX7
+    
+    Generated loading screen
+            Image size   : 6912 bytes
+            Compressed to: 134 bytes (1.939%) by RCS
+    
+    "complex.dat":
+            LowBlock addr: 23296 (0x5b00)
+            LowBlock size: 1848 bytes
+            Compressed to: 1848 bytes (100.000%) by (uncompressed)
+    
+    Boot exec address: 59122 (0xe6f2)
+    BASIC part       : 51 bytes
+    Screen unpacker  : 122 bytes
+    App bootstrap    : 125 bytes (69 codec, 56 rest)
+    "complex.tap" written: 6607 bytes
+    Estimated load time: 54 seconds (7 secs to loading screen).
+    
+    Memory : 0       2       4       6       8       10      12      14      16
+             |-------|-------|-------|-------|-------|-------|-------|-------|
+    On load: rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
+             sssssssssssssssssssssssssss..b..................................
+             ................................................................
+             .......................................BLLLLLLLCCCCCCCCCCCCCCCCC
+    
+    On boot: rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
+             sssssssssssssssssssssssssssLLLLLLLL.............................
+             ................................................................
+             ................................CCCCCCCCCCCCCCCCCCCCCCCCCC......
+    
+    Key    : r)om s)creen b)asic L)ow block C)ode block
+             H)igh block .)unused -)reserved
+
+The report tells how well different parts (code, loading screen and game data) get compressed. Typically the
+game data doesn't compress, because it is already compressed. 
+
+Following this, there's some statistics, followed by approximate memory maps on load and on game boot time. 
+Not all of the memory can be filled by game code, since we need somewhere to uncompress the game data on the 
+fly, as well as space for some buffers (such as stack). 
 
 # Advanced Topics
 
-tbd
+And finally we're here, some advanced tidbits for additional modification of the game, as well as 
+more information about error messages, should you ever see any.
 
 ## Custom Fonts
 
-tbd
+The fonts MuCho uses are proportional, meaning they are not fixed width. They are generated from
+bitmap image files which are 8 pixels wide and 752 pixels tall. Each of the 94 characters is stored
+within a 8x8 pixelblock, on top of each other.
+
+MuCho accepts most image formats, but lossless formats are preferred (i.e, while you CAN use .jpg, 
+it's much better to use .png or .psd). When loaded, empty space to either side of the glyphs is
+removed.
+
+A bunch of sample fonts are included in the kit, under "fonts" directory. There's also a photoshop
+.psd template.
+
+The characters in the font are in ASCII order, starting from the space character:
+     
+      !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMN
+     OPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}
+     
+In order to use a custom font, simply add the font filename after the other parameters to the MuCho
+compiler:
+
+    mc story.txt story.dat myfont.png
+
 
 ## Custom Divider
 
-tbd
+The divider between the player's choices and the page text is a 8 pixel tall band where a pattern repeats
+every 8 pixels. I.e, the divider pattern is 8 by 8 pixels.
+
+A bunch of sample dividers are included in the kit, under "dividers" directory.
+
+In order to use a custom divider, simply add the font filename after the other parameters to the MuCho
+compiler:
+
+    mc story.txt story.dat myfont.png mydivider.png
+    
+Please note that you must also have a custom font in order to use a custom divider.
+
 
 ## Custom Selector
 
-tbd
+Selector is the player's arrow with which the player knows which option to pick. It's also a 8 by 8 pixel
+pattern. The way most fonts work, it's best to bias the selector above the middle line, for example:
+
+    ........
+    *...*...
+    **..**..
+    ***.***.
+    **..**..
+    *...*...
+    ........
+    ........
+    
+A bunch of sample selectors are included in the kit, under "selectors" directory.
+
+In order to use a custom selector, simply add the font filename after the other parameters to the MuCho
+compiler:
+
+    mc story.txt story.dat myfont.png mydivider.png myselector.png
+    
+Please note that you must also have a custom font and custom divider in order to use a custom selector.
+
+Since both selectors and dividers are 8x8 patterns, you can swap between them.
 
 ## Custom Loading Screen
 
@@ -987,7 +1137,7 @@ You've probably typoed yet another filename.
 
 We're rather picky about the font image size. 
 
-    Divider pattern image not 8x8 (found ...x...)
+    divider pattern image not 8x8 (found ...x...)
     
 We're rather picky about the divider image size. 
     
