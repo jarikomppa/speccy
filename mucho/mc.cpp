@@ -512,15 +512,14 @@ void process()
         char *s = stringlit;
         temp[0] = ' ';
         temp[1] = ' ';
-        temp[2] = 0;
         c = 2;
-        width = propfont_width[0] * 2;
+        width = propfont_width[' '-32] * 2;
         while (*s)
         {
             temp[c] = *s;
             c++;
             width += propfont_width[*s-32];
-            if (width > 256)
+            if (width > 240)
             {
                 while (temp[c] != ' ')
                 {
@@ -1081,7 +1080,7 @@ int main(int parc, char **pars)
                             }
                             else
                             {
-                                printf("Invalid parameter \"%s\" (input, output, font, divisor and selector image files already defined)\n", pars[i]);
+                                printf("Invalid parameter \"%s\" (input, output, font, divider and selector image files already defined)\n", pars[i]);
                                 exit(-1);
                             }
                         }
