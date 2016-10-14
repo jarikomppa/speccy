@@ -6,7 +6,7 @@ Using the engine requires no actual programming, but having some tehchnical back
 
 ![Just a flow chart](images/justagraph)\ 
 
-Think of each box as a page in a book, and at the bottom of each page, "Turn to page 32 if you want to..".
+Think of each box as a page in a book, and at the bottom of each page you'll find something in the lines of, "Turn to page 32 if you want to..".
 
 \newpage
 
@@ -20,6 +20,9 @@ The structure of the development kit is as follows:
         divider_dither.png
         ...
     selectors\
+        selector_barwave.png
+        selector_sin.png
+        selector_pitchfork.png
         ...
     fonts\              - Example custom font images
         font_consolas.png
@@ -55,7 +58,8 @@ The source code to the game engine can be found in github at:
 ## Legalese
 
 TL;DR: MuCho is based on free software and is free software, feel free to use it
-however you see fit, including commercial usage.
+however you see fit, including commercial usage. (If it doesn't work, you're
+pretty much on your own, though).
 
 --
 
@@ -190,14 +194,14 @@ The text in the page descriptions is automatically formatted, removing any unnec
     
     This is a new paragraph.
     
-    Adding   more   spaces   does   nothing.
+        Adding   more   spaces   does   nothing.
 
 ### Comments
 
 You can add comments in the script which do not end up in your adventure file by starting a line with the hash character.
 
     # This is a comment
-    This is not a comment
+    This is not a comment    
 
 ### Images
 
@@ -461,7 +465,25 @@ what happens is:
         Set flaggy
         Clear flaggy
         Toggle flaggy
-        
+
+Another example, just to be sure:
+
+    $O attr:7 apple cls:1 banana rnd:64 orange set:strawberry
+    
+This becomes:
+    
+    If apple is on, and banana is on, and random is bigger than 64 and orange is on:
+        Set attribute to 7
+        Clear the page
+        Set strawberry
+
+To reiterate: first everything that affects whether the line should be executed is
+evaluated, and only then the rest are executed, assuming all of those things turn
+out to be true.
+
+If any of the checks fail, the rest are not executed.
+
+
 ### Limits
 
 A compiled room must not take more than 4096 bytes. The MuCho compiler will tell you when you cross the limit.
@@ -745,6 +767,33 @@ to hop to the start of any of the five chapters from the start page.
 The Dukes example is a stress test: it's Frederik Pohl's "The day of the boomer dukes" 
 novella (about 46kB of text, public domain) in MuCho format.
 
+### Traveller
+
+![Flow chart of the Traveller example](images/traveller)\ 
+
+In the traveller example the player is expected to run after a fleeing creature, which
+hops from one room to the next randomly, with a small chance of it staying put.
+
+This effect is created through a relatively complicated logic. Each room consists of the
+following kind of structure:
+
+    $O clr:flip clr:stay
+    $O rnd:127 set:flip
+    $O rnd:10 set:stay
+    $O red !stay flip clr:red set:green
+    You see Yellow run towards the green room.
+    $O red !stay !flip clr:red set:blue
+    You see Yellow run towards the blue room.
+    $O red
+    You see a wild Yellow here.
+
+First, "flip" and "stay" flags are cleared. Next, "flip" is set 50% of the time, and "stay" is set rather rarely.
+
+Then, if the creature is in this room and is not staying, depending on whether flip is on, the creature is moved
+from this room to one of the other ones.
+
+If the creature is still in this room after those checks, we announce it.
+
 # Compiling Stories
 
 In order to run your story on the ZX Spectrum (or, more likely, an emulator thereof),
@@ -972,6 +1021,15 @@ fly, as well as space for some buffers (such as stack).
 And finally we're here, some advanced tidbits for additional modification of the game, as well as 
 more information about error messages, should you ever see any.
 
+## Patching the Code
+
+Please note that using custom fonts, dividers and selectors requires the MuCho compiler to patch
+the Z80 code. After patching the crt0.ihx with your custom graphics assets, the compiler outputs 
+patched.ihx file.
+
+So if you're not seeing your customizations when playing the game, you're probably not giving
+the generated patched.ihx file to Mackarel.
+
 ## Custom Fonts
 
 The fonts MuCho uses are proportional, meaning they are not fixed width. They are generated from
@@ -995,6 +1053,8 @@ compiler:
 
     mc story.txt story.dat myfont.png
 
+Note that you need to use the "patched.ihx" file instead of the "crt0.ihx" in order for your
+customizations to show up.
 
 ## Custom Divider
 
@@ -1010,6 +1070,8 @@ compiler:
     
 Please note that you must also have a custom font in order to use a custom divider.
 
+Also note that you need to use the "patched.ihx" file instead of the "crt0.ihx" in order for your
+customizations to show up.
 
 ## Custom Selector
 
@@ -1036,9 +1098,16 @@ Please note that you must also have a custom font and custom divider in order to
 
 Since both selectors and dividers are 8x8 patterns, you can swap between them.
 
+Note that you need to use the "patched.ihx" file instead of the "crt0.ihx" in order for your
+customizations to show up.
+
 ## Custom Loading Screen
 
-tbd
+Adding custom loading screens requires a modification to how you call Mackarel to generate the .TAP files.
+
+    mackarel IHXFILE TAPFILE APPNAME LOADINGSCREEN -nosprestore -noei -lowblock GAMEDATA 0x5b00
+
+Add the loading screen .scr filename after the APPNAME, and you're set.
 
 ## Error messages
 
