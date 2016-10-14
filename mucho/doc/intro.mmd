@@ -2,7 +2,7 @@
 
 MuCho is a engine for making multiple choice adventure games (also known as choose your own adventure (CYOA), or gamebook) for the 48k ZX Spectrum.
 
-Using the engine requires no actual programming, but having some tehchnical background may help.
+Using the engine requires no actual programming, but having some technical background may help.
 
 ![Just a flow chart](images/justagraph)\ 
 
@@ -185,7 +185,7 @@ If a room has no $A lines, it is considered an "end node", and the adventure end
 
 ### Text
 
-The text in the page descriptions is automatically formatted, removing any unneccessary "whitespace" like line breaks or additional spaces. To start a new paragraph, add an empty line in your text.
+The text in the page descriptions is automatically formatted, removing any unnecessary "whitespace" like line breaks or additional spaces. To start a new paragraph, add an empty line in your text.
 
     All of
     these go
@@ -208,7 +208,7 @@ You can add comments in the script which do not end up in your adventure file by
 Images can be added to a page's description portion by using an $I line.
 
     $Q fountain
-    You arrive at a pictoresque fountain.
+    You arrive at a picturesque fountain.
     $I fountain.scr
     Water from the fountain sparkles in the sunlight.
     
@@ -374,7 +374,7 @@ is drawn), use the cls: command.
 |:-------------|-----|
 |Everything    |0    |
 |Page          |1    |
-|Inteface      |2    |
+|Interface      |2    |
 
 In most cases you can just use cls:0.
 
@@ -730,7 +730,7 @@ In order to exclusively-or two flags, you can use toggle.
 
 ## Examples
 
-Here's short overview of the examplex included in the kit.
+Here's short overview of the examples included in the kit.
 
 ### Simple
 
@@ -862,7 +862,7 @@ it. (It's the compressed block's start address in memory, if you have to know).
 
 The two rooms are 801 and 116 bytes uncompressed, and 501 and 96 bytes compressed.
 The larger the room, the more it will (probably) compress, so writing less doesn't
-neccessarily save you space.
+necessarily save you space.
 
 The two images follow, with number of character rows of their height; so the light.scr
 above is 80 pixels tall. Empty space tends to compress well, which explains the rather
@@ -881,7 +881,7 @@ it will abort compilation and tell you the reason.
 
 ### Further Debugging
 
-If you want to supress even this minimal information, use the -q flag. If, however, you
+If you want to suppress even this minimal information, use the -q flag. If, however, you
 need more information, you can use the -v flag. It will output massive amount of 
 information about your story. For the "complex" example the output is so large that
 it would make no sense to reproduce it here, but we'll take snippets and explain
@@ -928,7 +928,7 @@ TL;DR: Mackarel builds your .tap file.
 
 Mackarel is a tool that takes compiled z80 code (in intel hex, or .ihx) format, and turns
 them into ZX Spectrum .tap files, alongside additional data file. It also compresses
-everything (if possible) and handles loading screens, generating one if neccessary.
+everything (if possible) and handles loading screens, generating one if necessary.
 
 To build the .tap file, the command line is a bit complicated, but most of the time
 you won't need to play around with it (unless you want to customize things).
@@ -1034,7 +1034,7 @@ the generated patched.ihx file to Mackarel.
 
 The fonts MuCho uses are proportional, meaning they are not fixed width. They are generated from
 bitmap image files which are 8 pixels wide and 752 pixels tall. Each of the 94 characters is stored
-within a 8x8 pixelblock, on top of each other.
+within a 8x8 pixel block, on top of each other.
 
 MuCho accepts most image formats, but lossless formats are preferred (i.e, while you CAN use .jpg, 
 it's much better to use .png or .psd). When loaded, empty space to either side of the glyphs is
