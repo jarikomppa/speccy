@@ -63,13 +63,13 @@ public:
         return 1 + (offset > 128 ? 12 : 8) + elias_gamma_bits(len-1);
     }
     
-    Optimal* optimize(unsigned char *input_data, size_t input_size) {
+    Optimal* optimize(unsigned char *input_data, size_t input_size, long skip) {
         size_t *min;
         size_t *max;
-        Match *matches;
-        Match *match_slots;
+        size_t *matches;
+        size_t *match_slots;
         Optimal *optimal;
-        Match *match;
+        size_t *match;
         int match_index;
         int offset;
         size_t len;
@@ -80,8 +80,8 @@ public:
         /* allocate all data structures at once */
         min = (size_t *)calloc(MAX_OFFSET+1, sizeof(size_t));
         max = (size_t *)calloc(MAX_OFFSET+1, sizeof(size_t));
-        matches = (Match *)calloc(256*256, sizeof(Match));
-        match_slots = (Match *)calloc(input_size, sizeof(Match));
+        matches = (size_t *)calloc(256*256, sizeof(size_t));
+        match_slots = (size_t *)calloc(input_size, sizeof(size_t));
         optimal = (Optimal *)calloc(input_size, sizeof(Optimal));
     
         if (!min || !max || !matches || !match_slots || !optimal) {
@@ -89,23 +89,30 @@ public:
              exit(1);
         }
     
+        /* index skipped bytes */
+        for (i = 1; i <= skip; i++) {
+            match_index = input_data[i-1] << 8 | input_data[i];
+            match_slots[i] = matches[match_index];
+            matches[match_index] = i;
+        }
+    
         /* first byte is always literal */
-        optimal[0].bits = 8;
+        optimal[skip].bits = 8;
     
         /* process remaining bytes */
-        for (i = 1; i < input_size; i++) {
+        for (; i < input_size; i++) {
     
             optimal[i].bits = optimal[i-1].bits + 9;
             match_index = input_data[i-1] << 8 | input_data[i];
             best_len = 1;
-            for (match = &matches[match_index]; match->next != NULL && best_len < MAX_LEN; match = match->next) {
-                offset = i - match->next->index;
+            for (match = &matches[match_index]; *match != 0 && best_len < MAX_LEN; match = &match_slots[*match]) {
+                offset = i - *match;
                 if (offset > MAX_OFFSET) {
-                    match->next = NULL;
+                    *match = 0;
                     break;
                 }
     
-                for (len = 2; len <= MAX_LEN; len++) {
+                for (len = 2; len <= MAX_LEN && i >= skip+len; len++) {
                     if (len > best_len) {
                         best_len = len;
                         bits = optimal[i-len].bits + count_bits(offset, len);
@@ -114,7 +121,7 @@ public:
                             optimal[i].offset = offset;
                             optimal[i].len = len;
                         }
-                    } else if (i+1 == max[offset]+len && max[offset] != 0) {
+                    } else if (max[offset] != 0 && i+1 == max[offset]+len) {
                         len = i-min[offset];
                         if (len > best_len) {
                             len = best_len;
@@ -127,9 +134,8 @@ public:
                 min[offset] = i+1-len;
                 max[offset] = i;
             }
-            match_slots[i].index = i;
-            match_slots[i].next = matches[match_index].next;
-            matches[match_index].next = &match_slots[i];
+            match_slots[i] = matches[match_index];
+            matches[match_index] = i;
         }
     
         /* save time by releasing the largest block only, the O.S. will clean everything else later */
@@ -140,6 +146,13 @@ public:
     
     size_t bit_index;
     int bit_mask;
+    long diff;
+    
+    void read_bytes(int n, long *delta) {
+        diff += n;
+        if (diff > *delta)
+            *delta = diff;
+    }
     
     void write_byte(int value) {
         mPackedData[mMax++] = value;
@@ -168,19 +181,25 @@ public:
         }
     }
     
-    void compress(Optimal *optimal, unsigned char *input_data, size_t input_size) {
+    void compress(Optimal *optimal, unsigned char *input_data, size_t input_size, long skip) {
         size_t input_index;
         size_t input_prev;
         int offset1;
         int mask;
         int i;
+        long delta;
     
         /* calculate and allocate output buffer */
         input_index = input_size-1;
+        int output_size = (optimal[input_index].bits+18+7)/8;
+    
+        /* initialize delta */
+        diff = output_size - input_size + skip;
+        delta = 0;
     
         /* un-reverse optimal sequence */
         optimal[input_index].bits = 0;
-        while (input_index > 0) {
+        while (input_index != skip) {
             input_prev = input_index - (optimal[input_index].len > 0 ? optimal[input_index].len : 1);
             optimal[input_prev].bits = input_index;
             input_index = input_prev;
@@ -190,7 +209,8 @@ public:
         bit_mask = 0;
     
         /* first byte is always literal */
-        write_byte(input_data[0]);
+        write_byte(input_data[input_index]);
+        read_bytes(1, &delta);
     
         /* process remaining bytes */
         while ((input_index = optimal[input_index].bits) > 0) {
@@ -201,6 +221,7 @@ public:
     
                 /* literal value */
                 write_byte(input_data[input_index]);
+                read_bytes(1, &delta);
     
             } else {
     
@@ -221,6 +242,7 @@ public:
                         write_bit(offset1 & mask);
                     }
                 }
+                read_bytes(optimal[input_index].len, &delta);
             }
         }
     
@@ -237,6 +259,12 @@ public:
     
     virtual void pack(unsigned char *aData, int aLen)        
     {
-        compress(optimize(aData, aLen), aData, aLen);
+        compress(optimize(aData, aLen, 0), aData, aLen, 0);
     }
+
+    virtual void pack(unsigned char *aData, int aLen, int aSkip)        
+    {
+        compress(optimize(aData, aLen, aSkip), aData, aLen, aSkip);
+    }
+
 };
