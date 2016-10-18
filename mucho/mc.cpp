@@ -1017,12 +1017,12 @@ void process_images()
                 maxlive = j;
             }
         }
+        maxlive++;
         if (maxlive > 14)
         {
             printf("Warning: image \"%s\" has %d live character rows, 14 used.\n", image[i].name, maxlive);
             maxlive = 14;
         }
-        maxlive++;
         datalen = 0;
         putbyte(maxlive*8);
         int k;
