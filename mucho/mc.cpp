@@ -468,6 +468,15 @@ void parse()
         if (verbose) printf("Choice: %s (%d)\n", t, i);
         previous_section = 'Q';
         break;
+    case 'P':
+        if (previous_section == 'A')
+        {
+            printf("Syntax error - statement P may not be included in statement A, line %d\n", line);
+            exit(-1);
+        }
+        if (verbose) printf("Empty paragraph\n");
+        putstring(" ");
+        break;
     case 'O':
         if (previous_section == 'A')
         {
