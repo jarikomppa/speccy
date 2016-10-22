@@ -9,6 +9,8 @@
 #include "../common/stb_image.h"
 #include "../common/ihxtools.h"
 
+#define DATA_AREA_SIZE 29952
+
 const unsigned char divider_pattern[8] = 
 { 
     0x00, 
@@ -39,10 +41,16 @@ struct Symbol
     int hits;
 };
 
+struct RoomBuf
+{
+    unsigned char *data;
+    int len;
+};
+
 int pagedata = 0;
 int imgdata = 0;
 int trainers = 0;
-#define MAX_TRAINER 1024
+#define MAX_TRAINER (1024)
 unsigned char trainer[MAX_TRAINER];
 
 #define MAX_SYMBOLS (8*256) // 2k symbols should be enough for everybody
@@ -50,6 +58,10 @@ int symbols = 0;
 Symbol symbol[MAX_SYMBOLS];
 int images = 0;
 Symbol image[MAX_SYMBOLS];
+
+#define MAX_ROOMS 1024
+int rooms = 0;
+RoomBuf room[MAX_ROOMS];
 
 unsigned char *propfont_data = (unsigned char *)&builtin_data[0];
 unsigned char *propfont_width = (unsigned char *)&builtin_width[0];
@@ -198,26 +210,51 @@ void token(int n, char *src, char *dst)
 ZX7Pack pack;
 
 int roomno = 0;
+int totaldata = 0;
+char packbuf[8192];
+int packbufofs = 0;
+
+void flush_packbuf()
+{
+    if (packbufofs > trainers)
+    {
+        pack.mMax = 0;
+        pack.pack((unsigned char*)&packbuf[0], packbufofs, trainers);
+    
+        if (!quiet)
+            printf("zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", packbufofs-trainers, pack.mMax, ((pack.mMax)*100.0f)/(packbufofs-trainers), 0x5b00+outlen);
+    
+        outdata(pack.mPackedData, pack.mMax);
+        packbufofs = trainers;
+    }
+}
 
 void flush_room()
 {
-    if (datalen > trainers)
+    if (datalen > 0)
     {
         putbyte(0); // add a zero byte for good measure.
-        pack.mMax = 0;
-        if (datalen > 4096+trainers)
+        if (datalen > 4096)
         {
-            printf("Room %s data too large; max 4096 bytes, has %d bytes\n", symbol[roomno].name, datalen-trainers);
+            printf("Room %s data too large; max 4096 bytes, has %d bytes\n", symbol[roomno].name, datalen);
             exit(-1);
         }
-        pack.pack((unsigned char*)&databuf[0], datalen, trainers);
-        patchword(0x5b00 + outlen, roomno);
+        room[rooms].data = new unsigned char[datalen];
+        room[rooms].len = datalen;
+        memcpy(room[rooms].data, databuf, datalen);
+        rooms++;
+        totaldata += datalen;
+        if (totaldata > 4096)
+        {
+            flush_packbuf();
+            totaldata = datalen;
+        }
+        memcpy(packbuf+packbufofs, databuf, datalen);
+        packbufofs += datalen;
         
-        if (!quiet)
-            printf("%30s zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", symbol[roomno].name, datalen-trainers, pack.mMax, ((pack.mMax)*100.0f)/(datalen-trainers), 0x5b00+outlen);
-        outdata(pack.mPackedData, pack.mMax);
-        datalen = trainers;       
-        memcpy(databuf, trainer, trainers);
+        datalen = 0;
+        patchword(0x5b00 + outlen, roomno); // N rooms will have same offset
+                
         roomno++;
     }        
 }
@@ -226,7 +263,7 @@ void flush_room()
 
 void flush_sect()
 {
-    if (datalen > trainers)  // skip end if we're in the beginning
+    if (datalen > 0)  // skip end if we're in the beginning
     {
         if (verbose) printf("End of section\n");
         putbyte(0);
@@ -647,6 +684,7 @@ void scan(char *aFilename)
     // end with empty section
     flush_sect();
     flush_room(); 
+    flush_packbuf();
     fclose(f);
 }
 
@@ -709,7 +747,7 @@ void tokenref(int cur)
 
 
 void addwordcounttoken(char *aToken)
-{
+{    
     int h = calchash(aToken);
     int i;	
     for (i = 0; i < gTokens; i++)
@@ -859,17 +897,19 @@ void maketrainer()
     }
     trainers = c;
     
-    printf(
-        "Trainer data: %d bytes\n" 
-        "|---------1---------2---------3---------4---------5---------6----|\n ",          
-        trainers);
-    for (c = 0; c < trainers; c++)
+    if (!quiet)
     {
-        printf("%c", trainer[c]);
-        if (c % 64 == 63) printf("\n ");
+        printf(
+            "Trainer data: %d bytes\n" 
+            "|---------1---------2---------3---------4---------5---------6----|\n ",          
+            trainers);
+        for (c = 0; c < trainers; c++)
+        {
+            printf("%c", trainer[c]);
+            if (c % 64 == 63) printf("\n ");
+        }
+        printf("\n");
     }
-    printf("\n");
-
 }
 
 void scan_first_pass(char *aFilename)
@@ -881,8 +921,6 @@ void scan_first_pass(char *aFilename)
         exit(-1);
     }
 	
-	int pagestringlen = 0;
-
     while (!feof(f))
     {
         readline(scratch, f);
@@ -900,7 +938,6 @@ void scan_first_pass(char *aFilename)
                     exit(-1);
                 }
                 symbol[i].hits--; // clear the hit, as it'll be scanned again
-				pagestringlen = 0;
             }
             if (scratch[1] == 'I')
             {
@@ -911,12 +948,8 @@ void scan_first_pass(char *aFilename)
         }
         else
         {
-			if (pagestringlen < 2048)
-			{
-				// string literal
-				wordcount(scratch);
-				pagestringlen += strlen(scratch);
-			}
+			// string literal
+			wordcount(scratch);
         }
     }
     fclose(f);
@@ -926,6 +959,7 @@ void scan_first_pass(char *aFilename)
 void report()
 {
     int i;
+    printf("\n");
     printf("Token Hits Symbol\n");
     for (i = 0; i < symbols; i++)
     {
@@ -942,7 +976,7 @@ void report()
     }
     //      123456789012345678901234567890123456789012345678901234567890
     printf("\n");
-    printf("Memory map:\n");
+    printf("Memory map:\n\n");
     printf("         5         10        15        20        25      29\n");
     printf("---------.---------|---------.---------|---------.--------\n");
     int o = 0;
@@ -957,7 +991,7 @@ void report()
     printf("\n\n");
     printf("Page data : %5d bytes\n", pagedata);
     printf("Image data: %5d bytes\n", imgdata);
-    printf("Free      : %5d bytes\n", 29952 - trainers - pagedata - imgdata);
+    printf("Free      : %5d bytes\n", DATA_AREA_SIZE - trainers - pagedata - imgdata);
     printf("Trainer   : %5d bytes (used to improve compression by \"training\" it)\n", trainers);
         
 }
@@ -1058,9 +1092,9 @@ void process_images()
 
 void output(char *aFilename)
 {
-    if (outlen > 29952)
+    if (outlen > DATA_AREA_SIZE)
     {
-        printf("Total output size too large (29952 bytes max, %d found)\n", outlen);
+        printf("Total output size too large (%d bytes max, %d found)\n", DATA_AREA_SIZE, outlen);
         exit(-1);
     }
 
@@ -1288,7 +1322,7 @@ void scan_sel(char *aFilename)
 void output_trainer()
 {
     int i;
-    int freebytes = 29952 - trainers - outlen;
+    int freebytes = DATA_AREA_SIZE - trainers - outlen;
     for (i = 0; i < freebytes; i++)
         outbyte(0);
     outdata(trainer, trainers);
@@ -1401,8 +1435,9 @@ int main(int parc, char **pars)
     line = 0;    
     scan_first_pass(pars[infile]);
     maketrainer();    
-    memcpy(databuf, trainer, trainers);
-    datalen = trainers;
+    memcpy(packbuf, trainer, trainers);
+    packbufofs = trainers;
+    datalen = 0;
     image_id_start = symbols + 1;
     outlen = symbols * 2 + images * 2 + 2;
     line = 0;    
@@ -1419,35 +1454,3 @@ int main(int parc, char **pars)
     return 0;
 }
 
-
-/*                                                                                                                                                                                                          
->           start:  614 ->  430 (70.033%),  615 ->  381 (61.951%)
->  Foraminifera_9: 1416 ->  921 (65.042%), 1417 ->  789 (55.681%)
->Foraminifera_9_2: 2069 -> 1227 (59.304%), 2070 -> 1087 (52.512%)
->Foraminifera_9_3: 1645 -> 1059 (64.377%), 1646 ->  949 (57.655%)
->Foraminifera_9_4: 1544 ->  992 (64.249%), 1545 ->  844 (54.628%)
->Foraminifera_9_5: 1834 -> 1156 (63.032%), 1835 ->  990 (53.951%)
->Foraminifera_9_6: 1319 ->  864 (65.504%), 1320 ->  743 (56.288%)
->Foraminifera_9_7: 1692 -> 1065 (62.943%), 1693 ->  916 (54.105%)
->Foraminifera_9_8: 2161 -> 1301 (60.204%), 2162 -> 1132 (52.359%)
->     Shield_8805: 1732 -> 1078 (62.240%), 1733 ->  931 (53.722%)
->   Shield_8805_2: 1076 ->  729 (67.751%), 1077 ->  613 (56.917%)
->   Shield_8805_3: 1359 ->  892 (65.636%), 1360 ->  756 (55.588%)
->   Shield_8805_4: 1560 ->  986 (63.205%), 1561 ->  851 (54.516%)
->   Shield_8805_5: 1847 -> 1133 (61.343%), 1848 -> 1005 (54.383%)
->   Shield_8805_6: 1621 -> 1031 (63.603%), 1622 ->  900 (55.487%)
->             Cow: 1228 ->  804 (65.472%), 1229 ->  672 (54.679%)
->           Cow_2: 1983 -> 1152 (58.094%), 1984 -> 1011 (50.958%)
->           Cow_3: 1841 -> 1092 (59.316%), 1842 ->  954 (51.792%)
->  Sandy_Van_Pelt: 1383 ->  913 (66.016%), 1384 ->  791 (57.153%)
->Sandy_Van_Pelt_2: 1635 -> 1013 (61.957%), 1636 ->  881 (53.851%)
->Sandy_Van_Pelt_3: 1122 ->  764 (68.093%), 1123 ->  637 (56.723%)
->Sandy_Van_Pelt_4: 1840 -> 1124 (61.087%), 1841 ->  986 (53.558%)
->Sandy_Van_Pelt_5: 1909 -> 1199 (62.808%), 1910 -> 1041 (54.503%)
->Sandy_Van_Pelt_6: 1178 ->  762 (64.686%), 1179 ->  654 (55.471%)
->Sandy_Van_Pelt_7:  857 ->  553 (64.527%),  858 ->  464 (54.079%)
->     Priam's_Maw: 2002 -> 1283 (64.086%), 2003 -> 1153 (57.564%)
->   Priam's_Maw_2: 2249 -> 1349 (59.982%), 2250 -> 1190 (52.889%)
->   Priam's_Maw_3: 1312 ->  857 (65.320%), 1313 ->  720 (54.836%)
->   Priam's_Maw_4: 1495 ->  937 (62.676%), 1496 ->  807 (53.944%)
-*/
