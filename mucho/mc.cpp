@@ -43,8 +43,10 @@ struct Symbol
 
 struct RoomBuf
 {
+    char *name;
     unsigned char *data;
     int len;
+    int used;
 };
 
 int pagedata = 0;
@@ -239,21 +241,13 @@ void flush_room()
             printf("Room %s data too large; max 4096 bytes, has %d bytes\n", symbol[roomno].name, datalen);
             exit(-1);
         }
+        room[rooms].name = symbol[roomno].name;
         room[rooms].data = new unsigned char[datalen];
         room[rooms].len = datalen;
+        room[rooms].used = 0;
         memcpy(room[rooms].data, databuf, datalen);
         rooms++;
-        totaldata += datalen;
-        if (totaldata > 4096)
-        {
-            flush_packbuf();
-            totaldata = datalen;
-        }
-        memcpy(packbuf+packbufofs, databuf, datalen);
-        packbufofs += datalen;
-        
         datalen = 0;
-        patchword(0x5b00 + outlen, roomno); // N rooms will have same offset
                 
         roomno++;
     }        
@@ -684,7 +678,6 @@ void scan(char *aFilename)
     // end with empty section
     flush_sect();
     flush_room(); 
-    flush_packbuf();
     fclose(f);
 }
 
@@ -1328,6 +1321,78 @@ void output_trainer()
     outdata(trainer, trainers);
 }
 
+void process_rooms()
+{
+    int i, j;
+    i = 0;
+    
+    int minidx = -1;
+    room[0].used = 1;
+    patchword(0x5b00 + outlen, 0);
+    
+    // TODO: make sure all rooms get output (some combinations may be too large)
+    
+    do 
+    {
+        minidx = -1;
+        float minvalue = 1;
+        for (j = 0; j < rooms; j++)
+        {
+            if (i != j && !room[j].used)
+            {
+                int total = room[i].len+room[j].len;
+                if (total > 4096)
+                {
+                    //printf("(too big)");
+                }
+                else
+                {
+                    char tempbuf[8192];
+                    memcpy(tempbuf, room[i].data, room[i].len);
+                    memcpy(tempbuf + room[i].len, room[j].data, room[j].len);
+                    pack.mMax = 0;
+                    pack.pack((unsigned char*)&tempbuf[0], total);
+                    //printf("ZX7: %4d bytes - %3.3f%%", pack.mMax, ((float)pack.mMax/total)*100);
+                    float r = ((float)pack.mMax / total);
+                    if (minvalue > r)
+                    {
+                        minvalue = r;
+                        minidx = j;
+                    }
+                }
+            }
+        }    
+        if (minidx != -1)
+        {
+            printf("%s ", room[minidx].name);
+            room[minidx].used = 1;
+            i = minidx;
+
+            totaldata += room[minidx].len;
+            if (totaldata > 4096)
+            {
+                flush_packbuf();
+                totaldata = room[minidx].len;
+            }
+            memcpy(packbuf+packbufofs, room[minidx].data, room[minidx].len);
+            packbufofs += room[minidx].len;
+            
+            patchword(0x5b00 + outlen, minidx); // N rooms will have same offset
+        }        
+
+    } while (minidx != -1);
+    flush_packbuf();
+    for (i = 0; i < rooms; i++)
+    {
+        if (room[i].used == 0)
+        {
+            printf("WARNING Room %s didn't compress with anything\n", room[i].name);
+        }
+    }
+
+    printf("\n");
+}
+
 int main(int parc, char **pars)
 {    
     printf("MuCho compiler, by Jari Komppa http://iki.fi/sol/\n");
@@ -1442,7 +1507,8 @@ int main(int parc, char **pars)
     outlen = symbols * 2 + images * 2 + 2;
     line = 0;    
     scan(pars[infile]);
-    pagedata = outlen;    
+    process_rooms();
+    pagedata = outlen;
     process_images();
     imgdata = outlen - pagedata;
     output_trainer();
