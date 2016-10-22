@@ -1329,6 +1329,9 @@ void process_rooms()
     int minidx = -1;
     room[0].used = 1;
     patchword(0x5b00 + outlen, 0);
+    memcpy(packbuf+packbufofs, room[0].data, room[0].len);
+    packbufofs += room[0].len;
+    printf("%s ", room[0].name);
     
     // TODO: make sure all rooms get output (some combinations may be too large)
     
