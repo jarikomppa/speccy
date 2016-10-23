@@ -42,6 +42,7 @@ enum opcodeval
     OP_DATTR,
 
     OP_GO,
+    OP_GOSUB,
     
     OP_GT,
     OP_GTC,
@@ -489,7 +490,8 @@ void set_op(int opcode, int value)
         case OP_EXT: if (verbose) printf("EXT(%d)", value); break;
         case OP_IATTR: if (verbose) printf("IATTR(%d)", value); break;
         case OP_DATTR: if (verbose) printf("DATTR(%d)", value); break;
-        case OP_GO:  if (verbose) printf("GO(%d)", value); break;
+        case OP_GO:  if (verbose) printf("GO(%s)", symbol[value].name); break;
+        case OP_GOSUB:  if (verbose) printf("GOSUB(%s)", symbol[value].name); break;
     }
     if (verbose) printf("\n");
     store_cmd(opcode, value);
@@ -528,14 +530,17 @@ void set_number_op(int opcode, int value1, int value2)
     store_number_cmd(opcode, value1, value2);
 }
 
-void set_opgo(int value)
+void set_opgo(int op, int value)
 {
     if (value >= rooms)
     {
-        printf("Invalid GO parameter: symbol \"%s\" is not a room, line %d\n", line);
+        printf("Invalid GO%s parameter: symbol \"%s\" is not a room, line %d\n", 
+            op==OP_GOSUB?"SUB":"",
+            symbol[value].name,
+            line);
         exit(-1);
     }
-    set_op(OP_GO, value);
+    set_op(op, value);
 }
 
 void set_eop(int value, int maxvalue)
@@ -647,8 +652,10 @@ void parse_op(char *op)
             if (stricmp(cmd, "ext") == 0) set_op(OP_EXT, atoi(sym)); else
             if (stricmp(cmd, "border") == 0) set_eop(atoi(sym), 7); else
             if (stricmp(cmd, "cls") == 0) set_eop(atoi(sym)+8, 10); else
-            if (stricmp(cmd, "go") == 0) set_opgo(atoi(sym)); else
-            if (stricmp(cmd, "goto") == 0) set_opgo(atoi(sym)); else
+            if (stricmp(cmd, "go") == 0) set_opgo(OP_GO,get_symbol_id(sym)); else
+            if (stricmp(cmd, "goto") == 0) set_opgo(OP_GO,get_symbol_id(sym)); else
+            if (stricmp(cmd, "gosub") == 0) set_opgo(OP_GOSUB,get_symbol_id(sym)); else
+            if (stricmp(cmd, "call") == 0) set_opgo(OP_GOSUB,get_symbol_id(sym)); else
             {
                 printf("Syntax error: unknown operation \"%s\", line %d\n", cmd, line);
                 exit(-1);
@@ -668,11 +675,13 @@ void parse_op(char *op)
             if (op[i] == '!' && op[i+1] == '=') v = OP_IEQ;
             if (op[i] == '+' && op[i+1] != '=') v = OP_ADD;
             if (op[i] == '-' && op[i+1] != '=') v = OP_SUB;
+                
             if (v == 0)
             {
                 printf("Parse error near \"%s\" (\"%s\"), line %d\n", op+i, op, line);
                 exit(-1);
             }
+            
             sym = op + i + 1;
             if (op[i+1] == '=') sym++;
             int second = 0;
