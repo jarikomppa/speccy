@@ -416,8 +416,8 @@ void flush_cmd()
         {
             printf("  Command buffer '%c' (%d bytes) with %d bytes payload (%d ops)\n", 
             commandbuffer[0], 
-            commandptropofs,
-            commandptr-commandptropofs, 
+            commandptropofs+1,
+            commandptr-(commandptropofs+1), 
             ops);
         }
                 
