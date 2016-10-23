@@ -10,32 +10,58 @@
 #include "../common/ihxtools.h"
 
 #define DATA_AREA_SIZE 29952
+#define MAX_SYMBOLS (8*256) // 2k symbols should be enough for everybody
+#define MAX_NUMBERS 16
 
 /*
 a>b
 a<b
 a<=b
 a>=b
+a==b
 a!=b
 a=b
 a+b
 a-b
-a==b
 */
 
 enum opcodeval
 {
     OP_HAS,
     OP_NOT,
+    
     OP_SET,
     OP_CLR,
     OP_XOR,
+
     OP_RND,
+
     OP_ATTR,
     OP_EXT,
     OP_IATTR,
     OP_DATTR,
-    OP_GO
+
+    OP_GO,
+    
+    OP_GT,
+    OP_GTC,
+    OP_LT,
+    OP_LTC,
+    OP_GTE,
+    OP_GTEC,
+    OP_LTE,
+    OP_LTEC,
+    OP_EQ,
+    OP_EQC,
+    OP_IEQ,
+    OP_IEQC,
+    
+    OP_ASSIGN,
+    OP_ASSIGNC,
+    OP_ADD,
+    OP_ADDC,
+    OP_SUB,
+    OP_SUBC    
 };
 
 
@@ -84,13 +110,14 @@ int trainers = 0;
 #define MAX_TRAINER (1024)
 unsigned char trainer[MAX_TRAINER];
 
-#define MAX_SYMBOLS (8*256) // 2k symbols should be enough for everybody
 int symbols = 0;
-Symbol symbol[MAX_SYMBOLS];
+Symbol symbol[MAX_SYMBOLS*2];
 int images = 0;
 Symbol image[MAX_SYMBOLS];
 int codes = 0;
 Symbol code[MAX_SYMBOLS];
+int numbers =0;
+Symbol number[MAX_SYMBOLS];
 
 #define MAX_ROOMS 1024
 int rooms = 0;
@@ -188,6 +215,18 @@ int whitespace(char c)
     return 0;
 }
 
+int is_numeric(char *s)
+{
+    if (!*s) return 0;
+    while (*s)
+    {
+        if (*s < '0' || *s > '9')
+            return 0;
+        s++;
+    }
+    return 1;
+}
+
 void readrawline(char *buf, FILE * f)
 {
     int i = 0;
@@ -258,6 +297,23 @@ int get_symbol_id(char * s)
     symbol[symbols].hits = 1;
     symbols++;
     return symbols-1;            
+}
+
+int get_number_id(char * s)
+{
+    int i;
+    for (i = 0; i < numbers; i++)
+    {
+        if (stricmp(number[i].name, s) == 0)
+        {
+            number[i].hits++;
+            return i;
+        }
+    }
+    number[numbers].name = strdup(s);
+    number[numbers].hits = 1;
+    numbers++;
+    return numbers-1;            
 }
 
 int get_image_id(char * s)
@@ -381,6 +437,13 @@ void store_cmd(int op, int param)
     commandbuffer[commandptr] = param >> 8; commandptr++;
 }
 
+void store_number_cmd(int op, int param1, int param2)
+{
+    commandbuffer[commandptr] = op; commandptr++;
+    commandbuffer[commandptr] = param1 & 0xff; commandptr++;
+    commandbuffer[commandptr] = param2 & 0xff; commandptr++;
+}
+
 void store_section(int section)
 {
     flush_cmd();
@@ -426,9 +489,43 @@ void set_op(int opcode, int value)
         case OP_EXT: if (verbose) printf("EXT(%d)", value); break;
         case OP_IATTR: if (verbose) printf("IATTR(%d)", value); break;
         case OP_DATTR: if (verbose) printf("DATTR(%d)", value); break;
+        case OP_GO:  if (verbose) printf("GO(%d)", value); break;
     }
     if (verbose) printf("\n");
     store_cmd(opcode, value);
+}
+
+void set_number_op(int opcode, int value1, int value2)
+{
+    if (value1 > 255 || value2 > 255)
+    {
+        printf("Parameter value out of range, line %d\n", line);
+        exit(-1); 
+    }
+    if (verbose) printf("    Opcode: ");
+    switch(opcode)
+    {
+        case OP_GT: if (verbose) printf("GT(%s,%s)", number[value1].name, number[value2].name); break;
+        case OP_GTC: if (verbose) printf("GTC(%s,%d)", number[value1].name, value2); break;
+        case OP_LT: if (verbose) printf("LT(%s,%s)", number[value1].name, number[value2].name); break;
+        case OP_LTC: if (verbose) printf("LTC(%s,%d)", number[value1].name, value2); break;
+        case OP_GTE: if (verbose) printf("GTE(%s,%s)", number[value1].name, number[value2].name); break;
+        case OP_GTEC: if (verbose) printf("GTEC(%s,%d)", number[value1].name, value2); break;
+        case OP_LTE: if (verbose) printf("LTE(%s,%s)", number[value1].name, number[value2].name); break;
+        case OP_LTEC: if (verbose) printf("LTEC(%s,%d)", number[value1].name, value2); break;
+        case OP_EQ: if (verbose) printf("EQ(%s,%s)", number[value1].name, number[value2].name); break;
+        case OP_EQC: if (verbose) printf("EQC(%s,%d)", number[value1].name, value2); break;
+        case OP_IEQ: if (verbose) printf("IEQ(%s,%s)", number[value1].name, number[value2].name); break;
+        case OP_IEQC: if (verbose) printf("IEQC(%s,%d)", number[value1].name, value2); break;
+        case OP_ASSIGN: if (verbose) printf("ASSIGN(%s,%s)", number[value1].name, number[value2].name); break;
+        case OP_ASSIGNC: if (verbose) printf("ASSIGNC(%s,%d)", number[value1].name, value2); break;
+        case OP_ADD: if (verbose) printf("ADD(%s,%s)", number[value1].name, number[value2].name); break;
+        case OP_ADDC: if (verbose) printf("ADDC(%s,%d)", number[value1].name, value2); break;
+        case OP_SUB: if (verbose) printf("SUB(%s,%s)", number[value1].name, number[value2].name); break;
+        case OP_SUBC: if (verbose) printf("SUBC(%s,%d)", number[value1].name, value2); break;
+    }
+    if (verbose) printf("\n");
+    store_number_cmd(opcode, value1, value2);
 }
 
 void set_opgo(int value)
@@ -453,34 +550,50 @@ void set_eop(int value, int maxvalue)
 
 void parse_op(char *op)
 {
-    // Op may be of form "foo" "!foo" or "foo:bar"
+    // Op may be of form "foo" "!foo" or "foo:bar" or "foo[intop]bar" where intop is <,>,<=,>=,==,!=,=,+,-
     if (op[0] == 0)
     {
         printf("Syntax error (op=null), line %d\n", line);
         exit(-1);
     }
-    if (op[0] == ':')
+    if (op[0] == ':' || op[0] == '>' || op[0] == '<' || op[0] == '=' || op[0] == '+' || op[0] == '-' || (op[0] == '!' && op[1] == '='))
     {
-        printf("Syntax error (op starting with ':') \"%s\", line %d\n", op, line);
+        printf("Syntax error (op starting with '%c') \"%s\", line %d\n", op[0], op, line);
         exit(-1);
     }
 
     int i = 0;
-    int colons = 0;
+    int operations = 0;
     while (op[i]) 
     { 
-        if (op[i] == ':')
-            colons++;
+        if (op[i] == ':' || 
+            op[i] == '-' || 
+            op[i] == '+' ||
+            (op[i] == '<' && op[i+1] != '=') ||
+            (op[i] == '>' && op[i+1] != '=') ||
+            (op[i] == '=' && op[i+1] != '='))
+        {
+            operations++;
+        }
+        if ((op[i] == '<' && op[i+1] == '=') ||
+            (op[i] == '>' && op[i+1] == '=') ||
+            (op[i] == '=' && op[i+1] == '=') ||
+            (op[i] == '!' && op[i+1] == '='))
+        {
+            operations++;
+            i++;
+        }
+        
         i++; 
     }
 
-    if (colons > 1)
+    if (operations > 1)
     {
-        printf("Syntax error (op with more than one ':') \"%s\", line %d\n", op, line);
+        printf("Syntax error (op with more than one instruction) \"%s\", line %d\n", op, line);
         exit(-1);
     }
     
-    if (colons == 0)
+    if (operations == 0)
     {
         if (op[0] == '!')
         {        
@@ -496,42 +609,84 @@ void parse_op(char *op)
         char cmd[256];
         char *sym;
         i = 0;
-        while (op[i] != ':') 
+        while (op[i] != ':' && 
+               op[i] != '<' && 
+               op[i] != '>' && 
+               op[i] != '=' && 
+               op[i] != '!' && 
+               op[i] != '+' && 
+               op[i] != '-') 
         {
             cmd[i] = op[i];
             i++;
         }
         cmd[i] = 0;
-        sym = op+i+1;
-
-        if (stricmp(cmd, "has") == 0) set_op(OP_HAS, get_symbol_id(sym)); else
-        if (stricmp(cmd, "need") == 0) set_op(OP_HAS, get_symbol_id(sym)); else
-        if (stricmp(cmd, "not") == 0) set_op(OP_NOT, get_symbol_id(sym)); else
-        if (stricmp(cmd, "set") == 0) set_op(OP_SET, get_symbol_id(sym)); else
-        if (stricmp(cmd, "clear") == 0) set_op(OP_CLR, get_symbol_id(sym)); else
-        if (stricmp(cmd, "clr") == 0) set_op(OP_CLR, get_symbol_id(sym)); else
-        if (stricmp(cmd, "toggle") == 0) set_op(OP_XOR, get_symbol_id(sym)); else
-        if (stricmp(cmd, "xor") == 0) set_op(OP_XOR, get_symbol_id(sym)); else
-        if (stricmp(cmd, "flip") == 0) set_op(OP_XOR, get_symbol_id(sym)); else
-        if (stricmp(cmd, "random") == 0) set_op(OP_RND, atoi(sym)); else
-        if (stricmp(cmd, "rand") == 0) set_op(OP_RND, atoi(sym)); else
-        if (stricmp(cmd, "rnd") == 0) set_op(OP_RND, atoi(sym)); else
-        if (stricmp(cmd, "attr") == 0) set_op(OP_ATTR, atoi(sym)); else
-        if (stricmp(cmd, "iattr") == 0) set_op(OP_IATTR, atoi(sym)); else
-        if (stricmp(cmd, "dattr") == 0) set_op(OP_DATTR, atoi(sym)); else
-        if (stricmp(cmd, "attrib") == 0) set_op(OP_ATTR, atoi(sym)); else
-        if (stricmp(cmd, "iattrib") == 0) set_op(OP_IATTR, atoi(sym)); else
-        if (stricmp(cmd, "dattrib") == 0) set_op(OP_DATTR, atoi(sym)); else
-        if (stricmp(cmd, "color") == 0) set_op(OP_ATTR, atoi(sym)); else
-        if (stricmp(cmd, "ext") == 0) set_op(OP_EXT, atoi(sym)); else
-        if (stricmp(cmd, "border") == 0) set_eop(atoi(sym), 7); else
-        if (stricmp(cmd, "cls") == 0) set_eop(atoi(sym)+8, 10); else
-        if (stricmp(cmd, "go") == 0) set_opgo(atoi(sym)); else
-        if (stricmp(cmd, "goto") == 0) set_opgo(atoi(sym)); else
+        if (op[i] == ':')
         {
-            printf("Syntax error: unknown operation \"%s\", line %d\n", cmd, line);
-            exit(-1);
-        }                
+            sym = op+i+1;
+    
+            if (stricmp(cmd, "has") == 0) set_op(OP_HAS, get_symbol_id(sym)); else
+            if (stricmp(cmd, "need") == 0) set_op(OP_HAS, get_symbol_id(sym)); else
+            if (stricmp(cmd, "not") == 0) set_op(OP_NOT, get_symbol_id(sym)); else
+            if (stricmp(cmd, "set") == 0) set_op(OP_SET, get_symbol_id(sym)); else
+            if (stricmp(cmd, "clear") == 0) set_op(OP_CLR, get_symbol_id(sym)); else
+            if (stricmp(cmd, "clr") == 0) set_op(OP_CLR, get_symbol_id(sym)); else
+            if (stricmp(cmd, "toggle") == 0) set_op(OP_XOR, get_symbol_id(sym)); else
+            if (stricmp(cmd, "xor") == 0) set_op(OP_XOR, get_symbol_id(sym)); else
+            if (stricmp(cmd, "flip") == 0) set_op(OP_XOR, get_symbol_id(sym)); else
+            if (stricmp(cmd, "random") == 0) set_op(OP_RND, atoi(sym)); else
+            if (stricmp(cmd, "rand") == 0) set_op(OP_RND, atoi(sym)); else
+            if (stricmp(cmd, "rnd") == 0) set_op(OP_RND, atoi(sym)); else
+            if (stricmp(cmd, "attr") == 0) set_op(OP_ATTR, atoi(sym)); else
+            if (stricmp(cmd, "iattr") == 0) set_op(OP_IATTR, atoi(sym)); else
+            if (stricmp(cmd, "dattr") == 0) set_op(OP_DATTR, atoi(sym)); else
+            if (stricmp(cmd, "attrib") == 0) set_op(OP_ATTR, atoi(sym)); else
+            if (stricmp(cmd, "iattrib") == 0) set_op(OP_IATTR, atoi(sym)); else
+            if (stricmp(cmd, "dattrib") == 0) set_op(OP_DATTR, atoi(sym)); else
+            if (stricmp(cmd, "color") == 0) set_op(OP_ATTR, atoi(sym)); else
+            if (stricmp(cmd, "ext") == 0) set_op(OP_EXT, atoi(sym)); else
+            if (stricmp(cmd, "border") == 0) set_eop(atoi(sym), 7); else
+            if (stricmp(cmd, "cls") == 0) set_eop(atoi(sym)+8, 10); else
+            if (stricmp(cmd, "go") == 0) set_opgo(atoi(sym)); else
+            if (stricmp(cmd, "goto") == 0) set_opgo(atoi(sym)); else
+            {
+                printf("Syntax error: unknown operation \"%s\", line %d\n", cmd, line);
+                exit(-1);
+            }                
+        }
+        else
+        {
+            int first = get_number_id(cmd);
+            // numeric op <,>,<=,>=,==,!=,=,+,-
+            int v = 0;
+            if (op[i] == '<' && op[i+1] != '=') v = OP_LT;
+            if (op[i] == '<' && op[i+1] == '=') v = OP_LTE;
+            if (op[i] == '>' && op[i+1] != '=') v = OP_GT;
+            if (op[i] == '>' && op[i+1] == '=') v = OP_GTE;
+            if (op[i] == '=' && op[i+1] != '=') v = OP_ASSIGN;
+            if (op[i] == '=' && op[i+1] == '=') v = OP_EQ;
+            if (op[i] == '!' && op[i+1] == '=') v = OP_IEQ;
+            if (op[i] == '+' && op[i+1] != '=') v = OP_ADD;
+            if (op[i] == '-' && op[i+1] != '=') v = OP_SUB;
+            if (v == 0)
+            {
+                printf("Parse error near \"%s\" (\"%s\"), line %d\n", op+i, op, line);
+                exit(-1);
+            }
+            sym = op + i + 1;
+            if (op[i+1] == '=') sym++;
+            int second = 0;
+            if (is_numeric(sym)) 
+            {   
+                v++;
+                second = atoi(sym);
+            }
+            else
+            {
+                second = get_number_id(sym);
+            }
+            set_number_op(v, first, second);
+        }
     }
 }
 
@@ -1045,6 +1200,16 @@ void report()
         printf("%5d %4d \"%s\"\n", i, symbol[i].hits, symbol[i].name);
     }
 
+    if (numbers)
+    {
+	    printf("\n");
+        printf("Token Hits Number\n");
+        for (i = 0; i < numbers; i++)
+        {
+            printf("%5d %4d \"%s\"\n", i, number[i].hits, number[i].name);
+        }
+    }
+
     if (images)
     {
 	    printf("\n");
@@ -1266,12 +1431,6 @@ void process_codes(char *path)
 
 void output(char *aFilename)
 {
-    if (outlen > DATA_AREA_SIZE)
-    {
-        printf("Total output size too large (%d bytes max, %d found)\n", DATA_AREA_SIZE, outlen);
-        exit(-1);
-    }
-
     FILE * f = fopen(aFilename, "wb");
     if (!f)
     {
@@ -1728,6 +1887,38 @@ void process_rooms()
     delete[] compression_results;
 }
 
+void sanity()
+{
+    int i, j;
+    for (i = 0; i < symbols; i++)
+    {
+        for (j = 0; j < numbers; j++)
+        {
+            if (stricmp(symbol[i].name, number[j].name) == 0)
+            {
+                printf("Warning: Symbol \"%s\" used both as a flag and a number. This probably isn't what you wanted.\n", symbol[i].name);
+            }
+        }
+    }
+
+    if (symbols > MAX_SYMBOLS)
+    {
+        printf("Too many symbols in use (%d > %d)\n", symbols, MAX_SYMBOLS);
+        exit(-1);
+    }
+    
+    if (numbers > MAX_NUMBERS)
+    {
+        printf("Too many numeric variables in use (%d > %d)\n", numbers, MAX_NUMBERS);
+        exit(-1);
+    }
+
+    if (outlen > DATA_AREA_SIZE)
+    {
+        printf("Total output size too large (%d bytes max, %d found)\n", DATA_AREA_SIZE, outlen);
+        exit(-1);
+    }
+}
 
 int main(int parc, char **pars)
 {    
@@ -1853,6 +2044,7 @@ int main(int parc, char **pars)
     output_trainer();
     if (!quiet)
         report();
+    sanity();
     output(pars[outfile]);
 
     
