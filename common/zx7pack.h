@@ -139,7 +139,10 @@ public:
         }
     
         /* save time by releasing the largest block only, the O.S. will clean everything else later */
+        free(matches);
         free(match_slots);
+        free(min);
+        free(max);
     
         return optimal;
     }
