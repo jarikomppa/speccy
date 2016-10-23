@@ -11,6 +11,34 @@
 
 #define DATA_AREA_SIZE 29952
 
+/*
+a>b
+a<b
+a<=b
+a>=b
+a!=b
+a=b
+a+b
+a-b
+a==b
+*/
+
+enum opcodeval
+{
+    OP_HAS,
+    OP_NOT,
+    OP_SET,
+    OP_CLR,
+    OP_XOR,
+    OP_RND,
+    OP_ATTR,
+    OP_EXT,
+    OP_IATTR,
+    OP_DATTR,
+    OP_GO
+};
+
+
 const unsigned char divider_pattern[8] = 
 { 
     0x00, 
@@ -78,6 +106,7 @@ int quiet = 0;
 
 unsigned char commandbuffer[1024];
 int commandptr = 0;
+int commandptropofs = 0;
 
 int line = 0;
 int image_id_start = 0;
@@ -213,6 +242,58 @@ void token(int n, char *src, char *dst)
     *dst = 0;
 }
 
+
+int get_symbol_id(char * s)
+{
+    int i;
+    for (i = 0; i < symbols; i++)
+    {
+        if (stricmp(symbol[i].name, s) == 0)
+        {
+            symbol[i].hits++;
+            return i;
+        }
+    }
+    symbol[symbols].name = strdup(s);
+    symbol[symbols].hits = 1;
+    symbols++;
+    return symbols-1;            
+}
+
+int get_image_id(char * s)
+{
+    int i;
+    for (i = 0; i < images; i++)
+    {
+        if (stricmp(image[i].name, s) == 0)
+        {
+            image[i].hits++;
+            return i + image_id_start;
+        }
+    }
+    image[images].name = strdup(s);
+    image[images].hits = 1;
+    images++;
+    return images - 1 + image_id_start;            
+}
+
+int get_code_id(char * s)
+{
+    int i;
+    for (i = 0; i < codes; i++)
+    {
+        if (stricmp(code[i].name, s) == 0)
+        {
+            code[i].hits++;
+            return i + code_id_start;
+        }
+    }
+    code[codes].name = strdup(s);
+    code[codes].hits = 1;
+    codes++;
+    return codes - 1 + code_id_start;            
+}
+
 ZX7Pack pack;
 
 int roomno = 0;
@@ -273,11 +354,16 @@ void flush_cmd()
 {
     if (commandptr)
     {
-        if (verbose)printf("  Command buffer '%c' with %d bytes payload (about %d ops)\n", 
+        int ops = (commandptr-commandptropofs) / 3;
+        if (verbose) 
+        {
+            printf("  Command buffer '%c' (%d bytes) with %d bytes payload (%d ops)\n", 
             commandbuffer[0], 
-            commandptr-1, 
-            (commandptr-1) / 3);
-            
+            commandptropofs,
+            commandptr-commandptropofs, 
+            ops);
+        }
+                
         if (commandptr > 255)
         {
             printf("Syntax error - too many operations on one statement, line %d\n", line);
@@ -320,71 +406,6 @@ void store_section(int section, int param, int param2)
     commandbuffer[commandptr] = param2 >> 8; commandptr++;
 }
 
-int get_symbol_id(char * s)
-{
-    int i;
-    for (i = 0; i < symbols; i++)
-    {
-        if (stricmp(symbol[i].name, s) == 0)
-        {
-            symbol[i].hits++;
-            return i;
-        }
-    }
-    symbol[symbols].name = strdup(s);
-    symbol[symbols].hits = 1;
-    symbols++;
-    return symbols-1;            
-}
-
-int get_image_id(char * s)
-{
-    int i;
-    for (i = 0; i < images; i++)
-    {
-        if (stricmp(image[i].name, s) == 0)
-        {
-            image[i].hits++;
-            return i + image_id_start;
-        }
-    }
-    image[images].name = strdup(s);
-    image[images].hits = 1;
-    images++;
-    return images - 1 + image_id_start;            
-}
-
-int get_code_id(char * s)
-{
-    int i;
-    for (i = 0; i < codes; i++)
-    {
-        if (stricmp(code[i].name, s) == 0)
-        {
-            code[i].hits++;
-            return i + code_id_start;
-        }
-    }
-    code[codes].name = strdup(s);
-    code[codes].hits = 1;
-    codes++;
-    return codes - 1 + code_id_start;            
-}
-
-enum opcodeval
-{
-    OP_HAS,
-    OP_NOT,
-    OP_SET,
-    OP_CLR,
-    OP_XOR,
-    OP_RND,
-    OP_ATTR,
-    OP_EXT,
-    OP_IATTR,
-    OP_DATTR
-};
-
 void set_op(int opcode, int value)
 {
     if (value > 255)
@@ -408,6 +429,16 @@ void set_op(int opcode, int value)
     }
     if (verbose) printf("\n");
     store_cmd(opcode, value);
+}
+
+void set_opgo(int value)
+{
+    if (value >= rooms)
+    {
+        printf("Invalid GO parameter: symbol \"%s\" is not a room, line %d\n", line);
+        exit(-1);
+    }
+    set_op(OP_GO, value);
 }
 
 void set_eop(int value, int maxvalue)
@@ -495,8 +526,8 @@ void parse_op(char *op)
         if (stricmp(cmd, "ext") == 0) set_op(OP_EXT, atoi(sym)); else
         if (stricmp(cmd, "border") == 0) set_eop(atoi(sym), 7); else
         if (stricmp(cmd, "cls") == 0) set_eop(atoi(sym)+8, 10); else
-        if (stricmp(cmd, "sound") == 0) set_eop(atoi(sym)+100, 155); else
-        if (stricmp(cmd, "beep") == 0) set_eop(atoi(sym)+100, 155); else
+        if (stricmp(cmd, "go") == 0) set_opgo(atoi(sym)); else
+        if (stricmp(cmd, "goto") == 0) set_opgo(atoi(sym)); else
         {
             printf("Syntax error: unknown operation \"%s\", line %d\n", cmd, line);
             exit(-1);
@@ -509,7 +540,7 @@ int previous_section = 0;
 void parse()
 {
     // parse statement
-    int first_token = 1;
+    commandptropofs = 1;
     int i;
     char t[256];
     switch (scratch[1])
@@ -518,7 +549,7 @@ void parse()
         flush_room(); // flush previous room
         token(1, scratch, t);
         i = get_symbol_id(t);
-        first_token = 2;      
+        commandptropofs = 2;      
         store_section('Q', i);  
         if (verbose) printf("Room: \"%s\" (%d)\n", t, i);
         previous_section = 'Q';
@@ -526,7 +557,7 @@ void parse()
     case 'A':
         token(1, scratch, t);
         i = get_symbol_id(t);
-        first_token = 2;      
+        commandptropofs = 2;      
         store_section('A', i);          
         if (verbose) printf("Choice: %s (%d)\n", t, i);
         previous_section = 'Q';
@@ -557,7 +588,7 @@ void parse()
             exit(-1);
         }
         token(1, scratch, t);
-        first_token = 2;   
+        commandptropofs = 2;   
         store_section('I', get_image_id(t));
         if (verbose) printf("Image: \"%s\"\n", t);
         previous_section = 'I';
@@ -571,7 +602,7 @@ void parse()
         token(2, scratch, t);
         i = strtol(t, 0, 0);
         token(1, scratch, t);
-        first_token = 3;   
+        commandptropofs = 3;   
         store_section('C', get_code_id(t), i);
         if (verbose) printf("Code: \"%s\", %d\n", t, i);
         previous_section = 'C';
@@ -581,7 +612,7 @@ void parse()
         exit(-1);            
     }
     
-    i = first_token;    
+    i = commandptropofs;    
     do
     {
         token(i, scratch, t);
