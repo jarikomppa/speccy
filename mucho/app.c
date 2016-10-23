@@ -382,10 +382,11 @@ void render_room(unsigned short room_id)
         switch (dataptr[1])
         {
             case 'Q': 
-                if (!output_enable) // the next room
+                if (q) // the next room
                 {
                     return;
                 }
+                q = 1;
                 if (p) 
                 {
                     exec(dataptr); 
