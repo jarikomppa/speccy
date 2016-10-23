@@ -198,6 +198,11 @@ void putstring(char *d)
     putbyte(strlen((const char*)d));
     while (*d)
     {
+        if (*d < 32 || *d > 126)
+        {
+            printf("Invalid character \"%c\" found near line %d\n", *d, line);
+            exit(-1);
+        }
         putbyte(*d);
         d++;
     }
@@ -822,7 +827,7 @@ void process()
             temp[c] = *s;
             c++;
             width += propfont_width[*s-32];
-            if (width > 255)
+            if (width > 248)
             {
                 c--;
                 s--;
