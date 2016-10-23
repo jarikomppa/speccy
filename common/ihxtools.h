@@ -1,6 +1,6 @@
 
 // Presumes aDst to point at a 64k buffer
-int decode_ihx(unsigned char *aSrc, int aLen, unsigned char *aDst, int &aStartAddr, int &aEndAddr)
+int decode_ihx(unsigned char *aSrc, int aLen, unsigned char *aDst, int &aStartAddr, int &aEndAddr, int aFatal = 1)
 {
     int start = 0x10000;
     int end = 0;
@@ -14,6 +14,8 @@ int decode_ihx(unsigned char *aSrc, int aLen, unsigned char *aDst, int &aStartAd
         char tmp[128];
         if (aSrc[idx] != ':')
         {
+            if (!aFatal)
+                return 0;
             printf("decode_ihx: Parse error near line %d? (previous chars:\"%c%c%c%c%c%c\")\n", line,
                 (idx<5)?'?':(aSrc[idx-5]<32)?'?':aSrc[idx-5],
                 (idx<4)?'?':(aSrc[idx-4]<32)?'?':aSrc[idx-4],
@@ -52,6 +54,8 @@ int decode_ihx(unsigned char *aSrc, int aLen, unsigned char *aDst, int &aStartAd
                 done = 1;
                 break;
             default:
+                if (!aFatal)
+                    return 0;
                 printf("decode_ihx: Unsupported record type %d\n", recordtype);
                 exit(-1);
                 break;
@@ -79,6 +83,8 @@ int decode_ihx(unsigned char *aSrc, int aLen, unsigned char *aDst, int &aStartAd
         sum = (sum ^ 0xff) + 1;
         if (checksum != (sum & 0xff))
         {
+            if (!aFatal)
+                return 0;
             printf("decode_ihx: Checksum failure %02x, expected %02x\n", sum & 0xff, checksum);
             exit(-1);
         }
