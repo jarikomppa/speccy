@@ -700,9 +700,19 @@ void parse_op(char *op)
 }
 
 int previous_section = 0;
+int previous_stringlits = 0;
 
 void parse()
 {
+    if (previous_section == 'A' && previous_stringlits != 1)
+    {
+        printf("Statement A must have exactly one line of printable text (%d found)\n"
+               "(Multiple lines may be caused by word wrapping; see verbose output\n"
+               "to see what's going on), near line %d\n", previous_stringlits, line);
+               exit(-1);
+    }
+    previous_stringlits = 0;
+    
     // parse statement
     commandptropofs = 1;
     int i;
@@ -724,7 +734,7 @@ void parse()
         commandptropofs = 2;      
         store_section('A', i);          
         if (verbose) printf("Choice: %s (%d)\n", t, i);
-        previous_section = 'Q';
+        previous_section = 'A';
         break;
     case 'P':
         if (previous_section == 'A')
@@ -791,6 +801,7 @@ void store(char *lit)
     flush_cmd();
     putstring(lit);
     if (verbose) printf("  lit %d: \"%s\"\n", lits++, lit);
+    previous_stringlits++;
 }
 
 void process()
@@ -811,7 +822,7 @@ void process()
             temp[c] = *s;
             c++;
             width += propfont_width[*s-32];
-            if (width > 240)
+            if (width > 255)
             {
                 c--;
                 s--;
