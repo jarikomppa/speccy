@@ -1142,8 +1142,11 @@ void patch_ihx(char *path)
         char temp[1024];
         strcpy(temp, path);
         char *d = strrchr(temp, '\\');
+        if (d)
+        {
         strcpy(d+1, "crt0.ihx");
         f = fopen(temp, "rb");
+    }
     }
     if (!f)
     {
