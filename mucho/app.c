@@ -25,7 +25,6 @@
 
 //extern void zx7_unpack(unsigned char *src, unsigned char *dst) __z88dk_callee __z88dk_fastcall;
 extern void zx7_unpack(unsigned char *src)  __z88dk_fastcall;
-extern void playfx(unsigned short fx) __z88dk_fastcall;  
 
 #define KEY_PRESSED_UP (KEYDOWN(9) || KEYDOWN(Q) || KEYDOWN(W) || KEYDOWN(E) || KEYDOWN(R) || KEYDOWN(T) || KEYDOWN(Y) || KEYDOWN(U) || KEYDOWN(I) || KEYDOWN(O) || KEYDOWN(P))
 #define KEY_PRESSED_DOWN (KEYDOWN(8) || KEYDOWN(A) || KEYDOWN(S) || KEYDOWN(D) || KEYDOWN(F) || KEYDOWN(G) || KEYDOWN(H) || KEYDOWN(J) || KEYDOWN(K) || KEYDOWN(L))
@@ -149,10 +148,6 @@ void set_ext(unsigned short id)
     if (id == 10)
     {
         clearbottom();
-    }
-    if (id >= 100 && id <= 155)
-    {
-        playfx(id-100);
     }
 }
 
