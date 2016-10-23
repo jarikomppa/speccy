@@ -51,6 +51,7 @@ struct RoomBuf
 
 int pagedata = 0;
 int imgdata = 0;
+int codedata = 0;
 int trainers = 0;
 #define MAX_TRAINER (1024)
 unsigned char trainer[MAX_TRAINER];
@@ -60,6 +61,8 @@ int symbols = 0;
 Symbol symbol[MAX_SYMBOLS];
 int images = 0;
 Symbol image[MAX_SYMBOLS];
+int codes = 0;
+Symbol code[MAX_SYMBOLS];
 
 #define MAX_ROOMS 1024
 int rooms = 0;
@@ -78,6 +81,7 @@ int commandptr = 0;
 
 int line = 0;
 int image_id_start = 0;
+int code_id_start = 0;
 
 char outbuf[1024*1024];
 int outlen = 0;
@@ -305,6 +309,17 @@ void store_section(int section, int param)
     store_cmd(section, param);
 }
 
+void store_section(int section, int param, int param2)
+{
+    flush_cmd();
+    flush_sect();
+    commandbuffer[commandptr] = section; commandptr++;
+    commandbuffer[commandptr] = param & 0xff; commandptr++;
+    commandbuffer[commandptr] = param >> 8; commandptr++;
+    commandbuffer[commandptr] = param2 & 0xff; commandptr++;
+    commandbuffer[commandptr] = param2 >> 8; commandptr++;
+}
+
 int get_symbol_id(char * s)
 {
     int i;
@@ -337,6 +352,23 @@ int get_image_id(char * s)
     image[images].hits = 1;
     images++;
     return images - 1 + image_id_start;            
+}
+
+int get_code_id(char * s)
+{
+    int i;
+    for (i = 0; i < codes; i++)
+    {
+        if (stricmp(code[i].name, s) == 0)
+        {
+            code[i].hits++;
+            return i + code_id_start;
+        }
+    }
+    code[codes].name = strdup(s);
+    code[codes].hits = 1;
+    codes++;
+    return codes - 1 + code_id_start;            
 }
 
 enum opcodeval
@@ -526,9 +558,23 @@ void parse()
         }
         token(1, scratch, t);
         first_token = 2;   
-        store_section('I', get_image_id(t)); // TODO: store images & image id:s     
+        store_section('I', get_image_id(t));
         if (verbose) printf("Image: \"%s\"\n", t);
         previous_section = 'I';
+        break;
+    case 'C':
+        if (previous_section == 'A')
+        {
+            printf("Syntax error - statement C may not be included in statement A, line %d\n", line);
+            exit(-1);
+        }
+        token(2, scratch, t);
+        i = strtol(t, 0, 0);
+        token(1, scratch, t);
+        first_token = 3;   
+        store_section('C', get_code_id(t), i);
+        if (verbose) printf("Code: \"%s\", %d\n", t, i);
+        previous_section = 'C';
         break;
     default:
         printf("Syntax error: unknown statement \"%s\", line %d\n", scratch, line);
@@ -913,6 +959,12 @@ void scan_first_pass(char *aFilename)
         printf("File \"%s\" not found.\n", aFilename);
         exit(-1);
     }
+    
+    // Register beepfx as a possible code block. 
+    // Won't be stored if not actually in use.
+    int i;
+    i = get_code_id("beepfx.ihx");
+    code[i].hits--;
 	
     while (!feof(f))
     {
@@ -923,7 +975,6 @@ void scan_first_pass(char *aFilename)
             token(1, scratch, t);
             if (scratch[1] == 'Q')
             {
-                int i;
                 i = get_symbol_id(t);
                 if (symbol[i].hits > 1)
                 {
@@ -934,9 +985,13 @@ void scan_first_pass(char *aFilename)
             }
             if (scratch[1] == 'I')
             {
-                int i;
                 i = get_image_id(t);
                 image[i].hits--; // clear the hit, as it'll be scanned again
+            }
+            if (scratch[1] == 'C')
+            {
+                i = get_code_id(t);
+                code[i].hits--; // clear the hit, as it'll be scanned again
             }
         }
         else
@@ -961,12 +1016,24 @@ void report()
 
     if (images)
     {
+	    printf("\n");
         printf("Token Hits Image\n");
         for (i = 0; i < images; i++)
         {
             printf("%5d %4d \"%s\"\n", i, image[i].hits, image[i].name);
         }
     }
+
+    if (codes > 1 || (codes == 1 && code[0].hits > 0))
+    {
+	    printf("\n");
+        printf("Token Hits Code\n");
+        for (i = 0; i < codes; i++)
+        {
+            printf("%5d %4d \"%s\"\n", i, code[i].hits, code[i].name);
+        }
+    }
+
     //      123456789012345678901234567890123456789012345678901234567890
     printf("\n");
     printf("Memory map:\n\n");
@@ -977,6 +1044,8 @@ void report()
         o += printf("P");
     for (i = 0; i < imgdata / 512; i++)
         o += printf("I");
+    for (i = 0; i < codedata / 512; i++)
+        o += printf("C");
     for (i = o; i < 29*2-(trainers/512); i++)
         o += printf(".");
     for (i = o; i < 29*2; i++)
@@ -984,6 +1053,7 @@ void report()
     printf("\n\n");
     printf("Page data : %5d bytes\n", pagedata);
     printf("Image data: %5d bytes\n", imgdata);
+    printf("Code data : %5d bytes\n", codedata);
     printf("Free      : %5d bytes\n", DATA_AREA_SIZE - trainers - pagedata - imgdata);
     printf("Trainer   : %5d bytes (used to improve compression by \"training\" it)\n", trainers);
         
@@ -1083,6 +1153,86 @@ void process_images()
     }
 }
 
+void process_codes(char *path)
+{
+    int i;
+    for (i = 0; i < codes; i++)
+    {
+        if (code[i].hits > 0)
+        {
+            FILE * f;
+            
+            f = fopen(code[i].name, "rb");
+            if (!f)
+            {
+                char temp[1024];
+                strcpy(temp, path);
+                char *d = strrchr(temp, '\\');
+                if (d)
+                {
+                    strcpy(d+1, code[i].name);
+                    f = fopen(temp, "rb");
+                }
+            }
+            if (!f)
+            {
+                printf("Code \"%s\" not found", code[i].name);
+                exit(-1);
+            }
+            fseek(f,0,SEEK_END);
+            int len = ftell(f);
+            fseek(f,0,SEEK_SET);
+            unsigned char *ihx = new unsigned char[len+1];
+            fread(ihx, 1, len, f);
+            fclose(f);
+            
+            unsigned char codebuf[65536];
+            int start, end;
+            int l = decode_ihx(ihx, len, codebuf, start, end, 0);
+            if (l == 0)
+            {
+                if (!quiet)
+                {
+                    printf("Couldn't decode \"%s\" as .ihx, assuming binary\n");
+                }
+                start = 0xd000;
+                end = start + len;
+                l = len;
+                if (len < 4096)
+                    memcpy(codebuf+0xd000, ihx, len);
+            }
+            delete[] ihx;
+            
+            if (l > 4096 || start != 0xd000)
+            {
+                if (l > 4096)
+                {
+                    printf("Code %s data too large; max 4096 bytes, has %d bytes\n", code[i].name, l);
+                }
+                if (start != 0xd000)
+                {
+                    printf("Code %s start address not 0xd000; 0x%04x found\n", code[i].name, start);
+                }
+                exit(-1);
+            }
+    
+    
+            datalen = 0;
+            int j;
+            for (j = 0; j < l; j++)
+                putbyte(codebuf[0xd000 + j]);
+    
+            pack.mMax = 0;
+            pack.pack((unsigned char*)&databuf[0], datalen);
+            patchword(0x5b00 + outlen, i + code_id_start);        
+    
+            if (!quiet)
+                printf("%30s zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", code[i].name, datalen, pack.mMax, (pack.mMax*100.0f)/datalen, 0x5b00+outlen);
+            outdata(pack.mPackedData, pack.mMax);            
+        }
+    }
+}
+
 void output(char *aFilename)
 {
     if (outlen > DATA_AREA_SIZE)
@@ -1144,9 +1294,9 @@ void patch_ihx(char *path)
         char *d = strrchr(temp, '\\');
         if (d)
         {
-        strcpy(d+1, "crt0.ihx");
-        f = fopen(temp, "rb");
-    }
+            strcpy(d+1, "crt0.ihx");
+            f = fopen(temp, "rb");
+        }
     }
     if (!f)
     {
@@ -1163,6 +1313,7 @@ void patch_ihx(char *path)
     unsigned char codebuf[65536];
     int start, end;
     decode_ihx(ihx, len, codebuf, start, end);
+    delete[] ihx;
     
     int ofs = find_data(codebuf, start, builtin_data, 94*8);
     patch_data(codebuf, ofs, propfont_data, 94*8);
@@ -1373,7 +1524,7 @@ void process_rooms()
 }
 */
 
-
+/*
 int biggest_unused_room()
 {
     int i;
@@ -1392,6 +1543,7 @@ int biggest_unused_room()
     }    
     return bigidx;
 }
+*/
 
 float *compression_results;
 
@@ -1657,13 +1809,16 @@ int main(int parc, char **pars)
     packbufofs = trainers;
     datalen = 0;
     image_id_start = symbols + 1;
-    outlen = symbols * 2 + images * 2 + 2;
+    code_id_start = symbols + images + 1;
+    outlen = symbols * 2 + images * 2 + codes * 2 + 2;
     line = 0;    
     scan(pars[infile]);
     process_rooms();
     pagedata = outlen;
     process_images();
     imgdata = outlen - pagedata;
+    process_codes(pars[0]);
+    codedata = outlen - pagedata - imgdata;
     output_trainer();
     if (!quiet)
         report();
