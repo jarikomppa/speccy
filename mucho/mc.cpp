@@ -1396,7 +1396,7 @@ int best_compressible_room()
 {
     int i, j;
     int idx = -1;
-    float ratio = 1;
+    float ratio = 1000;
     for (i = 0; i < rooms; i++)
     {
         if (room[i].used == 0)
@@ -1466,10 +1466,10 @@ void process_rooms()
     do 
     {
         minidx = -1;
-        float minvalue = 1;
+        float minvalue = 1000;
         for (j = 0; j < rooms; j++)
         {
-            if (idx != j && !room[j].used)
+            if (idx != j && room[j].used == 0)
             {
                 int total = room[idx].len+room[j].len;
                 if (total > 4096)
@@ -1524,14 +1524,19 @@ void process_rooms()
             patchword(0x5b00 + outlen, minidx); // N rooms will have same offset
         }
     } while (minidx != -1);
+    
     flush_packbuf();
+    int panic = 0;
     for (j = 0; j < rooms; j++)
     {
         if (room[j].used == 0)
         {
-            printf("ERROR Room %s didn't compress with anything\n", room[j].name);
+            printf("ERROR Room \"%s\" didn't compress with anything\n", room[j].name);
+            panic = 1;
         }
     }
+    if (panic)
+        exit(-1);
 
     printf("\n");
     delete[] compression_results;
