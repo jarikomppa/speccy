@@ -34,17 +34,44 @@ enum opcodeval
 {
     OP_HAS,
     OP_NOT,
+    
     OP_SET,
     OP_CLR,
     OP_XOR,
+
     OP_RND,
+
     OP_ATTR,
     OP_EXT,
     OP_IATTR,
-    OP_DATTR
+    OP_DATTR,
+
+    OP_GO,
+    OP_GOSUB,
+    
+    OP_GT,
+    OP_GTC,
+    OP_LT,
+    OP_LTC,
+    OP_GTE,
+    OP_GTEC,
+    OP_LTE,
+    OP_LTEC,
+    OP_EQ,
+    OP_EQC,
+    OP_IEQ,
+    OP_IEQC,
+    
+    OP_ASSIGN,
+    OP_ASSIGNC,
+    OP_ADD,
+    OP_ADDC,
+    OP_SUB,
+    OP_SUBC    
 };
 
 unsigned char state[256]; // game state
+unsigned char number[16]; // number store
 unsigned char y8; // prg state
 unsigned char *answer[16];
 unsigned char answers;
@@ -111,9 +138,9 @@ unsigned char * unpack_resource(unsigned short id)
     for (v = 0; v < 4096; v++)
         *((unsigned char*)0xd000 + v) = 0;
 
-    v = (((unsigned short)*(unsigned char*)(0x5b00 + id*2+1)) << 8) | *(unsigned char*)(0x5b00 + id*2);
-    zx7_unpack((unsigned char*)v);
-    
+    v = *((unsigned short*)(unsigned char*)(0x5b00 + id * 2));
+
+    zx7_unpack((unsigned char*)v);    
 
     return (unsigned char*)0xd000;
 }
@@ -169,12 +196,16 @@ void exec(unsigned char *dataptr)
             dataptr += 1+1; 
             c -= 1; 
             break;
+        case 'C':
+            dataptr += 1+1+2+2;
+            c -= 5;
+            break;
     }
     
     while (c)
     {
         // ignore predicate ops
-        unsigned short id = ((unsigned short)dataptr[2] << 8) | dataptr[1];
+        unsigned short id = *((unsigned short*)&dataptr[1]);
         switch (*dataptr)
         {
             case OP_SET:
@@ -199,6 +230,24 @@ void exec(unsigned char *dataptr)
                 break;                
             case OP_EXT:
                 set_ext(id);
+                break;                
+            case OP_ASSIGN:
+                number[dataptr[1]] = number[dataptr[2]];
+                break;
+            case OP_ASSIGNC:
+                number[dataptr[1]] = dataptr[2];
+                break;
+            case OP_ADD:
+                number[dataptr[1]] += number[dataptr[2]];
+                break;
+            case OP_ADDC:
+                number[dataptr[1]] += dataptr[2];
+                break;
+            case OP_SUB:
+                number[dataptr[1]] -= number[dataptr[2]];
+                break;
+            case OP_SUBC:    
+                number[dataptr[1]] -= dataptr[2];
                 break;
         }
         dataptr += 3;
@@ -223,24 +272,36 @@ unsigned char pred(unsigned char *dataptr)
             dataptr += 1+1; 
             c -= 1; 
             break;
+        case 'C':
+            dataptr += 1+1+2+2;
+            c -= 5;
+            break;
     }
     
     while (c)
     {
         // ignore exec ops
-        unsigned short id = ((unsigned short)dataptr[2] << 8) | dataptr[1];
-        
+        unsigned short id = *((unsigned short*)&dataptr[1]);
+        unsigned char first = number[dataptr[1]];
+        unsigned char secondc = dataptr[2];
+        unsigned char second = number[secondc];
         switch (*dataptr)
         {
-            case OP_HAS:
-                if (!get_bit(id)) ret = 0;
-                break;
-            case OP_NOT:
-                if (get_bit(id)) ret = 0;
-                break;
-            case OP_RND:
-                if (xorshift8() > id) ret = 0;
-                break;
+            case OP_HAS: if (!get_bit(id))        ret = 0; break;
+            case OP_NOT: if ( get_bit(id))        ret = 0; break;
+            case OP_RND: if (xorshift8() > id)    ret = 0; break;
+            case OP_GT:  if (!(first >  second))  ret = 0; break;
+            case OP_GTC: if (!(first >  secondc)) ret = 0; break;
+            case OP_LT:  if (!(first <  second))  ret = 0; break;
+            case OP_LTC: if (!(first <  secondc)) ret = 0; break;
+            case OP_GTE: if (!(first >= second))  ret = 0; break;
+            case OP_GTEC:if (!(first >= secondc)) ret = 0; break;
+            case OP_LTE: if (!(first <= second))  ret = 0; break;
+            case OP_LTEC:if (!(first <= secondc)) ret = 0; break;
+            case OP_EQ:  if (!(first == second))  ret = 0; break;
+            case OP_EQC: if (!(first == secondc)) ret = 0; break;
+            case OP_IEQ: if (!(first != second))  ret = 0; break;
+            case OP_IEQC:if (!(first != secondc)) ret = 0; break;
         }
         
         dataptr += 3;
@@ -287,10 +348,26 @@ void hitkeytocontinue()
     clearbottom();
 }
 
+unsigned short hlreg;
+
+void codeblock(unsigned char *dataptr)
+{
+    unsigned short id = *((unsigned short*)&dataptr[2]);
+    hlreg = *((unsigned short*)&dataptr[4]);
+    unpack_resource(id);
+    //*((unsigned short*)(((char*)&codeblock) + 0x35)) = hlreg;
+    asmstuff:
+    __asm
+        push hl
+        ld hl, (#_hlreg)
+        call #0xd000
+        pop hl
+    __endasm;
+}
 
 void image(unsigned char *dataptr, unsigned char *aYOfs)
 {
-    unsigned short id = ((unsigned short)dataptr[3] << 8) | dataptr[2];
+    unsigned short id = *((unsigned short*)&dataptr[2]);
     unsigned char * dst;
     unsigned short yp, ayp;
     unsigned char x, y, rows;
@@ -401,6 +478,14 @@ void render_room(unsigned short room_id)
                     unpack_resource(room_id); // re-load the room data
                 }
                 break;
+            case 'C': 
+                if (p)
+                {
+                    exec(dataptr);
+                    codeblock(dataptr); 
+                    unpack_resource(room_id); // re-load the room data
+                }
+                break;
             case 'O': 
                 if (p) 
                 {
@@ -452,6 +537,8 @@ void reset()
 
     for (i = 0; i < 256; i++)
         state[i] = 0;
+    for (i = 0; i < 16; i++)
+        number[i] = 0;
 
     attrib = 070;
     attrib_c = 077;
@@ -585,7 +672,7 @@ void main()
                 if (KEY_PRESSED_FIRE)
                 {
                     unsigned char *dataptr = answer[current_answer];
-                    unsigned short id = ((unsigned short)dataptr[3] << 8) | dataptr[2];
+                    unsigned short id = *((unsigned short*)&dataptr[2]);
                     while (KEY_PRESSED_FIRE)
                     {
                         readkeyboard();
