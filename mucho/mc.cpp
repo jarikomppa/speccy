@@ -1803,6 +1803,8 @@ int best_compressible_room()
 void process_rooms()
 {
     int j, idx;
+    if (!quiet)
+        printf("Compressing..\n");
     
     compression_results = new float[rooms*rooms];
     for (j = 0; j < rooms*rooms; j++)
@@ -1811,12 +1813,12 @@ void process_rooms()
     //int minidx = biggest_unused_room();    
     int minidx = best_compressible_room();
     idx = minidx;
-    room[minidx].used = 1;
-    patchword(0x5b00 + outlen, minidx);
-    memcpy(packbuf+packbufofs, room[minidx].data, room[minidx].len);
-    packbufofs += room[minidx].len;
-    printf("%s ", room[minidx].name);
-    totaldata = room[minidx].len;
+    room[idx].used = 1;
+    patchword(0x5b00 + outlen, idx);
+    memcpy(packbuf+packbufofs, room[idx].data, room[idx].len);
+    packbufofs += room[idx].len;
+    printf("%s ", room[idx].name);
+    totaldata = room[idx].len;
     do 
     {
         minidx = -1;
@@ -1826,14 +1828,10 @@ void process_rooms()
             if (idx != j && room[j].used == 0)
             {
                 int total = room[idx].len+room[j].len;
-                if (total > 4096)
-                {
-                    //printf("(too big)");
-                }
-                else
+                if (total < 4096)
                 {
                     float r;
-                    if (compression_results[idx*rooms+j] == 0)
+                    if (compression_results[idx * rooms + j] == 0)
                     {
                         char tempbuf[8192];
                         memcpy(tempbuf, room[idx].data, room[idx].len);
@@ -1842,11 +1840,11 @@ void process_rooms()
                         pack.pack((unsigned char*)&tempbuf[0], total);
                         //printf("ZX7: %4d bytes - %3.3f%%", pack.mMax, ((float)pack.mMax/total)*100);
                         r = ((float)pack.mMax / total);
-                        compression_results[idx*rooms+j] = r;
+                        compression_results[idx * rooms + j] = r;
                     }
                     else
                     {
-                        r = compression_results[idx*rooms+j];
+                        r = compression_results[idx * rooms + j];
                     }
                     if (minvalue > r)
                     {
@@ -1859,9 +1857,6 @@ void process_rooms()
         
         if (minidx != -1)
         {
-            printf("%s ", room[minidx].name);
-            room[minidx].used = 1;
-
             totaldata += room[minidx].len;
             if (totaldata > 4096)
             {
@@ -1870,6 +1865,8 @@ void process_rooms()
                 minidx = best_compressible_room();
                 totaldata = room[minidx].len;
             }
+            printf("%s ", room[minidx].name);
+            room[minidx].used = 1;
             idx = minidx;
             
             memcpy(packbuf+packbufofs, room[minidx].data, room[minidx].len);
