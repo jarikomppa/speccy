@@ -336,12 +336,41 @@ void image(unsigned char *dataptr, unsigned char *aYOfs)
     *aYOfs = yp;
 }
 
+unsigned char * find_room(unsigned short id)
+{
+    unsigned char * dataptr = (unsigned char*)0xd000;
+    unpack_resource(id);
+        /*
+        - code string
+        - 0..n strings
+        - 0        
+        */
+    while (1)
+    {
+        if (dataptr[1] == 'Q')
+        {
+            if (dataptr[2] == (id & 0xff) &&
+                dataptr[3] == (id >> 8))
+            {
+                return dataptr;
+            }
+        }
+        dataptr += *dataptr + 1;
+        while (*dataptr)
+        {
+            dataptr += *dataptr + 1;
+        }
+        dataptr++;
+    }
+}
+
 void render_room(unsigned short room_id)
 {
-    unsigned char *dataptr = unpack_resource(room_id);
+    unsigned char *dataptr = find_room(room_id);    
     unsigned char output_enable = 1;
     unsigned char yofs = 0;
     unsigned char p = 0;
+    unsigned char q = 0;
 
     SET_BIT(room_id);
 
