@@ -813,6 +813,8 @@ void process()
             width += propfont_width[*s-32];
             if (width > 240)
             {
+                c--;
+                s--;
                 while (temp[c] != ' ')
                 {
                     c--;
