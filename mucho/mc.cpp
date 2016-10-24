@@ -124,6 +124,8 @@ Symbol number[MAX_SYMBOLS];
 int rooms = 0;
 RoomBuf room[MAX_ROOMS];
 
+int max_room = 0;
+
 unsigned char *propfont_data = (unsigned char *)&builtin_data[0];
 unsigned char *propfont_width = (unsigned char *)&builtin_width[0];
 unsigned char *divider_data = (unsigned char*)&divider_pattern[0];
@@ -537,7 +539,7 @@ void set_number_op(int opcode, int value1, int value2)
 
 void set_opgo(int op, int value)
 {
-    if (value >= rooms)
+    if (value >= max_room)
     {
         printf("Invalid GO%s parameter: symbol \"%s\" is not a room, line %d\n", 
             op==OP_GOSUB?"SUB":"",
@@ -1213,6 +1215,7 @@ void scan_first_pass(char *aFilename)
 			wordcount(scratch);
         }
     }
+    max_room = symbols;
     fclose(f);
 }
 
