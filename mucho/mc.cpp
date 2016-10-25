@@ -1,3 +1,7 @@
+//#define DUMP_BINARY_BLOBS
+
+
+#define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,21 +13,12 @@
 #include "../common/stb_image.h"
 #include "../common/ihxtools.h"
 
+#define strdup _strdup
+#define stricmp _stricmp
+
 #define DATA_AREA_SIZE 29952
 #define MAX_SYMBOLS (8*256) // 2k symbols should be enough for everybody
 #define MAX_NUMBERS 16
-
-/*
-a>b
-a<b
-a<=b
-a>=b
-a==b
-a!=b
-a=b
-a+b
-a-b
-*/
 
 enum opcodeval
 {
@@ -66,7 +61,7 @@ enum opcodeval
 };
 
 
-const unsigned char divider_pattern[8] = 
+const unsigned char gDividerPattern[8] = 
 { 
     0x00, 
     0xC1, 
@@ -78,7 +73,7 @@ const unsigned char divider_pattern[8] =
     0x00  
 };
 
-const unsigned char selector_pattern[8] = 
+const unsigned char gSelectorPattern[8] = 
 { 
     0x00, 
     0x88, 
@@ -92,44 +87,62 @@ const unsigned char selector_pattern[8] =
 
 struct Symbol
 {
-    char * name;
-    int hits;
+    char *mName;
+    int mHits;
 };
 
 struct RoomBuf
 {
-    char *name;
-    unsigned char *data;
-    int len;
-    int used;
+    char *mName;
+    unsigned char *mData;
+    int mLen;
+    int mUsed;
 };
 
-int pagedata = 0;
-int imgdata = 0;
-int codedata = 0;
-int trainers = 0;
-#define MAX_TRAINER (1024)
-unsigned char trainer[MAX_TRAINER];
+struct Token
+{
+    char * mData;
+    int mHits;
+    int mHash;
 
-int symbols = 0;
-Symbol symbol[MAX_SYMBOLS*2];
-int images = 0;
-Symbol image[MAX_SYMBOLS];
-int codes = 0;
-Symbol code[MAX_SYMBOLS];
-int numbers =0;
-Symbol number[MAX_SYMBOLS];
+    int mUsed;
+
+    int mNexts;
+    int mNext[128];
+    int mNextHit[128];    
+};
+
+#define MAXTOKENS 1024
+Token gToken[MAXTOKENS];
+int gTokens = 0;
+int gPrevToken = -1;
+
+int gPageData = 0;
+int gImageData = 0;
+int gCodeData = 0;
+int gTrainers = 0;
+#define MAX_TRAINER (1024)
+unsigned char gTrainer[MAX_TRAINER];
+
+int gSymbols = 0;
+Symbol gSymbol[MAX_SYMBOLS*2];
+int gImages = 0;
+Symbol gImage[MAX_SYMBOLS];
+int gCodes = 0;
+Symbol gCode[MAX_SYMBOLS];
+int gNumbers =0;
+Symbol gNumber[MAX_SYMBOLS];
 
 #define MAX_ROOMS 1024
-int rooms = 0;
-RoomBuf room[MAX_ROOMS];
+int gRooms = 0;
+RoomBuf gRoom[MAX_ROOMS];
 
-int max_room = 0;
+int gMaxRoomSymbol = 0;
 
 unsigned char *propfont_data = (unsigned char *)&builtin_data[0];
 unsigned char *propfont_width = (unsigned char *)&builtin_width[0];
-unsigned char *divider_data = (unsigned char*)&divider_pattern[0];
-unsigned char *selector_data = (unsigned char*)&selector_pattern[0];
+unsigned char *divider_data = (unsigned char*)&gDividerPattern[0];
+unsigned char *selector_data = (unsigned char*)&gSelectorPattern[0];
 
 int verbose = 0;
 int quiet = 0;
@@ -152,6 +165,13 @@ char scratch[64 * 1024];
 char stringlit[64 * 1024];
 int stringptr;
 int lits = 0;
+
+ZX7Pack pack;
+
+int roomno = 0;
+int totaldata = 0;
+char packbuf[8192];
+int packbufofs = 0;
 
 void patchword(unsigned short w, int pos)
 {
@@ -293,90 +313,92 @@ void token(int n, char *src, char *dst)
 int get_symbol_id(char * s)
 {
     int i;
-    for (i = 0; i < symbols; i++)
+    for (i = 0; i < gSymbols; i++)
     {
-        if (stricmp(symbol[i].name, s) == 0)
+        if (stricmp(gSymbol[i].mName, s) == 0)
         {
-            symbol[i].hits++;
+            gSymbol[i].mHits++;
             return i;
         }
     }
-    symbol[symbols].name = strdup(s);
-    symbol[symbols].hits = 1;
-    symbols++;
-    return symbols-1;            
+    gSymbol[gSymbols].mName = strdup(s);
+    gSymbol[gSymbols].mHits = 1;
+    gSymbols++;
+    return gSymbols-1;            
 }
 
 int get_number_id(char * s)
 {
     int i;
-    for (i = 0; i < numbers; i++)
+    for (i = 0; i < gNumbers; i++)
     {
-        if (stricmp(number[i].name, s) == 0)
+        if (stricmp(gNumber[i].mName, s) == 0)
         {
-            number[i].hits++;
+            gNumber[i].mHits++;
             return i;
         }
     }
-    number[numbers].name = strdup(s);
-    number[numbers].hits = 1;
-    numbers++;
-    return numbers-1;            
+    gNumber[gNumbers].mName = strdup(s);
+    gNumber[gNumbers].mHits = 1;
+    gNumbers++;
+    return gNumbers-1;            
 }
 
 int get_image_id(char * s)
 {
     int i;
-    for (i = 0; i < images; i++)
+    for (i = 0; i < gImages; i++)
     {
-        if (stricmp(image[i].name, s) == 0)
+        if (stricmp(gImage[i].mName, s) == 0)
         {
-            image[i].hits++;
+            gImage[i].mHits++;
             return i + image_id_start;
         }
     }
-    image[images].name = strdup(s);
-    image[images].hits = 1;
-    images++;
-    return images - 1 + image_id_start;            
+    gImage[gImages].mName = strdup(s);
+    gImage[gImages].mHits = 1;
+    gImages++;
+    return gImages - 1 + image_id_start;            
 }
 
 int get_code_id(char * s)
 {
     int i;
-    for (i = 0; i < codes; i++)
+    for (i = 0; i < gCodes; i++)
     {
-        if (stricmp(code[i].name, s) == 0)
+        if (stricmp(gCode[i].mName, s) == 0)
         {
-            code[i].hits++;
+            gCode[i].mHits++;
             return i + code_id_start;
         }
     }
-    code[codes].name = strdup(s);
-    code[codes].hits = 1;
-    codes++;
-    return codes - 1 + code_id_start;            
+    gCode[gCodes].mName = strdup(s);
+    gCode[gCodes].mHits = 1;
+    gCodes++;
+    return gCodes - 1 + code_id_start;            
 }
 
-ZX7Pack pack;
-
-int roomno = 0;
-int totaldata = 0;
-char packbuf[8192];
-int packbufofs = 0;
 
 void flush_packbuf()
 {
-    if (packbufofs > trainers)
+    if (packbufofs > gTrainers)
     {
         pack.mMax = 0;
-        pack.pack((unsigned char*)&packbuf[0], packbufofs, trainers);
+        pack.pack((unsigned char*)&packbuf[0], packbufofs, gTrainers);
+#ifdef DUMP_BINARY_BLOBS        
+        char temp[64];
+        static int blobno = 0;
+        sprintf(temp, "blob%02d.bin", blobno);
+        FILE * f = fopen(temp, "wb");
+        fwrite(packbuf+gTrainers,1,packbufofs-gTrainers,f);
+        fclose(f);
+#endif
     
         if (!quiet)
-            printf("zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", packbufofs-trainers, pack.mMax, ((pack.mMax)*100.0f)/(packbufofs-trainers), 0x5b00+outlen);
+            printf("zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", packbufofs-gTrainers, pack.mMax, ((pack.mMax)*100.0f)/(packbufofs-gTrainers), 0x5b00+outlen);
     
         outdata(pack.mPackedData, pack.mMax);
-        packbufofs = trainers;
+        packbufofs = gTrainers;
     }
 }
 
@@ -387,15 +409,15 @@ void flush_room()
         putbyte(0); // add a zero byte for good measure.
         if (datalen > 4096)
         {
-            printf("Room %s data too large; max 4096 bytes, has %d bytes\n", symbol[roomno].name, datalen);
+            printf("Room %s data too large; max 4096 bytes, has %d bytes\n", gSymbol[roomno].mName, datalen);
             exit(-1);
         }
-        room[rooms].name = symbol[roomno].name;
-        room[rooms].data = new unsigned char[datalen];
-        room[rooms].len = datalen;
-        room[rooms].used = 0;
-        memcpy(room[rooms].data, databuf, datalen);
-        rooms++;
+        gRoom[gRooms].mName = gSymbol[roomno].mName;
+        gRoom[gRooms].mData = new unsigned char[datalen];
+        gRoom[gRooms].mLen = datalen;
+        gRoom[gRooms].mUsed = 0;
+        memcpy(gRoom[gRooms].mData, databuf, datalen);
+        gRooms++;
         datalen = 0;
                 
         roomno++;
@@ -488,18 +510,18 @@ void set_op(int opcode, int value)
     if (verbose) printf("    Opcode: ");
     switch(opcode)
     {
-        case OP_HAS: if (verbose) printf("HAS(%s)", symbol[value].name); break;
-        case OP_NOT: if (verbose) printf("NOT(%s)", symbol[value].name); break;
-        case OP_SET: if (verbose) printf("SET(%s)", symbol[value].name); break;
-        case OP_CLR: if (verbose) printf("CLR(%s)", symbol[value].name); break;
-        case OP_XOR: if (verbose) printf("XOR(%s)", symbol[value].name); break;
+        case OP_HAS: if (verbose) printf("HAS(%s)", gSymbol[value].mName); break;
+        case OP_NOT: if (verbose) printf("NOT(%s)", gSymbol[value].mName); break;
+        case OP_SET: if (verbose) printf("SET(%s)", gSymbol[value].mName); break;
+        case OP_CLR: if (verbose) printf("CLR(%s)", gSymbol[value].mName); break;
+        case OP_XOR: if (verbose) printf("XOR(%s)", gSymbol[value].mName); break;
         case OP_RND: if (verbose) printf("RND(%d)", value); break;
         case OP_ATTR: if (verbose) printf("ATTR(%d)", value); break;
         case OP_EXT: if (verbose) printf("EXT(%d)", value); break;
         case OP_IATTR: if (verbose) printf("IATTR(%d)", value); break;
         case OP_DATTR: if (verbose) printf("DATTR(%d)", value); break;
-        case OP_GO:  if (verbose) printf("GO(%s)", symbol[value].name); break;
-        case OP_GOSUB:  if (verbose) printf("GOSUB(%s)", symbol[value].name); break;
+        case OP_GO:  if (verbose) printf("GO(%s)", gSymbol[value].mName); break;
+        case OP_GOSUB:  if (verbose) printf("GOSUB(%s)", gSymbol[value].mName); break;
     }
     if (verbose) printf("\n");
     store_cmd(opcode, value);
@@ -515,24 +537,24 @@ void set_number_op(int opcode, int value1, int value2)
     if (verbose) printf("    Opcode: ");
     switch(opcode)
     {
-        case OP_GT: if (verbose) printf("GT(%s,%s)", number[value1].name, number[value2].name); break;
-        case OP_GTC: if (verbose) printf("GTC(%s,%d)", number[value1].name, value2); break;
-        case OP_LT: if (verbose) printf("LT(%s,%s)", number[value1].name, number[value2].name); break;
-        case OP_LTC: if (verbose) printf("LTC(%s,%d)", number[value1].name, value2); break;
-        case OP_GTE: if (verbose) printf("GTE(%s,%s)", number[value1].name, number[value2].name); break;
-        case OP_GTEC: if (verbose) printf("GTEC(%s,%d)", number[value1].name, value2); break;
-        case OP_LTE: if (verbose) printf("LTE(%s,%s)", number[value1].name, number[value2].name); break;
-        case OP_LTEC: if (verbose) printf("LTEC(%s,%d)", number[value1].name, value2); break;
-        case OP_EQ: if (verbose) printf("EQ(%s,%s)", number[value1].name, number[value2].name); break;
-        case OP_EQC: if (verbose) printf("EQC(%s,%d)", number[value1].name, value2); break;
-        case OP_IEQ: if (verbose) printf("IEQ(%s,%s)", number[value1].name, number[value2].name); break;
-        case OP_IEQC: if (verbose) printf("IEQC(%s,%d)", number[value1].name, value2); break;
-        case OP_ASSIGN: if (verbose) printf("ASSIGN(%s,%s)", number[value1].name, number[value2].name); break;
-        case OP_ASSIGNC: if (verbose) printf("ASSIGNC(%s,%d)", number[value1].name, value2); break;
-        case OP_ADD: if (verbose) printf("ADD(%s,%s)", number[value1].name, number[value2].name); break;
-        case OP_ADDC: if (verbose) printf("ADDC(%s,%d)", number[value1].name, value2); break;
-        case OP_SUB: if (verbose) printf("SUB(%s,%s)", number[value1].name, number[value2].name); break;
-        case OP_SUBC: if (verbose) printf("SUBC(%s,%d)", number[value1].name, value2); break;
+        case OP_GT: if (verbose) printf("GT(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
+        case OP_GTC: if (verbose) printf("GTC(%s,%d)", gNumber[value1].mName, value2); break;
+        case OP_LT: if (verbose) printf("LT(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
+        case OP_LTC: if (verbose) printf("LTC(%s,%d)", gNumber[value1].mName, value2); break;
+        case OP_GTE: if (verbose) printf("GTE(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
+        case OP_GTEC: if (verbose) printf("GTEC(%s,%d)", gNumber[value1].mName, value2); break;
+        case OP_LTE: if (verbose) printf("LTE(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
+        case OP_LTEC: if (verbose) printf("LTEC(%s,%d)", gNumber[value1].mName, value2); break;
+        case OP_EQ: if (verbose) printf("EQ(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
+        case OP_EQC: if (verbose) printf("EQC(%s,%d)", gNumber[value1].mName, value2); break;
+        case OP_IEQ: if (verbose) printf("IEQ(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
+        case OP_IEQC: if (verbose) printf("IEQC(%s,%d)", gNumber[value1].mName, value2); break;
+        case OP_ASSIGN: if (verbose) printf("ASSIGN(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
+        case OP_ASSIGNC: if (verbose) printf("ASSIGNC(%s,%d)", gNumber[value1].mName, value2); break;
+        case OP_ADD: if (verbose) printf("ADD(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
+        case OP_ADDC: if (verbose) printf("ADDC(%s,%d)", gNumber[value1].mName, value2); break;
+        case OP_SUB: if (verbose) printf("SUB(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
+        case OP_SUBC: if (verbose) printf("SUBC(%s,%d)", gNumber[value1].mName, value2); break;
     }
     if (verbose) printf("\n");
     store_number_cmd(opcode, value1, value2);
@@ -540,11 +562,11 @@ void set_number_op(int opcode, int value1, int value2)
 
 void set_opgo(int op, int value)
 {
-    if (value >= max_room)
+    if (value >= gMaxRoomSymbol)
     {
         printf("Invalid GO%s parameter: symbol \"%s\" is not a room, line %d\n", 
             op==OP_GOSUB?"SUB":"",
-            symbol[value].name,
+            gSymbol[value].mName,
             line);
         exit(-1);
     }
@@ -808,7 +830,6 @@ void parse()
 
 void store(char *lit)
 {
-    flush_cmd();
     putstring(lit);
     if (verbose) printf("  lit %d: \"%s\"\n", lits++, lit);
     previous_stringlits++;
@@ -816,6 +837,7 @@ void store(char *lit)
 
 void process()
 {
+    flush_cmd();
     if (stringptr != 0)
     {
         char temp[256];
@@ -945,24 +967,6 @@ void scan(char *aFilename)
     fclose(f);
 }
 
-struct Token
-{
-    char * s;
-    int hits;
-    int hash;
-
-    int used;
-
-    int nexts;
-    int next[128];
-    int nexthit[128];
-    
-};
-
-#define MAXTOKENS 1024
-Token gToken[MAXTOKENS];
-int gTokens = 0;
-int gPrevToken = -1;
 
 int calchash(char *s)
 {
@@ -984,20 +988,20 @@ void tokenref(int cur)
     if (prev != -1)
     {
         int i;
-        for (i = 0; i < gToken[prev].nexts; i++)
+        for (i = 0; i < gToken[prev].mNexts; i++)
         {
-            if (gToken[prev].next[i] == cur)
+            if (gToken[prev].mNext[i] == cur)
             {
-                gToken[prev].nexthit[i]++;
+                gToken[prev].mNextHit[i]++;
                 return;
             }
         }
-        if (gToken[prev].nexts < 128)
+        if (gToken[prev].mNexts < 128)
         {
-            i = gToken[prev].nexts;
-            gToken[prev].next[i] = cur;
-            gToken[prev].nexthit[i] = 1;
-            gToken[prev].nexts++;
+            i = gToken[prev].mNexts;
+            gToken[prev].mNext[i] = cur;
+            gToken[prev].mNextHit[i] = 1;
+            gToken[prev].mNexts++;
         }
     }
 }
@@ -1007,23 +1011,25 @@ void addwordcounttoken(char *aToken)
 {    
     int h = calchash(aToken);
     int i;	
+	if (aToken == NULL || *aToken == 0)
+		return;
     for (i = 0; i < gTokens; i++)
     {
-        if (gToken[i].hash == h && strcmp(gToken[i].s, aToken) == 0)
+        if (gToken[i].mHash == h && strcmp(gToken[i].mData, aToken) == 0)
         {
             tokenref(i);
-            gToken[i].hits++;
+            gToken[i].mHits++;
             return;
         }
     }
     if (gTokens < MAXTOKENS)
     {
         tokenref(gTokens);
-        gToken[gTokens].s = strdup(aToken);
-        gToken[gTokens].hash = h;
-        gToken[gTokens].hits = 1;
-        gToken[gTokens].used = 0;
-        gToken[gTokens].nexts = 0;
+        gToken[gTokens].mData = strdup(aToken);
+        gToken[gTokens].mHash = h;
+        gToken[gTokens].mHits = 1;
+        gToken[gTokens].mUsed = 0;
+        gToken[gTokens].mNexts = 0;
         gTokens++;        
     }
 	else
@@ -1052,13 +1058,15 @@ void wordcount(char *aString)
         }
         aString++;
     }
+	temp[p] = 0;
+	addwordcounttoken(temp);
 }
 
 int tokencmp (const void * a, const void * b)
 {
     int idx1 = *(int*)a;
     int idx2 = *(int*)b;
-    return gToken[idx2].hits - gToken[idx1].hits;
+    return gToken[idx2].mHits - gToken[idx1].mHits;
 }
 
 int findidx(int *idx, int i)
@@ -1082,7 +1090,7 @@ void maketrainer()
         printf("Most frequent words in source material:\n");
         for (i = 0; i < ((gTokens < 25)?gTokens:25); i++)
         {
-            printf("%d. \"%s\"\t(%d)\n", i, gToken[idx[i]].s, gToken[idx[i]].hits);
+            printf("%d. \"%s\"\t(%d)\n", i, gToken[idx[i]].mData, gToken[idx[i]].mHits);
         }
     }
         
@@ -1092,7 +1100,7 @@ void maketrainer()
     
     while (c < MAX_TRAINER && i < gTokens)
     {
-        c += strlen(gToken[idx[i]].s) + 1;
+        c += strlen(gToken[idx[i]].mData) + 1;
         i++;
     }
     int maxtoken = i;
@@ -1100,69 +1108,76 @@ void maketrainer()
     i = 0;
     while (c < MAX_TRAINER && !done)
     {   
-        if (gToken[idx[i]].used) i = 0;
-        while (gToken[idx[i]].used && i < gTokens) i++;
-        if (i >= gTokens) { done = 1; i = 0; }
-            
-        char * s = gToken[idx[i]].s;
-        while (*s && c < MAX_TRAINER)
-        {
-            trainer[c] = *s;
-            s++;
-            c++;
-        }
-        
-        if (c < MAX_TRAINER)
-        {
-            trainer[c] = ' ';
-            c++;
-        }
-        
-        gToken[idx[i]].used = 1;
-        
-        // Try to chain the words together
-        int min = -1;
-        int mini = 0;
-        int j;
-        for (j = 0; j < gToken[idx[i]].nexts; j++)
-        {
-            int n = gToken[idx[i]].next[j];
-            int h = gToken[idx[i]].nexthit[j];
-            int nextidx = findidx(idx, n);
-            if (nextidx < maxtoken && 
-                h > min && 
-                gToken[n].used == 0)
-            {
-                min = h;
-                mini = nextidx;
-            }
-        }
-		
-		if (verbose)
-	    {    
-			printf("%s", gToken[idx[i]].s);
-			if (min == -1)
-			{
-				printf(" # ");
-			}
-			else
-			{
-				printf("[%d]->", min);
-			}
+        if (gToken[idx[i]].mUsed) i = 0;
+        while (gToken[idx[i]].mUsed && i < gTokens) i++;
+        if (i >= gTokens) 
+		{ 
+			done = 1; 
+			i = 0; 
 		}
-        i = mini;
+		else
+		{
+            
+			char * s = gToken[idx[i]].mData;
+			while (*s && c < MAX_TRAINER)
+			{
+				gTrainer[c] = *s;
+				s++;
+				c++;
+			}
+        
+			if (c < MAX_TRAINER)
+			{
+				gTrainer[c] = ' ';
+				c++;
+			}
+        
+			gToken[idx[i]].mUsed = 1;
+        
+			// Try to chain the words together
+			int min = -1;
+			int mini = 0;
+			int j;
+			for (j = 0; j < gToken[idx[i]].mNexts; j++)
+			{
+				int n = gToken[idx[i]].mNext[j];
+				int h = gToken[idx[i]].mNextHit[j];
+				int nextidx = findidx(idx, n);
+				if (nextidx < maxtoken && 
+					h > min && 
+					gToken[n].mUsed == 0)
+				{
+					min = h;
+					mini = nextidx;
+				}
+			}
+		
+			if (verbose)
+			{    
+				printf("%s", gToken[idx[i]].mData);
+				if (min == -1)
+				{
+					printf(" # ");
+				}
+				else
+				{
+					printf("[%d]->", min);
+				}
+			}
+			i = mini;
+		}
     }
-    trainers = c;
+    gTrainers = c;
     
     if (!quiet)
     {
         printf(
             "Trainer data: %d bytes\n" 
             "|---------1---------2---------3---------4---------5---------6----|\n ",          
-            trainers);
-        for (c = 0; c < trainers; c++)
+            gTrainers);
+        for (c = 0; c < gTrainers; c++)
         {
-            printf("%c", trainer[c]);
+            printf("%c", gTrainer[c]);
             if (c % 64 == 63) printf("\n ");
         }
         printf("\n");
@@ -1182,7 +1197,7 @@ void scan_first_pass(char *aFilename)
     // Won't be stored if not actually in use.
     int i;
     i = get_code_id("beepfx.ihx");
-    code[i].hits--;
+    gCode[i].mHits--;
 	
     while (!feof(f))
     {
@@ -1194,22 +1209,22 @@ void scan_first_pass(char *aFilename)
             if (scratch[1] == 'Q')
             {
                 i = get_symbol_id(t);
-                if (symbol[i].hits > 1)
+                if (gSymbol[i].mHits > 1)
                 {
                     printf("syntax error: room id \"%s\" used more than once, line %d\n", t, line);
                     exit(-1);
                 }
-                symbol[i].hits--; // clear the hit, as it'll be scanned again
+                gSymbol[i].mHits--; // clear the hit, as it'll be scanned again
             }
             if (scratch[1] == 'I')
             {
                 i = get_image_id(t);
-                image[i].hits--; // clear the hit, as it'll be scanned again
+                gImage[i].mHits--; // clear the hit, as it'll be scanned again
             }
             if (scratch[1] == 'C')
             {
                 i = get_code_id(t);
-                code[i].hits--; // clear the hit, as it'll be scanned again
+                gCode[i].mHits--; // clear the hit, as it'll be scanned again
             }
         }
         else
@@ -1218,7 +1233,7 @@ void scan_first_pass(char *aFilename)
 			wordcount(scratch);
         }
     }
-    max_room = symbols;
+    gMaxRoomSymbol = gSymbols;
     fclose(f);
 }
 
@@ -1228,38 +1243,38 @@ void report()
     int i;
     printf("\n");
     printf("Token Hits Symbol\n");
-    for (i = 0; i < symbols; i++)
+    for (i = 0; i < gSymbols; i++)
     {
-        printf("%5d %4d \"%s\"\n", i, symbol[i].hits, symbol[i].name);
+        printf("%5d %4d \"%s\"%s\n", i, gSymbol[i].mHits, gSymbol[i].mName, gSymbol[i].mHits < 2 ? " <- Warning":"");
     }
 
-    if (numbers)
+    if (gNumbers)
     {
 	    printf("\n");
         printf("Token Hits Number\n");
-        for (i = 0; i < numbers; i++)
+        for (i = 0; i < gNumbers; i++)
         {
-            printf("%5d %4d \"%s\"\n", i, number[i].hits, number[i].name);
+            printf("%5d %4d \"%s\"\n", i, gNumber[i].mHits, gNumber[i].mName);
         }
     }
 
-    if (images)
+    if (gImages)
     {
 	    printf("\n");
         printf("Token Hits Image\n");
-        for (i = 0; i < images; i++)
+        for (i = 0; i < gImages; i++)
         {
-            printf("%5d %4d \"%s\"\n", i, image[i].hits, image[i].name);
+            printf("%5d %4d \"%s\"\n", i, gImage[i].mHits, gImage[i].mName);
         }
     }
 
-    if (codes > 1 || (codes == 1 && code[0].hits > 0))
+    if (gCodes > 1 || (gCodes == 1 && gCode[0].mHits > 0))
     {
 	    printf("\n");
         printf("Token Hits Code\n");
-        for (i = 0; i < codes; i++)
+        for (i = 0; i < gCodes; i++)
         {
-            printf("%5d %4d \"%s\"\n", i, code[i].hits, code[i].name);
+            printf("%5d %4d \"%s\"\n", i, gCode[i].mHits, gCode[i].mName);
         }
     }
 
@@ -1269,22 +1284,22 @@ void report()
     printf("         5         10        15        20        25      29\n");
     printf("---------.---------|---------.---------|---------.--------\n");
     int o = 0;
-    for (i = 0; i < pagedata / 512; i++)
+    for (i = 0; i < gPageData / 512; i++)
         o += printf("P");
-    for (i = 0; i < imgdata / 512; i++)
+    for (i = 0; i < gImageData / 512; i++)
         o += printf("I");
-    for (i = 0; i < codedata / 512; i++)
+    for (i = 0; i < gCodeData / 512; i++)
         o += printf("C");
-    for (i = o; i < 29*2-(trainers/512); i++)
+    for (i = o; i < 29*2-(gTrainers/512); i++)
         o += printf(".");
     for (i = o; i < 29*2; i++)
         o += printf("t");
     printf("\n\n");
-    printf("Page data : %5d bytes\n", pagedata);
-    printf("Image data: %5d bytes\n", imgdata);
-    printf("Code data : %5d bytes\n", codedata);
-    printf("Free      : %5d bytes\n", DATA_AREA_SIZE - trainers - pagedata - imgdata);
-    printf("Trainer   : %5d bytes (used to improve compression by \"training\" it)\n", trainers);
+    printf("Page data : %5d bytes\n", gPageData);
+    printf("Image data: %5d bytes\n", gImageData);
+    printf("Code data : %5d bytes\n", gCodeData);
+    printf("Free      : %5d bytes\n", DATA_AREA_SIZE - gTrainers - gPageData - gImageData);
+    printf("Trainer   : %5d bytes (used to improve compression by \"training\" it)\n", gTrainers);
         
 }
 
@@ -1326,18 +1341,18 @@ void process_images()
 {
     int i;
     unsigned char t[6912];
-    for (i = 0; i < images; i++)
+    for (i = 0; i < gImages; i++)
     {
-        FILE * f = fopen(image[i].name, "rb");
+        FILE * f = fopen(gImage[i].mName, "rb");
         if (!f)
         {
-            printf("Image \"%s\" not found.\n", image[i].name);
+            printf("Image \"%s\" not found.\n", gImage[i].mName);
             exit(-1);
         }
         fseek(f,0,SEEK_END);
         if (ftell(f) != 6912)
         {
-            printf("Image \"%s\" wrong size (has to be 6912 bytes).\n", image[i].name);
+            printf("Image \"%s\" wrong size (has to be 6912 bytes).\n", gImage[i].mName);
             exit(-1);
         }
         fseek(f,0,SEEK_SET);
@@ -1355,7 +1370,7 @@ void process_images()
         maxlive++;
         if (maxlive > 14)
         {
-            printf("Warning: image \"%s\" has %d live character rows, 14 used.\n", image[i].name, maxlive);
+            printf("Warning: image \"%s\" has %d live character rows, 14 used.\n", gImage[i].mName, maxlive);
             maxlive = 14;
         }
         datalen = 0;
@@ -1370,14 +1385,14 @@ void process_images()
         pack.mMax = 0;
         if (datalen > 4096)
         {
-            printf("Image %s data too large; max 4096 bytes, has %d bytes (%d lines)\n", image[i].name, datalen, maxlive);
+            printf("Image %s data too large; max 4096 bytes, has %d bytes (%d lines)\n", gImage[i].mName, datalen, maxlive);
             exit(-1);
         }
         pack.pack((unsigned char*)&databuf[0], datalen);
         patchword(0x5b00 + outlen, i + image_id_start);        
 
         if (!quiet)
-            printf("%25s (%02d) zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", image[i].name, maxlive, datalen, pack.mMax, (pack.mMax*100.0f)/datalen, 0x5b00+outlen);
+            printf("%25s (%02d) zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gImage[i].mName, maxlive, datalen, pack.mMax, (pack.mMax*100.0f)/datalen, 0x5b00+outlen);
         outdata(pack.mPackedData, pack.mMax);            
     }
 }
@@ -1385,13 +1400,13 @@ void process_images()
 void process_codes(char *path)
 {
     int i;
-    for (i = 0; i < codes; i++)
+    for (i = 0; i < gCodes; i++)
     {
-        if (code[i].hits > 0)
+        if (gCode[i].mHits > 0)
         {
             FILE * f;
             
-            f = fopen(code[i].name, "rb");
+            f = fopen(gCode[i].mName, "rb");
             if (!f)
             {
                 char temp[1024];
@@ -1399,13 +1414,13 @@ void process_codes(char *path)
                 char *d = strrchr(temp, '\\');
                 if (d)
                 {
-                    strcpy(d+1, code[i].name);
+                    strcpy(d+1, gCode[i].mName);
                     f = fopen(temp, "rb");
                 }
             }
             if (!f)
             {
-                printf("Code \"%s\" not found", code[i].name);
+                printf("Code \"%s\" not found", gCode[i].mName);
                 exit(-1);
             }
             fseek(f,0,SEEK_END);
@@ -1422,7 +1437,7 @@ void process_codes(char *path)
             {
                 if (!quiet)
                 {
-                    printf("Couldn't decode \"%s\" as .ihx, assuming binary\n", code[i].name);
+                    printf("Couldn't decode \"%s\" as .ihx, assuming binary\n", gCode[i].mName);
                 }
                 start = 0xd000;
                 l = len;
@@ -1435,11 +1450,11 @@ void process_codes(char *path)
             {
                 if (l > 4096)
                 {
-                    printf("Code %s data too large; max 4096 bytes, has %d bytes\n", code[i].name, l);
+                    printf("Code %s data too large; max 4096 bytes, has %d bytes\n", gCode[i].mName, l);
                 }
                 if (start != 0xd000)
                 {
-                    printf("Code %s start address not 0xd000; 0x%04x found\n", code[i].name, start);
+                    printf("Code %s start address not 0xd000; 0x%04x found\n", gCode[i].mName, start);
                 }
                 exit(-1);
             }
@@ -1455,7 +1470,7 @@ void process_codes(char *path)
             patchword(0x5b00 + outlen, i + code_id_start);        
     
             if (!quiet)
-                printf("%30s zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", code[i].name, datalen, pack.mMax, (pack.mMax*100.0f)/datalen, 0x5b00+outlen);
+                printf("%30s zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gCode[i].mName, datalen, pack.mMax, (pack.mMax*100.0f)/datalen, 0x5b00+outlen);
             outdata(pack.mPackedData, pack.mMax);            
         }
     }
@@ -1543,10 +1558,10 @@ void patch_ihx(char *path)
     ofs = find_data(codebuf, start, builtin_width, 94);
     patch_data(codebuf, ofs, propfont_width, 94);
     
-    ofs = find_data(codebuf, start, divider_pattern, 8);
+    ofs = find_data(codebuf, start, gDividerPattern, 8);
     patch_data(codebuf, ofs, divider_data, 8);
 
-    ofs = find_data(codebuf, start, selector_pattern, 8);
+    ofs = find_data(codebuf, start, gSelectorPattern, 8);
     patch_data(codebuf, ofs, selector_data, 8);
     
     write_ihx("patched.ihx", codebuf, start, end);
@@ -1691,10 +1706,10 @@ void scan_sel(char *aFilename)
 void output_trainer()
 {
     int i;
-    int freebytes = DATA_AREA_SIZE - trainers - outlen;
+    int freebytes = DATA_AREA_SIZE - gTrainers - outlen;
     for (i = 0; i < freebytes; i++)
         outbyte(0);
-    outdata(trainer, trainers);
+    outdata(gTrainer, gTrainers);
 }
 
 /*
@@ -1709,13 +1724,13 @@ void process_rooms()
         minidx = -1;
         for (j = 0; j < rooms; j++)
         {
-            if (room[j].used == 0)
+            if (gRoom[j].mUsed == 0)
             {
-                if (room[j].len+packbufofs-trainers < 4096)
+                if (gRoom[j].mLen+packbufofs-trainers < 4096)
                 {
-                    memcpy(packbuf+packbufofs, room[j].data, room[j].len);
+                    memcpy(packbuf+packbufofs, gRoom[j].mData, gRoom[j].mLen);
                     pack.mMax = 0;
-                    pack.pack((unsigned char*)&packbuf[0], packbufofs + room[j].len, trainers);
+                    pack.pack((unsigned char*)&packbuf[0], packbufofs + gRoom[j].mLen, trainers);
                     if (pack.mMax < minvalue)
                     {
                         minvalue = pack.mMax;
@@ -1727,11 +1742,11 @@ void process_rooms()
         
         if (minidx != -1)
         {
-            memcpy(packbuf+packbufofs, room[minidx].data, room[minidx].len);
-            packbufofs += room[minidx].len;
-            room[minidx].used = 1;
+            memcpy(packbuf+packbufofs, gRoom[minidx].mData, gRoom[minidx].mLen);
+            packbufofs += gRoom[minidx].mLen;
+            gRoom[minidx].mUsed = 1;
             patchword(0x5b00 + outlen, minidx);
-            printf("%s ", room[minidx].name);
+            printf("%s ", gRoom[minidx].mName);
         }
         else
         {
@@ -1754,11 +1769,11 @@ int biggest_unused_room()
     int bigidx = -1;
     for (i = 0; i < rooms; i++)
     {
-        if (room[i].used == 0)
+        if (gRoom[i].mUsed == 0)
         {
-            if (room[i].len > bigsize)
+            if (gRoom[i].mLen > bigsize)
             {
-                bigsize = room[i].len;
+                bigsize = gRoom[i].mLen;
                 bigidx = i;
             }
         }
@@ -1774,30 +1789,30 @@ int best_compressible_room()
     int i, j;
     int idx = -1;
     float ratio = 1000;
-    for (i = 0; i < rooms; i++)
+    for (i = 0; i < gRooms; i++)
     {
-        if (room[i].used == 0)
+        if (gRoom[i].mUsed == 0)
         {
-            for (j = i+1; j < rooms; j++)
+            for (j = i+1; j < gRooms; j++)
             {
-                if (room[j].used == 0)
+                if (gRoom[j].mUsed == 0)
                 {
                     float r;
-                    if (compression_results[i*rooms+j] == 0)
+                    if (compression_results[i * gRooms + j] == 0)
                     {
-                        int total = room[i].len + room[j].len;
+                        int total = gRoom[i].mLen + gRoom[j].mLen;
                         char tempbuf[8192];
-                        memcpy(tempbuf, room[i].data, room[i].len);
-                        memcpy(tempbuf + room[i].len, room[j].data, room[j].len);
+                        memcpy(tempbuf, gRoom[i].mData, gRoom[i].mLen);
+                        memcpy(tempbuf + gRoom[i].mLen, gRoom[j].mData, gRoom[j].mLen);
                         pack.mMax = 0;
                         pack.pack((unsigned char*)&tempbuf[0], total);
                         //printf("ZX7: %4d bytes - %3.3f%%", pack.mMax, ((float)pack.mMax/total)*100);
                         r = ((float)pack.mMax / total);
-                        compression_results[i*rooms+j] = r;
+                        compression_results[i * gRooms + j] = r;
                     }
                     else
                     {
-                        r = compression_results[i*rooms+j];
+                        r = compression_results[i * gRooms + j];
                     }
                     if (ratio > r)
                     {
@@ -1829,45 +1844,45 @@ void process_rooms()
     if (!quiet)
         printf("Compressing..\n");
     
-    compression_results = new float[rooms*rooms];
-    for (j = 0; j < rooms*rooms; j++)
+    compression_results = new float[gRooms * gRooms];
+    for (j = 0; j < gRooms * gRooms; j++)
         compression_results[j] = 0;
     
     //int minidx = biggest_unused_room();    
     int minidx = best_compressible_room();
     idx = minidx;
-    room[idx].used = 1;
+    gRoom[idx].mUsed = 1;
     patchword(0x5b00 + outlen, idx);
-    memcpy(packbuf+packbufofs, room[idx].data, room[idx].len);
-    packbufofs += room[idx].len;
-    printf("%s ", room[idx].name);
-    totaldata = room[idx].len;
+    memcpy(packbuf+packbufofs, gRoom[idx].mData, gRoom[idx].mLen);
+    packbufofs += gRoom[idx].mLen;
+    printf("%s ", gRoom[idx].mName);
+    totaldata = gRoom[idx].mLen;
     do 
     {
         minidx = -1;
         float minvalue = 1000;
-        for (j = 0; j < rooms; j++)
+        for (j = 0; j < gRooms; j++)
         {
-            if (idx != j && room[j].used == 0)
+            if (idx != j && gRoom[j].mUsed == 0)
             {
-                int total = room[idx].len+room[j].len;
+                int total = gRoom[idx].mLen+gRoom[j].mLen;
                 if (total < 4096)
                 {
                     float r;
-                    if (compression_results[idx * rooms + j] == 0)
+                    if (compression_results[idx * gRooms + j] == 0)
                     {
                         char tempbuf[8192];
-                        memcpy(tempbuf, room[idx].data, room[idx].len);
-                        memcpy(tempbuf + room[idx].len, room[j].data, room[j].len);
+                        memcpy(tempbuf, gRoom[idx].mData, gRoom[idx].mLen);
+                        memcpy(tempbuf + gRoom[idx].mLen, gRoom[j].mData, gRoom[j].mLen);
                         pack.mMax = 0;
                         pack.pack((unsigned char*)&tempbuf[0], total);
                         //printf("ZX7: %4d bytes - %3.3f%%", pack.mMax, ((float)pack.mMax/total)*100);
                         r = ((float)pack.mMax / total);
-                        compression_results[idx * rooms + j] = r;
+                        compression_results[idx * gRooms + j] = r;
                     }
                     else
                     {
-                        r = compression_results[idx * rooms + j];
+                        r = compression_results[idx * gRooms + j];
                     }
                     if (minvalue > r)
                     {
@@ -1880,20 +1895,20 @@ void process_rooms()
         
         if (minidx != -1)
         {
-            totaldata += room[minidx].len;
+            totaldata += gRoom[minidx].mLen;
             if (totaldata > 4096)
             {
                 flush_packbuf();
                 //minidx = biggest_unused_room();
                 minidx = best_compressible_room();
-                totaldata = room[minidx].len;
+                totaldata = gRoom[minidx].mLen;
             }
-            printf("%s ", room[minidx].name);
-            room[minidx].used = 1;
+            printf("%s ", gRoom[minidx].mName);
+            gRoom[minidx].mUsed = 1;
             idx = minidx;
             
-            memcpy(packbuf+packbufofs, room[minidx].data, room[minidx].len);
-            packbufofs += room[minidx].len;
+            memcpy(packbuf+packbufofs, gRoom[minidx].mData, gRoom[minidx].mLen);
+            packbufofs += gRoom[minidx].mLen;
              
             patchword(0x5b00 + outlen, minidx); // N rooms will have same offset
         }
@@ -1901,11 +1916,11 @@ void process_rooms()
     
     flush_packbuf();
     int panic = 0;
-    for (j = 0; j < rooms; j++)
+    for (j = 0; j < gRooms; j++)
     {
-        if (room[j].used == 0)
+        if (gRoom[j].mUsed == 0)
         {
-            printf("ERROR Room \"%s\" didn't compress with anything\n", room[j].name);
+            printf("ERROR Room \"%s\" didn't compress with anything\n", gRoom[j].mName);
             panic = 1;
         }
     }
@@ -1919,26 +1934,26 @@ void process_rooms()
 void sanity()
 {
     int i, j;
-    for (i = 0; i < symbols; i++)
+    for (i = 0; i < gSymbols; i++)
     {
-        for (j = 0; j < numbers; j++)
+        for (j = 0; j < gNumbers; j++)
         {
-            if (stricmp(symbol[i].name, number[j].name) == 0)
+            if (stricmp(gSymbol[i].mName, gNumber[j].mName) == 0)
             {
-                printf("Warning: Symbol \"%s\" used both as a flag and a number. This probably isn't what you wanted.\n", symbol[i].name);
+                printf("Warning: Symbol \"%s\" used both as a flag and a number. This probably isn't what you wanted.\n", gSymbol[i].mName);
             }
         }
     }
 
-    if (symbols > MAX_SYMBOLS)
+    if (gSymbols > MAX_SYMBOLS)
     {
-        printf("Too many symbols in use (%d > %d)\n", symbols, MAX_SYMBOLS);
+        printf("Too many symbols in use (%d > %d)\n", gSymbols, MAX_SYMBOLS);
         exit(-1);
     }
     
-    if (numbers > MAX_NUMBERS)
+    if (gNumbers > MAX_NUMBERS)
     {
-        printf("Too many numeric variables in use (%d > %d)\n", numbers, MAX_NUMBERS);
+        printf("Too many numeric variables in use (%d > %d)\n", gNumbers, MAX_NUMBERS);
         exit(-1);
     }
 
@@ -2056,20 +2071,20 @@ int main(int parc, char **pars)
     line = 0;    
     scan_first_pass(pars[infile]);
     maketrainer();    
-    memcpy(packbuf, trainer, trainers);
-    packbufofs = trainers;
+    memcpy(packbuf, gTrainer, gTrainers);
+    packbufofs = gTrainers;
     datalen = 0;
-    image_id_start = symbols + 1;
-    code_id_start = symbols + images + 1;
-    outlen = symbols * 2 + images * 2 + codes * 2 + 2;
+    image_id_start = gSymbols + 1;
+    code_id_start = gSymbols + gImages + 1;
+    outlen = gSymbols * 2 + gImages * 2 + gCodes * 2 + 2;
     line = 0;    
     scan(pars[infile]);
     process_rooms();
-    pagedata = outlen;
+    gPageData = outlen;
     process_images();
-    imgdata = outlen - pagedata;
+    gImageData = outlen - gPageData;
     process_codes(pars[0]);
-    codedata = outlen - pagedata - imgdata;
+    gCodeData = outlen - gPageData - gImageData;
     output_trainer();
     if (!quiet)
         report();
