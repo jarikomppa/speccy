@@ -137,6 +137,9 @@ Symbol gNumber[MAX_SYMBOLS];
 int gRooms = 0;
 RoomBuf gRoom[MAX_ROOMS];
 
+int gRoomNo = 0;
+
+
 int gMaxRoomSymbol = 0;
 
 unsigned char *gPropfontData = (unsigned char *)&builtin_data[0];
@@ -167,10 +170,11 @@ int gStringIdx;
 
 ZX7Pack gPack;
 
-int roomno = 0;
-int totaldata = 0;
-char packbuf[8192];
-int packbufofs = 0;
+char gPackBuf[8192];
+int gPackBufIdx = 0;
+
+float *gCompressionResults;
+
 
 void patchword(unsigned short w, int pos)
 {
@@ -380,24 +384,24 @@ int get_code_id(char * s)
 
 void flush_packbuf()
 {
-    if (packbufofs > gTrainers)
+    if (gPackBufIdx > gTrainers)
     {
         gPack.mMax = 0;
-        gPack.pack((unsigned char*)&packbuf[0], packbufofs, gTrainers);
+        gPack.pack((unsigned char*)&gPackBuf[0], gPackBufIdx, gTrainers);
 #ifdef DUMP_BINARY_BLOBS        
         char temp[64];
         static int blobno = 0;
         sprintf(temp, "blob%02d.bin", blobno);
         FILE * f = fopen(temp, "wb");
-        fwrite(packbuf+gTrainers,1,packbufofs-gTrainers,f);
+        fwrite(gPackBuf+gTrainers,1,gPackBufIdx-gTrainers,f);
         fclose(f);
 #endif
     
         if (!gQuiet)
-            printf("zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", packbufofs-gTrainers, gPack.mMax, ((gPack.mMax)*100.0f)/(packbufofs-gTrainers), 0x5b00+gOutLen);
+            printf("zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gPackBufIdx-gTrainers, gPack.mMax, ((gPack.mMax)*100.0f)/(gPackBufIdx-gTrainers), 0x5b00+gOutLen);
     
         outdata(gPack.mPackedData, gPack.mMax);
-        packbufofs = gTrainers;
+        gPackBufIdx = gTrainers;
     }
 }
 
@@ -408,10 +412,10 @@ void flush_room()
         putbyte(0); // add a zero byte for good measure.
         if (gDataLen > 4096)
         {
-            printf("Room %s data too large; max 4096 bytes, has %d bytes\n", gSymbol[roomno].mName, gDataLen);
+            printf("Room %s data too large; max 4096 bytes, has %d bytes\n", gSymbol[gRoomNo].mName, gDataLen);
             exit(-1);
         }
-        gRoom[gRooms].mName = gSymbol[roomno].mName;
+        gRoom[gRooms].mName = gSymbol[gRoomNo].mName;
         gRoom[gRooms].mData = new unsigned char[gDataLen];
         gRoom[gRooms].mLen = gDataLen;
         gRoom[gRooms].mUsed = 0;
@@ -419,7 +423,7 @@ void flush_room()
         gRooms++;
         gDataLen = 0;
                 
-        roomno++;
+        gRoomNo++;
     }        
 }
 
@@ -1711,77 +1715,7 @@ void output_trainer()
     outdata(gTrainer, gTrainers);
 }
 
-/*
-// 186 bytes free
-void process_rooms()
-{
-    int i, j;
-    int minidx = -1;
-    do
-    {
-        int minvalue = 8192;
-        minidx = -1;
-        for (j = 0; j < rooms; j++)
-        {
-            if (gRoom[j].mUsed == 0)
-            {
-                if (gRoom[j].mLen+packbufofs-trainers < 4096)
-                {
-                    memcpy(packbuf+packbufofs, gRoom[j].mData, gRoom[j].mLen);
-                    pack.mMax = 0;
-                    pack.pack((unsigned char*)&packbuf[0], packbufofs + gRoom[j].mLen, trainers);
-                    if (pack.mMax < minvalue)
-                    {
-                        minvalue = pack.mMax;
-                        minidx = j;
-                    }
-                }
-            }
-        }
-        
-        if (minidx != -1)
-        {
-            memcpy(packbuf+packbufofs, gRoom[minidx].mData, gRoom[minidx].mLen);
-            packbufofs += gRoom[minidx].mLen;
-            gRoom[minidx].mUsed = 1;
-            patchword(0x5b00 + outlen, minidx);
-            printf("%s ", gRoom[minidx].mName);
-        }
-        else
-        {
-            if (packbufofs > trainers)
-            {
-                flush_packbuf();
-                minidx = 0;
-            }                      
-        }
-    }
-    while (minidx != -1);
-}
-*/
 
-/*
-int biggest_unused_room()
-{
-    int i;
-    int bigsize = 0;
-    int bigidx = -1;
-    for (i = 0; i < rooms; i++)
-    {
-        if (gRoom[i].mUsed == 0)
-        {
-            if (gRoom[i].mLen > bigsize)
-            {
-                bigsize = gRoom[i].mLen;
-                bigidx = i;
-            }
-        }
-    }    
-    return bigidx;
-}
-*/
-
-float *compression_results;
 
 int best_compressible_room()
 {
@@ -1797,7 +1731,7 @@ int best_compressible_room()
                 if (gRoom[j].mUsed == 0)
                 {
                     float r;
-                    if (compression_results[i * gRooms + j] == 0)
+                    if (gCompressionResults[i * gRooms + j] == 0)
                     {
                         int total = gRoom[i].mLen + gRoom[j].mLen;
                         char tempbuf[8192];
@@ -1807,11 +1741,11 @@ int best_compressible_room()
                         gPack.pack((unsigned char*)&tempbuf[0], total);
                         //printf("ZX7: %4d bytes - %3.3f%%", gPack.mMax, ((float)gPack.mMax/total)*100);
                         r = ((float)gPack.mMax / total);
-                        compression_results[i * gRooms + j] = r;
+                        gCompressionResults[i * gRooms + j] = r;
                     }
                     else
                     {
-                        r = compression_results[i * gRooms + j];
+                        r = gCompressionResults[i * gRooms + j];
                     }
                     if (ratio > r)
                     {
@@ -1826,34 +1760,23 @@ int best_compressible_room()
 }
    
 
-//270 bytes free (start from page 0)
-//314 bytes free (start from longest page)
-// - makes sense, most pairing opportunities for the biggest page
-//restaring from longest makes things worse
-// - not sure why
-//using trainers when matching makes things worse
-// - not all data is at start of buffer..
-//1620 bytes free (restart from page with best compression ratio with some other page)
-// - slow, but apparently very effective.
-//6558 bytes free (bugfix, wasn't tracking idx correctly, thanks to bad variable naming)
-// - this is ridiculous. The savings are so large I'm not sure I'm storing everything anymore.
 void process_rooms()
 {
-    int j, idx;
+    int j, idx, totaldata;
     if (!gQuiet)
         printf("Compressing..\n");
     
-    compression_results = new float[gRooms * gRooms];
+    gCompressionResults = new float[gRooms * gRooms];
     for (j = 0; j < gRooms * gRooms; j++)
-        compression_results[j] = 0;
+        gCompressionResults[j] = 0;
     
     //int minidx = biggest_unused_room();    
     int minidx = best_compressible_room();
     idx = minidx;
     gRoom[idx].mUsed = 1;
     patchword(0x5b00 + gOutLen, idx);
-    memcpy(packbuf+packbufofs, gRoom[idx].mData, gRoom[idx].mLen);
-    packbufofs += gRoom[idx].mLen;
+    memcpy(gPackBuf+gPackBufIdx, gRoom[idx].mData, gRoom[idx].mLen);
+    gPackBufIdx += gRoom[idx].mLen;
     printf("%s ", gRoom[idx].mName);
     totaldata = gRoom[idx].mLen;
     do 
@@ -1868,7 +1791,7 @@ void process_rooms()
                 if (total < 4096)
                 {
                     float r;
-                    if (compression_results[idx * gRooms + j] == 0)
+                    if (gCompressionResults[idx * gRooms + j] == 0)
                     {
                         char tempbuf[8192];
                         memcpy(tempbuf, gRoom[idx].mData, gRoom[idx].mLen);
@@ -1877,11 +1800,11 @@ void process_rooms()
                         gPack.pack((unsigned char*)&tempbuf[0], total);
                         //printf("ZX7: %4d bytes - %3.3f%%", gPack.mMax, ((float)gPack.mMax/total)*100);
                         r = ((float)gPack.mMax / total);
-                        compression_results[idx * gRooms + j] = r;
+                        gCompressionResults[idx * gRooms + j] = r;
                     }
                     else
                     {
-                        r = compression_results[idx * gRooms + j];
+                        r = gCompressionResults[idx * gRooms + j];
                     }
                     if (minvalue > r)
                     {
@@ -1906,8 +1829,8 @@ void process_rooms()
             gRoom[minidx].mUsed = 1;
             idx = minidx;
             
-            memcpy(packbuf+packbufofs, gRoom[minidx].mData, gRoom[minidx].mLen);
-            packbufofs += gRoom[minidx].mLen;
+            memcpy(gPackBuf+gPackBufIdx, gRoom[minidx].mData, gRoom[minidx].mLen);
+            gPackBufIdx += gRoom[minidx].mLen;
              
             patchword(0x5b00 + gOutLen, minidx); // N rooms will have same offset
         }
@@ -1927,7 +1850,7 @@ void process_rooms()
         exit(-1);
 
     printf("\n");
-    delete[] compression_results;
+    delete[] gCompressionResults;
 }
 
 void sanity()
@@ -2071,8 +1994,8 @@ int main(int parc, char **pars)
     gLine = 0;    
     scan_first_pass(pars[infile]);
     maketrainer();    
-    memcpy(packbuf, gTrainer, gTrainers);
-    packbufofs = gTrainers;
+    memcpy(gPackBuf, gTrainer, gTrainers);
+    gPackBufIdx = gTrainers;
     gDataLen = 0;
     gFirstImageId = gSymbols + 1;
     gFirstCodeId = gSymbols + gImages + 1;
