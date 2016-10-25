@@ -76,6 +76,7 @@ unsigned char y8; // prg state
 unsigned char *answer[16];
 unsigned char answers;
 unsigned char attrib, iattrib, dattrib, attrib_c, iattrib_c;
+unsigned short go, gosub;
 
 void cls()
 {
@@ -129,20 +130,24 @@ void clearbottom()
 
 }
 
-unsigned char * unpack_resource(unsigned short id)
+unsigned short current_resource;
+
+void unpack_resource(unsigned short id)
 {
     // dest = 0xd000, ~4k of scratch. A bit tight?
+       
+    unsigned short res = *((unsigned short*)(unsigned char*)(0x5b00 + id * 2));
+
+    if (res != current_resource)
+    {
+        unsigned short v;
+        for (v = 0; v < 4096; v++)
+            *((unsigned char*)0xd000 + v) = 0;    
     
-    unsigned short v;
-
-    for (v = 0; v < 4096; v++)
-        *((unsigned char*)0xd000 + v) = 0;
-
-    v = *((unsigned short*)(unsigned char*)(0x5b00 + id * 2));
-
-    zx7_unpack((unsigned char*)v);    
-
-    return (unsigned char*)0xd000;
+        zx7_unpack((unsigned char*)res);    
+        
+        current_resource = res;
+    }
 }
 
 unsigned char xorshift8(void) 
@@ -248,6 +253,12 @@ void exec(unsigned char *dataptr)
                 break;
             case OP_SUBC:    
                 number[dataptr[1]] -= dataptr[2];
+                break;
+            case OP_GO:
+                go = id;
+                break;
+            case OP_GOSUB:
+                gosub = id;
                 break;
         }
         dataptr += 3;
@@ -363,6 +374,7 @@ void codeblock(unsigned char *dataptr)
         call #0xd000
         pop hl
     __endasm;
+
 }
 
 void image(unsigned char *dataptr, unsigned char *aYOfs)
@@ -372,7 +384,8 @@ void image(unsigned char *dataptr, unsigned char *aYOfs)
     unsigned short yp, ayp;
     unsigned char x, y, rows;
     
-    dataptr = unpack_resource(id);
+    unpack_resource(id);
+    dataptr = (unsigned char*)0xd000;
     id = *dataptr; // scanlines
     yp = *aYOfs;
     rows = id / 8;
@@ -443,12 +456,22 @@ unsigned char * find_room(unsigned short id)
 
 void render_room(unsigned short room_id)
 {
-    unsigned char *dataptr = find_room(room_id);    
-    unsigned char output_enable = 1;
-    unsigned char yofs = 0;
-    unsigned char p = 0;
-    unsigned char q = 0;
+    unsigned char *dataptr;
+    unsigned char *subreturn;
+    unsigned char output_enable;
+    unsigned char yofs;
+    unsigned char p;
+    unsigned char q;
 
+restart:
+    p = 0;
+    q = 0;
+    go = 0xffff;
+    gosub = 0xffff;
+    output_enable = 1;
+    subreturn = 0;
+    yofs = 0;
+    dataptr = find_room(room_id);    
     SET_BIT(room_id);
 
     cls();
@@ -498,7 +521,7 @@ void render_room(unsigned short room_id)
                 }
                 break;
             case 'A':
-                if (p)
+                if (p && subreturn == 0) // no A:s from subpages
                 {
                     add_answer(dataptr);
                 }
@@ -526,6 +549,30 @@ void render_room(unsigned short room_id)
             dataptr += *dataptr + 1;
         }
         dataptr++;
+        
+        if (go != 0xffff)
+        {
+            room_id = go;
+            goto restart;
+        }
+                
+        if (gosub != 0xffff && subreturn == 0)
+        {
+            output_enable = 1;
+            subreturn = dataptr;
+            dataptr = find_room(gosub);
+            SET_BIT(gosub);
+            gosub = 0xffff;
+            q = 0;
+        }
+        
+        if (*dataptr == 0 && subreturn != 0)
+        {
+            dataptr = subreturn;
+            subreturn = 0;
+            unpack_resource(room_id);
+        }
+        
     }
     // if we get here, this was the last room in the data
 }
@@ -547,6 +594,8 @@ void reset()
     dattrib = 072;
     cls();
     clearbottom();
+    go = 0xffff;
+    gosub = 0xffff;
     
     port254(7);
 
@@ -580,6 +629,7 @@ void main()
     unsigned short current_room = 0;    
     unsigned char current_answer = 0;
     unsigned char selecting;    
+    current_resource = 0;
 
     reset();     
 

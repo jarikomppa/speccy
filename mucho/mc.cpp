@@ -418,14 +418,15 @@ void flush_cmd()
 {
     if (commandptr)
     {
-        int ops = (commandptr-commandptropofs) / 3;
+        int ops = (commandptr-1-(commandptropofs-1)*2) / 3;
         if (verbose) 
         {
-            printf("  Command buffer '%c' (%d bytes) with %d bytes payload (%d ops)\n", 
+            printf("  Command buffer '%c' (%d bytes) with %d bytes payload (%d ops) %d\n", 
             commandbuffer[0], 
-            commandptropofs+1,
-            commandptr-(commandptropofs+1), 
-            ops);
+            //commandptropofs+1,
+            commandptr,
+            commandptr-1-(commandptropofs-1)*2, 
+            ops, commandptropofs);
         }
                 
         if (commandptr > 255)
@@ -718,10 +719,11 @@ void parse()
                "to see what's going on), near line %d\n", previous_stringlits, line);
                exit(-1);
     }
+
     previous_stringlits = 0;
     
     // parse statement
-    commandptropofs = 1;
+    commandptropofs = 0;
     int i;
     char t[256];
     switch (scratch[1])
@@ -730,7 +732,7 @@ void parse()
         flush_room(); // flush previous room
         token(1, scratch, t);
         i = get_symbol_id(t);
-        commandptropofs = 2;      
+        commandptropofs = 2; // $Q + roomno
         store_section('Q', i);  
         if (verbose) printf("Room: \"%s\" (%d)\n", t, i);
         previous_section = 'Q';
@@ -738,7 +740,7 @@ void parse()
     case 'A':
         token(1, scratch, t);
         i = get_symbol_id(t);
-        commandptropofs = 2;      
+        commandptropofs = 2; // $A + roomno
         store_section('A', i);          
         if (verbose) printf("Choice: %s (%d)\n", t, i);
         previous_section = 'A';
@@ -758,6 +760,7 @@ void parse()
             printf("Syntax error - statement O may not be included in statement A, line %d\n", line);
             exit(-1);
         }
+        commandptropofs = 1; // $O
         store_section('O');
         if (verbose) printf("Predicated section\n");
         previous_section = 'O';
@@ -769,7 +772,7 @@ void parse()
             exit(-1);
         }
         token(1, scratch, t);
-        commandptropofs = 2;   
+        commandptropofs = 2; // $I + imageid
         store_section('I', get_image_id(t));
         if (verbose) printf("Image: \"%s\"\n", t);
         previous_section = 'I';
@@ -783,7 +786,7 @@ void parse()
         token(2, scratch, t);
         i = strtol(t, 0, 0);
         token(1, scratch, t);
-        commandptropofs = 3;   
+        commandptropofs = 3; // $C + codeblock + HL
         store_section('C', get_code_id(t), i);
         if (verbose) printf("Code: \"%s\", %d\n", t, i);
         previous_section = 'C';
@@ -1334,7 +1337,7 @@ void process_images()
         fseek(f,0,SEEK_END);
         if (ftell(f) != 6912)
         {
-            printf("Image \"&s\" wrong size (has to be 6912 bytes).\n", image[i].name);
+            printf("Image \"%s\" wrong size (has to be 6912 bytes).\n", image[i].name);
             exit(-1);
         }
         fseek(f,0,SEEK_SET);
@@ -1419,10 +1422,9 @@ void process_codes(char *path)
             {
                 if (!quiet)
                 {
-                    printf("Couldn't decode \"%s\" as .ihx, assuming binary\n");
+                    printf("Couldn't decode \"%s\" as .ihx, assuming binary\n", code[i].name);
                 }
                 start = 0xd000;
-                end = start + len;
                 l = len;
                 if (len < 4096)
                     memcpy(codebuf+0xd000, ihx, len);
