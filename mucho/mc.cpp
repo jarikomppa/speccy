@@ -158,15 +158,14 @@ int gFirstCodeId = 0;
 char gOutBuf[1024*1024];
 int gOutLen = 0;
 
-char databuf[1024*1024];
-int datalen = 0;
+char gDataBuf[1024*1024];
+int gDataLen = 0;
 
-char scratch[64 * 1024];
-char stringlit[64 * 1024];
-int stringptr;
-int lits = 0;
+char gScratch[64 * 1024];
+char gStringLit[64 * 1024];
+int gStringIdx;
 
-ZX7Pack pack;
+ZX7Pack gPack;
 
 int roomno = 0;
 int totaldata = 0;
@@ -200,8 +199,8 @@ void outdata(unsigned char *d, int len, int skip = 0)
 
 void putbyte(unsigned char d)
 {
-    databuf[datalen] = d;
-    datalen++;
+    gDataBuf[gDataLen] = d;
+    gDataLen++;
 }
 
 void putbuf(unsigned char *d, int len)
@@ -383,8 +382,8 @@ void flush_packbuf()
 {
     if (packbufofs > gTrainers)
     {
-        pack.mMax = 0;
-        pack.pack((unsigned char*)&packbuf[0], packbufofs, gTrainers);
+        gPack.mMax = 0;
+        gPack.pack((unsigned char*)&packbuf[0], packbufofs, gTrainers);
 #ifdef DUMP_BINARY_BLOBS        
         char temp[64];
         static int blobno = 0;
@@ -395,30 +394,30 @@ void flush_packbuf()
 #endif
     
         if (!gQuiet)
-            printf("zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", packbufofs-gTrainers, pack.mMax, ((pack.mMax)*100.0f)/(packbufofs-gTrainers), 0x5b00+gOutLen);
+            printf("zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", packbufofs-gTrainers, gPack.mMax, ((gPack.mMax)*100.0f)/(packbufofs-gTrainers), 0x5b00+gOutLen);
     
-        outdata(pack.mPackedData, pack.mMax);
+        outdata(gPack.mPackedData, gPack.mMax);
         packbufofs = gTrainers;
     }
 }
 
 void flush_room()
 {
-    if (datalen > 0)
+    if (gDataLen > 0)
     {
         putbyte(0); // add a zero byte for good measure.
-        if (datalen > 4096)
+        if (gDataLen > 4096)
         {
-            printf("Room %s data too large; max 4096 bytes, has %d bytes\n", gSymbol[roomno].mName, datalen);
+            printf("Room %s data too large; max 4096 bytes, has %d bytes\n", gSymbol[roomno].mName, gDataLen);
             exit(-1);
         }
         gRoom[gRooms].mName = gSymbol[roomno].mName;
-        gRoom[gRooms].mData = new unsigned char[datalen];
-        gRoom[gRooms].mLen = datalen;
+        gRoom[gRooms].mData = new unsigned char[gDataLen];
+        gRoom[gRooms].mLen = gDataLen;
         gRoom[gRooms].mUsed = 0;
-        memcpy(gRoom[gRooms].mData, databuf, datalen);
+        memcpy(gRoom[gRooms].mData, gDataBuf, gDataLen);
         gRooms++;
-        datalen = 0;
+        gDataLen = 0;
                 
         roomno++;
     }        
@@ -428,7 +427,7 @@ void flush_room()
 
 void flush_sect()
 {
-    if (datalen > 0)  // skip end if we're in the beginning
+    if (gDataLen > 0)  // skip end if we're in the beginning
     {
         if (!gVerbose) printf("End of section\n");
         putbyte(0);
@@ -748,11 +747,11 @@ void parse()
     gCommandPtrOpOfs = 0;
     int i;
     char t[256];
-    switch (scratch[1])
+    switch (gScratch[1])
     {
     case 'Q':
         flush_room(); // flush previous room
-        token(1, scratch, t);
+        token(1, gScratch, t);
         i = get_symbol_id(t);
         gCommandPtrOpOfs = 2; // $Q + roomno
         store_section('Q', i);  
@@ -760,7 +759,7 @@ void parse()
         previous_section = 'Q';
         break;
     case 'A':
-        token(1, scratch, t);
+        token(1, gScratch, t);
         i = get_symbol_id(t);
         gCommandPtrOpOfs = 2; // $A + roomno
         store_section('A', i);          
@@ -793,7 +792,7 @@ void parse()
             printf("Syntax error - statement I may not be included in statement A, gLine %d\n", gLine);
             exit(-1);
         }
-        token(1, scratch, t);
+        token(1, gScratch, t);
         gCommandPtrOpOfs = 2; // $I + imageid
         store_section('I', get_image_id(t));
         if (!gVerbose) printf("Image: \"%s\"\n", t);
@@ -805,23 +804,23 @@ void parse()
             printf("Syntax error - statement C may not be included in statement A, gLine %d\n", gLine);
             exit(-1);
         }
-        token(2, scratch, t);
+        token(2, gScratch, t);
         i = strtol(t, 0, 0);
-        token(1, scratch, t);
+        token(1, gScratch, t);
         gCommandPtrOpOfs = 3; // $C + codeblock + HL
         store_section('C', get_code_id(t), i);
         if (!gVerbose) printf("Code: \"%s\", %d\n", t, i);
         previous_section = 'C';
         break;
     default:
-        printf("Syntax error: unknown statement \"%s\", gLine %d\n", scratch, gLine);
+        printf("Syntax error: unknown statement \"%s\", gLine %d\n", gScratch, gLine);
         exit(-1);            
     }
     
     i = gCommandPtrOpOfs;    
     do
     {
-        token(i, scratch, t);
+        token(i, gScratch, t);
         if (t[0]) parse_op(t);
         i++;
     }
@@ -831,20 +830,20 @@ void parse()
 void store(char *lit)
 {
     putstring(lit);
-    if (!gVerbose) printf("  lit %d: \"%s\"\n", lits++, lit);
+    if (!gVerbose) printf("  String literal: \"%s\"\n", lit);
     previous_stringlits++;
 }
 
 void process()
 {
     flush_cmd();
-    if (stringptr != 0)
+    if (gStringIdx != 0)
     {
         char temp[256];
 //        temp[0] = 0;
         int c = 0;
         int width = 0;
-        char *s = stringlit;
+		char *s = gStringLit;
         temp[0] = ' ';
         temp[1] = ' ';
         c = 2;
@@ -874,15 +873,15 @@ void process()
         temp[c] = 0;
         store(temp);
     
-        stringptr = 0;
-        stringlit[0] = 0;
+        gStringIdx = 0;
+        gStringLit[0] = 0;
     }
 }
 
 void capture()
 {
     // capture string literal
-    char *s = scratch;
+    char *s = gScratch;
     
     if (*s == 0)
     {
@@ -893,10 +892,10 @@ void capture()
     
     int was_whitespace = 1;
     
-    if (stringptr && *s)
+    if (gStringIdx && *s)
     {
-        stringlit[stringptr] = ' ';
-        stringptr++;
+        gStringLit[gStringIdx] = ' ';
+        gStringIdx++;
     }
     
     while (*s)
@@ -918,13 +917,13 @@ void capture()
                 
         if (!ws)
         {
-            stringlit[stringptr] = *s;
-            stringptr++;
+            gStringLit[gStringIdx] = *s;
+            gStringIdx++;
         }
         
         s++;
     }
-    stringlit[stringptr] = 0;
+    gStringLit[gStringIdx] = 0;
 }
 
 void scan(char *aFilename)
@@ -937,13 +936,13 @@ void scan(char *aFilename)
     }
     
     
-    stringptr = 0;
-    stringlit[0] = 0;
+    gStringIdx = 0;
+    gStringLit[0] = 0;
     
     while (!feof(f))
     {
-        readline(scratch, f);
-        if (scratch[0] == '$')
+        readline(gScratch, f);
+        if (gScratch[0] == '$')
         {
             // process last string literal
             process();
@@ -1201,12 +1200,12 @@ void scan_first_pass(char *aFilename)
 	
     while (!feof(f))
     {
-        readline(scratch, f);
-        if (scratch[0] == '$')
+        readline(gScratch, f);
+        if (gScratch[0] == '$')
         {
             char t[256];
-            token(1, scratch, t);
-            if (scratch[1] == 'Q')
+            token(1, gScratch, t);
+            if (gScratch[1] == 'Q')
             {
                 i = get_symbol_id(t);
                 if (gSymbol[i].mHits > 1)
@@ -1216,12 +1215,12 @@ void scan_first_pass(char *aFilename)
                 }
                 gSymbol[i].mHits--; // clear the hit, as it'll be scanned again
             }
-            if (scratch[1] == 'I')
+            if (gScratch[1] == 'I')
             {
                 i = get_image_id(t);
                 gImage[i].mHits--; // clear the hit, as it'll be scanned again
             }
-            if (scratch[1] == 'C')
+            if (gScratch[1] == 'C')
             {
                 i = get_code_id(t);
                 gCode[i].mHits--; // clear the hit, as it'll be scanned again
@@ -1230,7 +1229,7 @@ void scan_first_pass(char *aFilename)
         else
         {
 			// string literal
-			wordcount(scratch);
+			wordcount(gScratch);
         }
     }
     gMaxRoomSymbol = gSymbols;
@@ -1373,7 +1372,7 @@ void process_images()
             printf("Warning: image \"%s\" has %d live character rows, 14 used.\n", gImage[i].mName, maxlive);
             maxlive = 14;
         }
-        datalen = 0;
+        gDataLen = 0;
         putbyte(maxlive*8);
         int k;
         for (j = 0; j < 8*maxlive; j++)
@@ -1382,18 +1381,18 @@ void process_images()
         for (j = 0; j < 32*maxlive; j++)
             putbyte(t[j + 192*32]);
 
-        pack.mMax = 0;
-        if (datalen > 4096)
+        gPack.mMax = 0;
+        if (gDataLen > 4096)
         {
-            printf("Image %s data too large; max 4096 bytes, has %d bytes (%d lines)\n", gImage[i].mName, datalen, maxlive);
+            printf("Image %s data too large; max 4096 bytes, has %d bytes (%d lines)\n", gImage[i].mName, gDataLen, maxlive);
             exit(-1);
         }
-        pack.pack((unsigned char*)&databuf[0], datalen);
+        gPack.pack((unsigned char*)&gDataBuf[0], gDataLen);
         patchword(0x5b00 + gOutLen, i + gFirstImageId);        
 
         if (!gQuiet)
-            printf("%25s (%02d) zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gImage[i].mName, maxlive, datalen, pack.mMax, (pack.mMax*100.0f)/datalen, 0x5b00+gOutLen);
-        outdata(pack.mPackedData, pack.mMax);            
+            printf("%25s (%02d) zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gImage[i].mName, maxlive, gDataLen, gPack.mMax, (gPack.mMax*100.0f)/gDataLen, 0x5b00+gOutLen);
+        outdata(gPack.mPackedData, gPack.mMax);            
     }
 }
 
@@ -1460,18 +1459,18 @@ void process_codes(char *path)
             }
     
     
-            datalen = 0;
+            gDataLen = 0;
             int j;
             for (j = 0; j < l; j++)
                 putbyte(codebuf[0xd000 + j]);
     
-            pack.mMax = 0;
-            pack.pack((unsigned char*)&databuf[0], datalen);
+            gPack.mMax = 0;
+            gPack.pack((unsigned char*)&gDataBuf[0], gDataLen);
             patchword(0x5b00 + gOutLen, i + gFirstCodeId);        
     
             if (!gQuiet)
-                printf("%30s zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gCode[i].mName, datalen, pack.mMax, (pack.mMax*100.0f)/datalen, 0x5b00+gOutLen);
-            outdata(pack.mPackedData, pack.mMax);            
+                printf("%30s zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gCode[i].mName, gDataLen, gPack.mMax, (gPack.mMax*100.0f)/gDataLen, 0x5b00+gOutLen);
+            outdata(gPack.mPackedData, gPack.mMax);            
         }
     }
 }
@@ -1804,10 +1803,10 @@ int best_compressible_room()
                         char tempbuf[8192];
                         memcpy(tempbuf, gRoom[i].mData, gRoom[i].mLen);
                         memcpy(tempbuf + gRoom[i].mLen, gRoom[j].mData, gRoom[j].mLen);
-                        pack.mMax = 0;
-                        pack.pack((unsigned char*)&tempbuf[0], total);
-                        //printf("ZX7: %4d bytes - %3.3f%%", pack.mMax, ((float)pack.mMax/total)*100);
-                        r = ((float)pack.mMax / total);
+                        gPack.mMax = 0;
+                        gPack.pack((unsigned char*)&tempbuf[0], total);
+                        //printf("ZX7: %4d bytes - %3.3f%%", gPack.mMax, ((float)gPack.mMax/total)*100);
+                        r = ((float)gPack.mMax / total);
                         compression_results[i * gRooms + j] = r;
                     }
                     else
@@ -1874,10 +1873,10 @@ void process_rooms()
                         char tempbuf[8192];
                         memcpy(tempbuf, gRoom[idx].mData, gRoom[idx].mLen);
                         memcpy(tempbuf + gRoom[idx].mLen, gRoom[j].mData, gRoom[j].mLen);
-                        pack.mMax = 0;
-                        pack.pack((unsigned char*)&tempbuf[0], total);
-                        //printf("ZX7: %4d bytes - %3.3f%%", pack.mMax, ((float)pack.mMax/total)*100);
-                        r = ((float)pack.mMax / total);
+                        gPack.mMax = 0;
+                        gPack.pack((unsigned char*)&tempbuf[0], total);
+                        //printf("ZX7: %4d bytes - %3.3f%%", gPack.mMax, ((float)gPack.mMax/total)*100);
+                        r = ((float)gPack.mMax / total);
                         compression_results[idx * gRooms + j] = r;
                     }
                     else
@@ -2074,7 +2073,7 @@ int main(int parc, char **pars)
     maketrainer();    
     memcpy(packbuf, gTrainer, gTrainers);
     packbufofs = gTrainers;
-    datalen = 0;
+    gDataLen = 0;
     gFirstImageId = gSymbols + 1;
     gFirstCodeId = gSymbols + gImages + 1;
     gOutLen = gSymbols * 2 + gImages * 2 + gCodes * 2 + 2;
