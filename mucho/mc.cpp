@@ -1,6 +1,5 @@
 //#define DUMP_BINARY_BLOBS
 
-
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,6 +18,9 @@
 #define DATA_AREA_SIZE 29952
 #define MAX_SYMBOLS (8*256) // 2k symbols should be enough for everybody
 #define MAX_NUMBERS 16
+#define MAXTOKENS 1024
+#define MAX_TRAINER 1024
+#define MAX_ROOMS 1024
 
 enum opcodeval
 {
@@ -112,7 +114,7 @@ struct Token
     int mNextHit[128];    
 };
 
-#define MAXTOKENS 1024
+
 Token gToken[MAXTOKENS];
 int gTokens = 0;
 int gPrevToken = -1;
@@ -121,7 +123,6 @@ int gPageData = 0;
 int gImageData = 0;
 int gCodeData = 0;
 int gTrainers = 0;
-#define MAX_TRAINER (1024)
 unsigned char gTrainer[MAX_TRAINER];
 
 int gSymbols = 0;
@@ -133,30 +134,29 @@ Symbol gCode[MAX_SYMBOLS];
 int gNumbers =0;
 Symbol gNumber[MAX_SYMBOLS];
 
-#define MAX_ROOMS 1024
 int gRooms = 0;
 RoomBuf gRoom[MAX_ROOMS];
 
 int gMaxRoomSymbol = 0;
 
-unsigned char *propfont_data = (unsigned char *)&builtin_data[0];
-unsigned char *propfont_width = (unsigned char *)&builtin_width[0];
-unsigned char *divider_data = (unsigned char*)&gDividerPattern[0];
-unsigned char *selector_data = (unsigned char*)&gSelectorPattern[0];
+unsigned char *gPropfontData = (unsigned char *)&builtin_data[0];
+unsigned char *gPropfontWidth = (unsigned char *)&builtin_width[0];
+unsigned char *gDividerData = (unsigned char*)&gDividerPattern[0];
+unsigned char *gSelectorData = (unsigned char*)&gSelectorPattern[0];
 
-int verbose = 0;
-int quiet = 0;
+int gVerbose = 0;
+int gQuiet = 0;
 
-unsigned char commandbuffer[1024];
-int commandptr = 0;
-int commandptropofs = 0;
+unsigned char gCommandBuffer[1024];
+int gCommandPtr = 0;
+int gCommandPtrOpOfs = 0;
 
-int line = 0;
-int image_id_start = 0;
-int code_id_start = 0;
+int gLine = 0;
+int gFirstImageId = 0;
+int gFirstCodeId = 0;
 
-char outbuf[1024*1024];
-int outlen = 0;
+char gOutBuf[1024*1024];
+int gOutLen = 0;
 
 char databuf[1024*1024];
 int datalen = 0;
@@ -175,14 +175,14 @@ int packbufofs = 0;
 
 void patchword(unsigned short w, int pos)
 {
-    outbuf[pos*2] = w & 0xff;
-    outbuf[pos*2+1] = w >> 8;
+    gOutBuf[pos*2] = w & 0xff;
+    gOutBuf[pos*2+1] = w >> 8;
 }
 
 void outbyte(unsigned char d)
 {
-    outbuf[outlen] = d;
-    outlen++;    
+    gOutBuf[gOutLen] = d;
+    gOutLen++;    
 }
 
 void outdata(unsigned char *d, int len, int skip = 0)
@@ -222,7 +222,7 @@ void putstring(char *d)
     {
         if (*d < 32 || *d > 126)
         {
-            printf("Invalid character \"%c\" found near line %d\n", *d, line);
+            printf("Invalid character \"%c\" found near line %d\n", *d, gLine);
             exit(-1);
         }
         putbyte(*d);
@@ -287,7 +287,7 @@ void readline(char *buf, FILE * f)
     do
     {
         readrawline(buf, f);
-        line++;
+        gLine++;
     }
     while (!feof(f) && buf[0] == '#' && buf[0] > 31);
 }
@@ -352,13 +352,13 @@ int get_image_id(char * s)
         if (stricmp(gImage[i].mName, s) == 0)
         {
             gImage[i].mHits++;
-            return i + image_id_start;
+            return i + gFirstImageId;
         }
     }
     gImage[gImages].mName = strdup(s);
     gImage[gImages].mHits = 1;
     gImages++;
-    return gImages - 1 + image_id_start;            
+    return gImages - 1 + gFirstImageId;            
 }
 
 int get_code_id(char * s)
@@ -369,13 +369,13 @@ int get_code_id(char * s)
         if (stricmp(gCode[i].mName, s) == 0)
         {
             gCode[i].mHits++;
-            return i + code_id_start;
+            return i + gFirstCodeId;
         }
     }
     gCode[gCodes].mName = strdup(s);
     gCode[gCodes].mHits = 1;
     gCodes++;
-    return gCodes - 1 + code_id_start;            
+    return gCodes - 1 + gFirstCodeId;            
 }
 
 
@@ -394,8 +394,8 @@ void flush_packbuf()
         fclose(f);
 #endif
     
-        if (!quiet)
-            printf("zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", packbufofs-gTrainers, pack.mMax, ((pack.mMax)*100.0f)/(packbufofs-gTrainers), 0x5b00+outlen);
+        if (!gQuiet)
+            printf("zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", packbufofs-gTrainers, pack.mMax, ((pack.mMax)*100.0f)/(packbufofs-gTrainers), 0x5b00+gOutLen);
     
         outdata(pack.mPackedData, pack.mMax);
         packbufofs = gTrainers;
@@ -430,7 +430,7 @@ void flush_sect()
 {
     if (datalen > 0)  // skip end if we're in the beginning
     {
-        if (verbose) printf("End of section\n");
+        if (!gVerbose) printf("End of section\n");
         putbyte(0);
     }
     
@@ -438,48 +438,48 @@ void flush_sect()
 
 void flush_cmd()
 {
-    if (commandptr)
+    if (gCommandPtr)
     {
-        int ops = (commandptr-1-(commandptropofs-1)*2) / 3;
-        if (verbose) 
+        int ops = (gCommandPtr-1-(gCommandPtrOpOfs-1)*2) / 3;
+        if (!gVerbose) 
         {
             printf("  Command buffer '%c' (%d bytes) with %d bytes payload (%d ops) %d\n", 
-            commandbuffer[0], 
+            gCommandBuffer[0], 
             //commandptropofs+1,
-            commandptr,
-            commandptr-1-(commandptropofs-1)*2, 
-            ops, commandptropofs);
+            gCommandPtr,
+            gCommandPtr-1-(gCommandPtrOpOfs-1)*2, 
+            ops);
         }
                 
-        if (commandptr > 255)
+        if (gCommandPtr > 255)
         {
-            printf("Syntax error - too many operations on one statement, line %d\n", line);
+            printf("Syntax error - too many operations on one statement, gLine %d\n", gLine);
             exit(-1);
         }
-        putbuf(commandbuffer, commandptr);
+        putbuf(gCommandBuffer, gCommandPtr);
     }
-    commandptr = 0;
+    gCommandPtr = 0;
 }
 
 void store_cmd(int op, int param)
 {
-    commandbuffer[commandptr] = op; commandptr++;
-    commandbuffer[commandptr] = param & 0xff; commandptr++;
-    commandbuffer[commandptr] = param >> 8; commandptr++;
+    gCommandBuffer[gCommandPtr] = op; gCommandPtr++;
+    gCommandBuffer[gCommandPtr] = param & 0xff; gCommandPtr++;
+    gCommandBuffer[gCommandPtr] = param >> 8; gCommandPtr++;
 }
 
 void store_number_cmd(int op, int param1, int param2)
 {
-    commandbuffer[commandptr] = op; commandptr++;
-    commandbuffer[commandptr] = param1 & 0xff; commandptr++;
-    commandbuffer[commandptr] = param2 & 0xff; commandptr++;
+    gCommandBuffer[gCommandPtr] = op; gCommandPtr++;
+    gCommandBuffer[gCommandPtr] = param1 & 0xff; gCommandPtr++;
+    gCommandBuffer[gCommandPtr] = param2 & 0xff; gCommandPtr++;
 }
 
 void store_section(int section)
 {
     flush_cmd();
     flush_sect();
-    commandbuffer[commandptr] = section; commandptr++;
+    gCommandBuffer[gCommandPtr] = section; gCommandPtr++;
 }
 
 void store_section(int section, int param)
@@ -493,37 +493,37 @@ void store_section(int section, int param, int param2)
 {
     flush_cmd();
     flush_sect();
-    commandbuffer[commandptr] = section; commandptr++;
-    commandbuffer[commandptr] = param & 0xff; commandptr++;
-    commandbuffer[commandptr] = param >> 8; commandptr++;
-    commandbuffer[commandptr] = param2 & 0xff; commandptr++;
-    commandbuffer[commandptr] = param2 >> 8; commandptr++;
+    gCommandBuffer[gCommandPtr] = section; gCommandPtr++;
+    gCommandBuffer[gCommandPtr] = param & 0xff; gCommandPtr++;
+    gCommandBuffer[gCommandPtr] = param >> 8; gCommandPtr++;
+    gCommandBuffer[gCommandPtr] = param2 & 0xff; gCommandPtr++;
+    gCommandBuffer[gCommandPtr] = param2 >> 8; gCommandPtr++;
 }
 
 void set_op(int opcode, int value)
 {
     if (value > 255)
     {
-        printf("Parameter value out of range, line %d\n", line);
+        printf("Parameter value out of range, gLine %d\n", gLine);
         exit(-1);
     }
-    if (verbose) printf("    Opcode: ");
+    if (!gVerbose) printf("    Opcode: ");
     switch(opcode)
     {
-        case OP_HAS: if (verbose) printf("HAS(%s)", gSymbol[value].mName); break;
-        case OP_NOT: if (verbose) printf("NOT(%s)", gSymbol[value].mName); break;
-        case OP_SET: if (verbose) printf("SET(%s)", gSymbol[value].mName); break;
-        case OP_CLR: if (verbose) printf("CLR(%s)", gSymbol[value].mName); break;
-        case OP_XOR: if (verbose) printf("XOR(%s)", gSymbol[value].mName); break;
-        case OP_RND: if (verbose) printf("RND(%d)", value); break;
-        case OP_ATTR: if (verbose) printf("ATTR(%d)", value); break;
-        case OP_EXT: if (verbose) printf("EXT(%d)", value); break;
-        case OP_IATTR: if (verbose) printf("IATTR(%d)", value); break;
-        case OP_DATTR: if (verbose) printf("DATTR(%d)", value); break;
-        case OP_GO:  if (verbose) printf("GO(%s)", gSymbol[value].mName); break;
-        case OP_GOSUB:  if (verbose) printf("GOSUB(%s)", gSymbol[value].mName); break;
+        case OP_HAS: if (!gVerbose) printf("HAS(%s)", gSymbol[value].mName); break;
+        case OP_NOT: if (!gVerbose) printf("NOT(%s)", gSymbol[value].mName); break;
+        case OP_SET: if (!gVerbose) printf("SET(%s)", gSymbol[value].mName); break;
+        case OP_CLR: if (!gVerbose) printf("CLR(%s)", gSymbol[value].mName); break;
+        case OP_XOR: if (!gVerbose) printf("XOR(%s)", gSymbol[value].mName); break;
+        case OP_RND: if (!gVerbose) printf("RND(%d)", value); break;
+        case OP_ATTR: if (!gVerbose) printf("ATTR(%d)", value); break;
+        case OP_EXT: if (!gVerbose) printf("EXT(%d)", value); break;
+        case OP_IATTR: if (!gVerbose) printf("IATTR(%d)", value); break;
+        case OP_DATTR: if (!gVerbose) printf("DATTR(%d)", value); break;
+        case OP_GO:  if (!gVerbose) printf("GO(%s)", gSymbol[value].mName); break;
+        case OP_GOSUB:  if (!gVerbose) printf("GOSUB(%s)", gSymbol[value].mName); break;
     }
-    if (verbose) printf("\n");
+    if (!gVerbose) printf("\n");
     store_cmd(opcode, value);
 }
 
@@ -531,32 +531,32 @@ void set_number_op(int opcode, int value1, int value2)
 {
     if (value1 > 255 || value2 > 255)
     {
-        printf("Parameter value out of range, line %d\n", line);
+        printf("Parameter value out of range, gLine %d\n", gLine);
         exit(-1); 
     }
-    if (verbose) printf("    Opcode: ");
+    if (!gVerbose) printf("    Opcode: ");
     switch(opcode)
     {
-        case OP_GT: if (verbose) printf("GT(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
-        case OP_GTC: if (verbose) printf("GTC(%s,%d)", gNumber[value1].mName, value2); break;
-        case OP_LT: if (verbose) printf("LT(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
-        case OP_LTC: if (verbose) printf("LTC(%s,%d)", gNumber[value1].mName, value2); break;
-        case OP_GTE: if (verbose) printf("GTE(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
-        case OP_GTEC: if (verbose) printf("GTEC(%s,%d)", gNumber[value1].mName, value2); break;
-        case OP_LTE: if (verbose) printf("LTE(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
-        case OP_LTEC: if (verbose) printf("LTEC(%s,%d)", gNumber[value1].mName, value2); break;
-        case OP_EQ: if (verbose) printf("EQ(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
-        case OP_EQC: if (verbose) printf("EQC(%s,%d)", gNumber[value1].mName, value2); break;
-        case OP_IEQ: if (verbose) printf("IEQ(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
-        case OP_IEQC: if (verbose) printf("IEQC(%s,%d)", gNumber[value1].mName, value2); break;
-        case OP_ASSIGN: if (verbose) printf("ASSIGN(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
-        case OP_ASSIGNC: if (verbose) printf("ASSIGNC(%s,%d)", gNumber[value1].mName, value2); break;
-        case OP_ADD: if (verbose) printf("ADD(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
-        case OP_ADDC: if (verbose) printf("ADDC(%s,%d)", gNumber[value1].mName, value2); break;
-        case OP_SUB: if (verbose) printf("SUB(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
-        case OP_SUBC: if (verbose) printf("SUBC(%s,%d)", gNumber[value1].mName, value2); break;
+        case OP_GT: if (!gVerbose) printf("GT(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
+        case OP_GTC: if (!gVerbose) printf("GTC(%s,%d)", gNumber[value1].mName, value2); break;
+        case OP_LT: if (!gVerbose) printf("LT(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
+        case OP_LTC: if (!gVerbose) printf("LTC(%s,%d)", gNumber[value1].mName, value2); break;
+        case OP_GTE: if (!gVerbose) printf("GTE(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
+        case OP_GTEC: if (!gVerbose) printf("GTEC(%s,%d)", gNumber[value1].mName, value2); break;
+        case OP_LTE: if (!gVerbose) printf("LTE(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
+        case OP_LTEC: if (!gVerbose) printf("LTEC(%s,%d)", gNumber[value1].mName, value2); break;
+        case OP_EQ: if (!gVerbose) printf("EQ(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
+        case OP_EQC: if (!gVerbose) printf("EQC(%s,%d)", gNumber[value1].mName, value2); break;
+        case OP_IEQ: if (!gVerbose) printf("IEQ(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
+        case OP_IEQC: if (!gVerbose) printf("IEQC(%s,%d)", gNumber[value1].mName, value2); break;
+        case OP_ASSIGN: if (!gVerbose) printf("ASSIGN(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
+        case OP_ASSIGNC: if (!gVerbose) printf("ASSIGNC(%s,%d)", gNumber[value1].mName, value2); break;
+        case OP_ADD: if (!gVerbose) printf("ADD(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
+        case OP_ADDC: if (!gVerbose) printf("ADDC(%s,%d)", gNumber[value1].mName, value2); break;
+        case OP_SUB: if (!gVerbose) printf("SUB(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
+        case OP_SUBC: if (!gVerbose) printf("SUBC(%s,%d)", gNumber[value1].mName, value2); break;
     }
-    if (verbose) printf("\n");
+    if (!gVerbose) printf("\n");
     store_number_cmd(opcode, value1, value2);
 }
 
@@ -564,10 +564,10 @@ void set_opgo(int op, int value)
 {
     if (value >= gMaxRoomSymbol)
     {
-        printf("Invalid GO%s parameter: symbol \"%s\" is not a room, line %d\n", 
+        printf("Invalid GO%s parameter: symbol \"%s\" is not a room, gLine %d\n", 
             op==OP_GOSUB?"SUB":"",
             gSymbol[value].mName,
-            line);
+            gLine);
         exit(-1);
     }
     set_op(op, value);
@@ -577,7 +577,7 @@ void set_eop(int value, int maxvalue)
 {
     if (value > maxvalue)
     {
-        printf("Parameter value out of range, line %d\n", line);
+        printf("Parameter value out of range, gLine %d\n", gLine);
         exit(-1);
     }
     set_op(OP_EXT, value);
@@ -588,12 +588,12 @@ void parse_op(char *op)
     // Op may be of form "foo" "!foo" or "foo:bar" or "foo[intop]bar" where intop is <,>,<=,>=,==,!=,=,+,-
     if (op[0] == 0)
     {
-        printf("Syntax error (op=null), line %d\n", line);
+        printf("Syntax error (op=null), gLine %d\n", gLine);
         exit(-1);
     }
     if (op[0] == ':' || op[0] == '>' || op[0] == '<' || op[0] == '=' || op[0] == '+' || op[0] == '-' || (op[0] == '!' && op[1] == '='))
     {
-        printf("Syntax error (op starting with '%c') \"%s\", line %d\n", op[0], op, line);
+        printf("Syntax error (op starting with '%c') \"%s\", gLine %d\n", op[0], op, gLine);
         exit(-1);
     }
 
@@ -624,7 +624,7 @@ void parse_op(char *op)
 
     if (operations > 1)
     {
-        printf("Syntax error (op with more than one instruction) \"%s\", line %d\n", op, line);
+        printf("Syntax error (op with more than one instruction) \"%s\", gLine %d\n", op, gLine);
         exit(-1);
     }
     
@@ -687,7 +687,7 @@ void parse_op(char *op)
             if (stricmp(cmd, "gosub") == 0) set_opgo(OP_GOSUB,get_symbol_id(sym)); else
             if (stricmp(cmd, "call") == 0) set_opgo(OP_GOSUB,get_symbol_id(sym)); else
             {
-                printf("Syntax error: unknown operation \"%s\", line %d\n", cmd, line);
+                printf("Syntax error: unknown operation \"%s\", gLine %d\n", cmd, gLine);
                 exit(-1);
             }                
         }
@@ -708,7 +708,7 @@ void parse_op(char *op)
                 
             if (v == 0)
             {
-                printf("Parse error near \"%s\" (\"%s\"), line %d\n", op+i, op, line);
+                printf("Parse error near \"%s\" (\"%s\"), gLine %d\n", op+i, op, gLine);
                 exit(-1);
             }
             
@@ -738,14 +738,14 @@ void parse()
     {
         printf("Statement A must have exactly one line of printable text (%d found)\n"
                "(Multiple lines may be caused by word wrapping; see verbose output\n"
-               "to see what's going on), near line %d\n", previous_stringlits, line);
+               "to see what's going on), near line %d\n", previous_stringlits, gLine);
                exit(-1);
     }
 
     previous_stringlits = 0;
     
     // parse statement
-    commandptropofs = 0;
+    gCommandPtrOpOfs = 0;
     int i;
     char t[256];
     switch (scratch[1])
@@ -754,71 +754,71 @@ void parse()
         flush_room(); // flush previous room
         token(1, scratch, t);
         i = get_symbol_id(t);
-        commandptropofs = 2; // $Q + roomno
+        gCommandPtrOpOfs = 2; // $Q + roomno
         store_section('Q', i);  
-        if (verbose) printf("Room: \"%s\" (%d)\n", t, i);
+        if (!gVerbose) printf("Room: \"%s\" (%d)\n", t, i);
         previous_section = 'Q';
         break;
     case 'A':
         token(1, scratch, t);
         i = get_symbol_id(t);
-        commandptropofs = 2; // $A + roomno
+        gCommandPtrOpOfs = 2; // $A + roomno
         store_section('A', i);          
-        if (verbose) printf("Choice: %s (%d)\n", t, i);
+        if (!gVerbose) printf("Choice: %s (%d)\n", t, i);
         previous_section = 'A';
         break;
     case 'P':
         if (previous_section == 'A')
         {
-            printf("Syntax error - statement P may not be included in statement A, line %d\n", line);
+            printf("Syntax error - statement P may not be included in statement A, gLine %d\n", gLine);
             exit(-1);
         }
-        if (verbose) printf("Empty paragraph\n");
+        if (!gVerbose) printf("Empty paragraph\n");
         putstring(" ");
         break;
     case 'O':
         if (previous_section == 'A')
         {
-            printf("Syntax error - statement O may not be included in statement A, line %d\n", line);
+            printf("Syntax error - statement O may not be included in statement A, gLine %d\n", gLine);
             exit(-1);
         }
-        commandptropofs = 1; // $O
+        gCommandPtrOpOfs = 1; // $O
         store_section('O');
-        if (verbose) printf("Predicated section\n");
+        if (!gVerbose) printf("Predicated section\n");
         previous_section = 'O';
         break;
     case 'I':
         if (previous_section == 'A')
         {
-            printf("Syntax error - statement I may not be included in statement A, line %d\n", line);
+            printf("Syntax error - statement I may not be included in statement A, gLine %d\n", gLine);
             exit(-1);
         }
         token(1, scratch, t);
-        commandptropofs = 2; // $I + imageid
+        gCommandPtrOpOfs = 2; // $I + imageid
         store_section('I', get_image_id(t));
-        if (verbose) printf("Image: \"%s\"\n", t);
+        if (!gVerbose) printf("Image: \"%s\"\n", t);
         previous_section = 'I';
         break;
     case 'C':
         if (previous_section == 'A')
         {
-            printf("Syntax error - statement C may not be included in statement A, line %d\n", line);
+            printf("Syntax error - statement C may not be included in statement A, gLine %d\n", gLine);
             exit(-1);
         }
         token(2, scratch, t);
         i = strtol(t, 0, 0);
         token(1, scratch, t);
-        commandptropofs = 3; // $C + codeblock + HL
+        gCommandPtrOpOfs = 3; // $C + codeblock + HL
         store_section('C', get_code_id(t), i);
-        if (verbose) printf("Code: \"%s\", %d\n", t, i);
+        if (!gVerbose) printf("Code: \"%s\", %d\n", t, i);
         previous_section = 'C';
         break;
     default:
-        printf("Syntax error: unknown statement \"%s\", line %d\n", scratch, line);
+        printf("Syntax error: unknown statement \"%s\", gLine %d\n", scratch, gLine);
         exit(-1);            
     }
     
-    i = commandptropofs;    
+    i = gCommandPtrOpOfs;    
     do
     {
         token(i, scratch, t);
@@ -831,7 +831,7 @@ void parse()
 void store(char *lit)
 {
     putstring(lit);
-    if (verbose) printf("  lit %d: \"%s\"\n", lits++, lit);
+    if (!gVerbose) printf("  lit %d: \"%s\"\n", lits++, lit);
     previous_stringlits++;
 }
 
@@ -848,12 +848,12 @@ void process()
         temp[0] = ' ';
         temp[1] = ' ';
         c = 2;
-        width = propfont_width[' '-32] * 2;
+        width = gPropfontWidth[' '-32] * 2;
         while (*s)
         {
             temp[c] = *s;
             c++;
-            width += propfont_width[*s-32];
+            width += gPropfontWidth[*s-32];
             if (width > 248)
             {
                 c--;
@@ -1085,7 +1085,7 @@ void maketrainer()
         
     qsort(idx, gTokens, sizeof(int), tokencmp);
 
-    if (verbose)
+    if (!gVerbose)
     {    
         printf("Most frequent words in source material:\n");
         for (i = 0; i < ((gTokens < 25)?gTokens:25); i++)
@@ -1152,7 +1152,7 @@ void maketrainer()
 				}
 			}
 		
-			if (verbose)
+			if (!gVerbose)
 			{    
 				printf("%s", gToken[idx[i]].mData);
 				if (min == -1)
@@ -1169,7 +1169,7 @@ void maketrainer()
     }
     gTrainers = c;
     
-    if (!quiet)
+    if (!gQuiet)
     {
         printf(
             "Trainer data: %d bytes\n" 
@@ -1211,7 +1211,7 @@ void scan_first_pass(char *aFilename)
                 i = get_symbol_id(t);
                 if (gSymbol[i].mHits > 1)
                 {
-                    printf("syntax error: room id \"%s\" used more than once, line %d\n", t, line);
+                    printf("syntax error: room id \"%s\" used more than once, gLine %d\n", t, gLine);
                     exit(-1);
                 }
                 gSymbol[i].mHits--; // clear the hit, as it'll be scanned again
@@ -1323,16 +1323,16 @@ int scan_row(int row, unsigned char*d)
         if (hit)
         {
             ret = 1;
-            if (verbose)
+            if (!gVerbose)
                 printf("*");
         }
         else
         {
-            if (verbose)
+            if (!gVerbose)
                 printf(" ");
         }                
     }
-    if (verbose)
+    if (!gVerbose)
         printf(" row %d, live %d\n", row, ret);
     return ret;
 }
@@ -1389,10 +1389,10 @@ void process_images()
             exit(-1);
         }
         pack.pack((unsigned char*)&databuf[0], datalen);
-        patchword(0x5b00 + outlen, i + image_id_start);        
+        patchword(0x5b00 + gOutLen, i + gFirstImageId);        
 
-        if (!quiet)
-            printf("%25s (%02d) zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gImage[i].mName, maxlive, datalen, pack.mMax, (pack.mMax*100.0f)/datalen, 0x5b00+outlen);
+        if (!gQuiet)
+            printf("%25s (%02d) zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gImage[i].mName, maxlive, datalen, pack.mMax, (pack.mMax*100.0f)/datalen, 0x5b00+gOutLen);
         outdata(pack.mPackedData, pack.mMax);            
     }
 }
@@ -1435,7 +1435,7 @@ void process_codes(char *path)
             int l = decode_ihx(ihx, len, codebuf, start, end, 0);
             if (l == 0)
             {
-                if (!quiet)
+                if (!gQuiet)
                 {
                     printf("Couldn't decode \"%s\" as .ihx, assuming binary\n", gCode[i].mName);
                 }
@@ -1467,10 +1467,10 @@ void process_codes(char *path)
     
             pack.mMax = 0;
             pack.pack((unsigned char*)&databuf[0], datalen);
-            patchword(0x5b00 + outlen, i + code_id_start);        
+            patchword(0x5b00 + gOutLen, i + gFirstCodeId);        
     
-            if (!quiet)
-                printf("%30s zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gCode[i].mName, datalen, pack.mMax, (pack.mMax*100.0f)/datalen, 0x5b00+outlen);
+            if (!gQuiet)
+                printf("%30s zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gCode[i].mName, datalen, pack.mMax, (pack.mMax*100.0f)/datalen, 0x5b00+gOutLen);
             outdata(pack.mPackedData, pack.mMax);            
         }
     }
@@ -1486,7 +1486,7 @@ void output(char *aFilename)
     }
     
 
-    fwrite(outbuf, 1, outlen, f);
+    fwrite(gOutBuf, 1, gOutLen, f);
     fclose(f);
 }
 
@@ -1553,16 +1553,16 @@ void patch_ihx(char *path)
     delete[] ihx;
     
     int ofs = find_data(codebuf, start, builtin_data, 94*8);
-    patch_data(codebuf, ofs, propfont_data, 94*8);
+    patch_data(codebuf, ofs, gPropfontData, 94*8);
     
     ofs = find_data(codebuf, start, builtin_width, 94);
-    patch_data(codebuf, ofs, propfont_width, 94);
+    patch_data(codebuf, ofs, gPropfontWidth, 94);
     
     ofs = find_data(codebuf, start, gDividerPattern, 8);
-    patch_data(codebuf, ofs, divider_data, 8);
+    patch_data(codebuf, ofs, gDividerData, 8);
 
     ofs = find_data(codebuf, start, gSelectorPattern, 8);
-    patch_data(codebuf, ofs, selector_data, 8);
+    patch_data(codebuf, ofs, gSelectorData, 8);
     
     write_ihx("patched.ihx", codebuf, start, end);
 }
@@ -1635,21 +1635,21 @@ void scan_font(char *aFilename)
     
     shift();
 
-    propfont_data = new unsigned char[94*8];
-    propfont_width = new unsigned char[94];
+    gPropfontData = new unsigned char[94*8];
+    gPropfontWidth = new unsigned char[94];
     
     int i, j, c;
     for (i = 0, c = 0; i < 94; i++)
     {
         for (j = 0; j < 8; j++, c++)
         {
-            propfont_data[c] = chardata[i].pixdata[j];
+            gPropfontData[c] = chardata[i].pixdata[j];
         }
     }
 
     for (i = 0; i < 94; i++)
     {
-        propfont_width[i] = chardata[i].xmax-chardata[i].xmin+1+1;
+        gPropfontWidth[i] = chardata[i].xmax-chardata[i].xmin+1+1;
     }
 }
 
@@ -1667,13 +1667,13 @@ void scan_div(char *aFilename)
         printf("Divider pattern image not 8x8 (found %dx%d)\n", x, y);
         exit(-1);
     }
-    divider_data = new unsigned char[8];
+    gDividerData = new unsigned char[8];
     for (i = 0; i < 8; i++)
     {
         for (j = 0; j < 8; j++)
         {
-            divider_data[i] <<= 1;
-            divider_data[i] |= (data[i * 8 + j] & 0xff) ? 1 : 0;
+            gDividerData[i] <<= 1;
+            gDividerData[i] |= (data[i * 8 + j] & 0xff) ? 1 : 0;
         }
     }              
 }
@@ -1692,13 +1692,13 @@ void scan_sel(char *aFilename)
         printf("Selector pattern image not 8x8 (found %dx%d)\n", x, y);
         exit(-1);
     }
-    selector_data = new unsigned char[8];
+    gSelectorData = new unsigned char[8];
     for (i = 0; i < 8; i++)
     {
         for (j = 0; j < 8; j++)
         {
-            selector_data[i] <<= 1;
-            selector_data[i] |= (data[i * 8 + j] & 0xff) ? 1 : 0;
+            gSelectorData[i] <<= 1;
+            gSelectorData[i] |= (data[i * 8 + j] & 0xff) ? 1 : 0;
         }
     }              
 }
@@ -1706,7 +1706,7 @@ void scan_sel(char *aFilename)
 void output_trainer()
 {
     int i;
-    int freebytes = DATA_AREA_SIZE - gTrainers - outlen;
+    int freebytes = DATA_AREA_SIZE - gTrainers - gOutLen;
     for (i = 0; i < freebytes; i++)
         outbyte(0);
     outdata(gTrainer, gTrainers);
@@ -1841,7 +1841,7 @@ int best_compressible_room()
 void process_rooms()
 {
     int j, idx;
-    if (!quiet)
+    if (!gQuiet)
         printf("Compressing..\n");
     
     compression_results = new float[gRooms * gRooms];
@@ -1852,7 +1852,7 @@ void process_rooms()
     int minidx = best_compressible_room();
     idx = minidx;
     gRoom[idx].mUsed = 1;
-    patchword(0x5b00 + outlen, idx);
+    patchword(0x5b00 + gOutLen, idx);
     memcpy(packbuf+packbufofs, gRoom[idx].mData, gRoom[idx].mLen);
     packbufofs += gRoom[idx].mLen;
     printf("%s ", gRoom[idx].mName);
@@ -1910,7 +1910,7 @@ void process_rooms()
             memcpy(packbuf+packbufofs, gRoom[minidx].mData, gRoom[minidx].mLen);
             packbufofs += gRoom[minidx].mLen;
              
-            patchword(0x5b00 + outlen, minidx); // N rooms will have same offset
+            patchword(0x5b00 + gOutLen, minidx); // N rooms will have same offset
         }
     } while (minidx != -1);
     
@@ -1957,9 +1957,9 @@ void sanity()
         exit(-1);
     }
 
-    if (outlen > DATA_AREA_SIZE)
+    if (gOutLen > DATA_AREA_SIZE)
     {
-        printf("Total output size too large (%d bytes max, %d found)\n", DATA_AREA_SIZE, outlen);
+        printf("Total output size too large (%d bytes max, %d found)\n", DATA_AREA_SIZE, gOutLen);
         exit(-1);
     }
 }
@@ -1991,12 +1991,13 @@ int main(int parc, char **pars)
             {
                 case 'v':
                 case 'V':
-                    verbose = 1;
+					gQuiet = 0;
+                    gVerbose = 1;
                     break;
                 case 'q':
                 case 'Q':
-                    quiet = 1;
-                    verbose = 0;
+                    gQuiet = 1;
+                    gVerbose = 0;
                     break;
                 default:
                     printf("Unknown parameter \"%s\"\n", pars[i]);
@@ -2068,25 +2069,26 @@ int main(int parc, char **pars)
 
     patch_ihx(pars[0]);
 
-    line = 0;    
+    gLine = 0;    
     scan_first_pass(pars[infile]);
     maketrainer();    
     memcpy(packbuf, gTrainer, gTrainers);
     packbufofs = gTrainers;
     datalen = 0;
-    image_id_start = gSymbols + 1;
-    code_id_start = gSymbols + gImages + 1;
-    outlen = gSymbols * 2 + gImages * 2 + gCodes * 2 + 2;
-    line = 0;    
+    gFirstImageId = gSymbols + 1;
+    gFirstCodeId = gSymbols + gImages + 1;
+    gOutLen = gSymbols * 2 + gImages * 2 + gCodes * 2 + 2;
+	gLine = 0;    
+
     scan(pars[infile]);
     process_rooms();
-    gPageData = outlen;
+    gPageData = gOutLen;
     process_images();
-    gImageData = outlen - gPageData;
+    gImageData = gOutLen - gPageData;
     process_codes(pars[0]);
-    gCodeData = outlen - gPageData - gImageData;
+    gCodeData = gOutLen - gPageData - gImageData;
     output_trainer();
-    if (!quiet)
+    if (!gQuiet)
         report();
     sanity();
     output(pars[outfile]);
