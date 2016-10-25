@@ -122,8 +122,6 @@ int gCommandPtr = 0;
 int gCommandPtrOpOfs = 0;
 
 int gLine = 0;
-int gFirstImageId = 0;
-int gFirstCodeId = 0;
 
 char gScratch[64 * 1024];
 char gStringLit[64 * 1024];
@@ -260,10 +258,12 @@ public:
     int mHits[MAX_SYMBOLS*2];
 	int mHash[MAX_SYMBOLS*2];
 	int mCount;
+	int mFirstIndex;
 
 	Symbol()
 	{
 		mCount = 0;
+		mFirstIndex = 0;
 	}
 
 	int calcHash(char *aString)
@@ -290,7 +290,7 @@ public:
 	        if (mHash[i] == hash && stricmp(mName[i], aString) == 0)
 			{
 	            mHits[i]++;
-				return i;
+				return i + mFirstIndex;
 			}
 		}
 		mName[mCount] = strdup(aString);
@@ -363,9 +363,9 @@ public:
 	}
 };
 
-Buffer gDataBuffer;
-Buffer gOutBuffer;
-Buffer gPackBuffer;
+Buffer gDataBuffer; // Gathered data
+Buffer gOutBuffer;  // Data to be stored to disk
+Buffer gPackBuffer; // Data to be sent to compressor
 
 int whitespace(char c)
 {
@@ -460,6 +460,7 @@ void flush_packbuf()
         char temp[64];
         static int blobno = 0;
         sprintf(temp, "blob%02d.bin", blobno);
+        blobno++;
         FILE * f = fopen(temp, "wb");
         fwrite(gPackBuffer.mData + gTrainers, 1, gPackBuffer.mLen - gTrainers, f);
         fclose(f);
@@ -850,6 +851,7 @@ void parse()
         }
         if (gVerbose) printf("Empty paragraph\n");
         gDataBuffer.putString(" ");
+		gCommandPtrOpOfs = 10000;
         break;
     case 'O':
         if (previous_section == 'A')
@@ -1358,7 +1360,7 @@ void process_images()
             maxlive = 14;
         }
         gDataBuffer.mLen = 0;
-        gDataBuffer.putByte(maxlive*8);
+        gDataBuffer.putByte(maxlive * 8);
         int k;
         for (j = 0; j < 8*maxlive; j++)
             for (k = 0; k < 32; k++)
@@ -1366,7 +1368,6 @@ void process_images()
         for (j = 0; j < 32*maxlive; j++)
             gDataBuffer.putByte(t[j + 192*32]);
 
-        gPack.mMax = 0;
         if (gDataBuffer.mLen > 4096)
         {
             printf("Image %s data too large; max 4096 bytes, has %d bytes (%d lines)\n", 
@@ -1375,8 +1376,8 @@ void process_images()
 				maxlive);
             exit(-1);
         }
+        gPack.mMax = 0;
         gPack.pack((unsigned char*)&gDataBuffer.mData[0], gDataBuffer.mLen);
-        gOutBuffer.patchWord(0x5b00 + gOutBuffer.mLen, i + gFirstImageId);        
 
         if (!gQuiet)
             printf("%25s (%02d) zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", 
@@ -1386,6 +1387,8 @@ void process_images()
 				gPack.mMax, 
 				(gPack.mMax * 100.0f) / gDataBuffer.mLen, 
 				0x5b00 + gOutBuffer.mLen);
+
+		gOutBuffer.patchWord(0x5b00 + gOutBuffer.mLen, i + gImage.mFirstIndex);        
         gOutBuffer.putRawArray(gPack.mPackedData, gPack.mMax);            
     }
 }
@@ -1460,7 +1463,7 @@ void process_codes(char *path)
     
             gPack.mMax = 0;
             gPack.pack((unsigned char*)&gDataBuffer.mData[0], gDataBuffer.mLen);
-            gOutBuffer.patchWord(0x5b00 + gOutBuffer.mLen, i + gFirstCodeId);        
+            gOutBuffer.patchWord(0x5b00 + gOutBuffer.mLen, i + gCode.mFirstIndex);        
     
             if (!gQuiet)
                 printf("%30s zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", 
@@ -1988,8 +1991,8 @@ int main(int parc, char **pars)
     maketrainer();    
 	gPackBuffer.putRawArray(gTrainer, gTrainers);
     gDataBuffer.mLen = 0;
-	gFirstImageId = gSymbol.mCount + 1;
-	gFirstCodeId = gSymbol.mCount + gImage.mCount + 1;
+	gImage.mFirstIndex = gSymbol.mCount + 1;
+	gCode.mFirstIndex = gSymbol.mCount + gImage.mCount + 1;
 	gOutBuffer.mLen = gSymbol.mCount * 2 + gImage.mCount * 2 + gCode.mCount * 2 + 2;
 	gLine = 0;    
 
