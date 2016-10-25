@@ -324,15 +324,21 @@ public:
 		mLen++;
 	}
 
-	void putArray(unsigned char *aData, int aLen)
+
+	void putRawArray(unsigned char *aData, int aLen)
 	{
-		putByte(aLen);
 		while (aLen)
 		{
 			putByte(*aData);
 			aLen--;
 			aData++;
 		}
+	}
+
+	void putArray(unsigned char *aData, int aLen)
+	{
+		putByte(aLen);
+		putRawArray(aData, aLen);
 	}
 
 	void putString(char *aData)
@@ -466,7 +472,7 @@ void flush_packbuf()
 				(gPack.mMax * 100.0f) / (gPackBuffer.mLen - gTrainers), 
 				0x5b00 + gOutBuffer.mLen);
     
-		gDataBuffer.putArray(gPack.mPackedData, gPack.mMax);
+		gOutBuffer.putRawArray(gPack.mPackedData, gPack.mMax);
 		gPackBuffer.mLen = gTrainers;
     }
 }
@@ -1363,15 +1369,24 @@ void process_images()
         gPack.mMax = 0;
         if (gDataBuffer.mLen > 4096)
         {
-            printf("Image %s data too large; max 4096 bytes, has %d bytes (%d lines)\n", gImage.mName[i], gDataBuffer.mLen, maxlive);
+            printf("Image %s data too large; max 4096 bytes, has %d bytes (%d lines)\n", 
+				gImage.mName[i], 
+				gDataBuffer.mLen, 
+				maxlive);
             exit(-1);
         }
         gPack.pack((unsigned char*)&gDataBuffer.mData[0], gDataBuffer.mLen);
         gOutBuffer.patchWord(0x5b00 + gOutBuffer.mLen, i + gFirstImageId);        
 
         if (!gQuiet)
-            printf("%25s (%02d) zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gImage.mName[i], maxlive, gDataBuffer.mLen, gPack.mMax, (gPack.mMax*100.0f)/gDataBuffer.mLen, 0x5b00+gOutBuffer.mLen);
-        gOutBuffer.putArray(gPack.mPackedData, gPack.mMax);            
+            printf("%25s (%02d) zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", 
+				gImage.mName[i], 
+				maxlive, 
+				gDataBuffer.mLen, 
+				gPack.mMax, 
+				(gPack.mMax * 100.0f) / gDataBuffer.mLen, 
+				0x5b00 + gOutBuffer.mLen);
+        gOutBuffer.putRawArray(gPack.mPackedData, gPack.mMax);            
     }
 }
 
@@ -1448,8 +1463,13 @@ void process_codes(char *path)
             gOutBuffer.patchWord(0x5b00 + gOutBuffer.mLen, i + gFirstCodeId);        
     
             if (!gQuiet)
-                printf("%30s zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gCode.mName[i], gDataBuffer.mLen, gPack.mMax, (gPack.mMax*100.0f)/gDataBuffer.mLen, 0x5b00+gOutBuffer.mLen);
-            gOutBuffer.putArray(gPack.mPackedData, gPack.mMax);            
+                printf("%30s zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", 
+					gCode.mName[i], 
+					gDataBuffer.mLen, 
+					gPack.mMax, 
+					(gPack.mMax * 100.0f) / gDataBuffer.mLen, 
+					0x5b00 + gOutBuffer.mLen);
+            gOutBuffer.putRawArray(gPack.mPackedData, gPack.mMax);            
         }
     }
 }
@@ -1463,7 +1483,6 @@ void output(char *aFilename)
         exit(-1);
     }
     
-
     fwrite(gOutBuffer.mData, 1, gOutBuffer.mLen, f);
     fclose(f);
 }
@@ -1687,7 +1706,7 @@ void output_trainer()
     int freebytes = DATA_AREA_SIZE - gTrainers - gOutBuffer.mLen;
     for (i = 0; i < freebytes; i++)
         gOutBuffer.putByte(0);
-    gOutBuffer.putArray(gTrainer, gTrainers);
+    gOutBuffer.putRawArray(gTrainer, gTrainers);
 }
 
 
@@ -1750,7 +1769,7 @@ void process_rooms()
     idx = minidx;
     gRoom[idx].mUsed = 1;
     gOutBuffer.patchWord(0x5b00 + gOutBuffer.mLen, idx);
-	gPackBuffer.putArray(gRoom[idx].mData, gRoom[idx].mLen);
+	gPackBuffer.putRawArray(gRoom[idx].mData, gRoom[idx].mLen);
     printf("%s ", gRoom[idx].mName);
     totaldata = gRoom[idx].mLen;
     do 
@@ -1803,7 +1822,7 @@ void process_rooms()
             gRoom[minidx].mUsed = 1;
             idx = minidx;
             
-			gPackBuffer.putArray(gRoom[minidx].mData, gRoom[minidx].mLen);
+			gPackBuffer.putRawArray(gRoom[minidx].mData, gRoom[minidx].mLen);
              
             gOutBuffer.patchWord(0x5b00 + gOutBuffer.mLen, minidx); // N rooms will have same offset
         }
@@ -1967,7 +1986,7 @@ int main(int parc, char **pars)
     gLine = 0;    
     scan_first_pass(pars[infile]);
     maketrainer();    
-	gPackBuffer.putArray(gTrainer, gTrainers);
+	gPackBuffer.putRawArray(gTrainer, gTrainers);
     gDataBuffer.mLen = 0;
 	gFirstImageId = gSymbol.mCount + 1;
 	gFirstCodeId = gSymbol.mCount + gImage.mCount + 1;
