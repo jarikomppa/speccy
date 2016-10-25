@@ -1,6 +1,7 @@
 //#define DUMP_BINARY_BLOBS
 
 #define _CRT_SECURE_NO_WARNINGS
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -87,12 +88,6 @@ const unsigned char gSelectorPattern[8] =
     0x00  
 };
 
-struct Symbol
-{
-    char *mName;
-    int mHits;
-};
-
 struct RoomBuf
 {
     char *mName;
@@ -101,38 +96,133 @@ struct RoomBuf
     int mUsed;
 };
 
-struct Token
+class WordCounter
 {
-    char * mData;
-    int mHits;
-    int mHash;
+public:
+	char *mWord[MAXTOKENS];
+	int mHits[MAXTOKENS];
+	int mHash[MAXTOKENS];
+	int mUsed[MAXTOKENS];
+	int mNexts[MAXTOKENS];
+	int mNext[MAXTOKENS][128];
+	int mNextHit[MAXTOKENS][128];
+	int mPrevToken;
+	int mTokens;
 
-    int mUsed;
+	int calcHash(char *aString)
+	{
+		unsigned int i = 0;
+		while (*aString)
+		{
+			i = (i << 11) | (i >> 21);
+			i ^= *aString;
+	        aString++;
+		}    
+    
+		return 0;
+	}    
 
-    int mNexts;
-    int mNext[128];
-    int mNextHit[128];    
+	WordCounter()
+	{
+		mPrevToken = -1;
+		mTokens = 0;
+	}
+
+	void tokenRef(int cur)
+	{
+		int prev = mPrevToken;
+		mPrevToken = cur;
+		if (prev != -1)
+		{
+			int i;
+			for (i = 0; i < mNexts[prev]; i++)
+			{
+				if (mNext[prev][i] == cur)
+				{
+					mNextHit[prev][i]++;
+					return;
+				}
+			}
+			if (mNexts[prev] < 128)
+			{
+				i = mNexts[prev];
+				mNext[prev][i] = cur;
+				mNextHit[prev][i] = 1;
+				mNexts[prev]++;
+			}
+		}
+	}
+
+
+	void addWordcountToken(char *aToken)
+	{    
+		int h = calcHash(aToken);
+		int i;	
+		if (aToken == NULL || *aToken == 0)
+			return;
+
+		for (i = 0; i < mTokens; i++)
+		{
+			if (mHash[i] == h && strcmp(mWord[i], aToken) == 0)
+			{
+				tokenRef(i);
+				mHits[i]++;
+				return;
+			}
+		}
+		if (mTokens < MAXTOKENS)
+		{
+			tokenRef(mTokens);
+			mWord[mTokens] = strdup(aToken);
+			mHash[mTokens] = h;
+			mHits[mTokens] = 1;
+			mUsed[mTokens] = 0;
+			mNexts[mTokens] = 0;
+			mTokens++;        
+		}
+		else
+		{
+			mPrevToken = -1;
+		}
+	}
+
+	void wordCount(char *aString)
+	{
+		char temp[256];
+		int p = 0;
+		while (*aString)
+		{
+			temp[p] = *aString;
+			if (*aString == ' ' || *aString == 0 || *aString == '\t' || *aString == '\r' || *aString == '\n')
+			{
+				temp[p] = 0;
+				if (p > 0)
+				{
+					addWordcountToken(temp);
+				}
+				p = 0;
+			}
+			else
+			{
+				p++;
+			}
+			aString++;
+		}
+		temp[p] = 0;
+		addWordcountToken(temp);
+	}
 };
 
+WordCounter gWordCounter;
 
-Token gToken[MAXTOKENS];
-int gTokens = 0;
-int gPrevToken = -1;
+
+
 
 int gPageData = 0;
 int gImageData = 0;
 int gCodeData = 0;
 int gTrainers = 0;
 unsigned char gTrainer[MAX_TRAINER];
-
-int gSymbols = 0;
-Symbol gSymbol[MAX_SYMBOLS*2];
-int gImages = 0;
-Symbol gImage[MAX_SYMBOLS];
-int gCodes = 0;
-Symbol gCode[MAX_SYMBOLS];
-int gNumbers =0;
-Symbol gNumber[MAX_SYMBOLS];
 
 int gRooms = 0;
 RoomBuf gRoom[MAX_ROOMS];
@@ -167,6 +257,59 @@ char gPackBuf[8192];
 int gPackBufIdx = 0;
 
 float *gCompressionResults;
+
+struct Symbol
+{
+    char *mName[MAX_SYMBOLS*2];
+    int mHits[MAX_SYMBOLS*2];
+	int mHash[MAX_SYMBOLS*2];
+	int mCount;
+
+	Symbol()
+	{
+		mCount = 0;
+	}
+
+	int calcHash(char *aString)
+	{
+		unsigned int i = 0;
+		while (*aString)
+		{
+			char c = toupper(*aString);
+			
+			i = (i << 11) | (i >> 21);
+			i ^= *aString;
+	        aString++;
+		}    
+    
+		return 0;
+	}    
+
+	int getId(char * aString)
+	{
+		int i;
+		int hash = calcHash(aString);
+		for (i = 0; i < mCount; i++)
+		{
+	        if (mHash[i] == hash && stricmp(mName[i], aString) == 0)
+			{
+	            mHits[i]++;
+				return i;
+			}
+		}
+		mName[mCount] = strdup(aString);
+		mHits[mCount] = 1;
+		mHash[mCount] = hash;
+		mCount++;
+		return mCount-1;            
+	}
+};
+
+
+Symbol gSymbol;
+Symbol gImage;
+Symbol gCode;
+Symbol gNumber;
 
 
 class Buffer
@@ -301,73 +444,7 @@ void token(int n, char *src, char *dst)
 }
 
 
-int get_symbol_id(char * s)
-{
-    int i;
-    for (i = 0; i < gSymbols; i++)
-    {
-        if (stricmp(gSymbol[i].mName, s) == 0)
-        {
-            gSymbol[i].mHits++;
-            return i;
-        }
-    }
-    gSymbol[gSymbols].mName = strdup(s);
-    gSymbol[gSymbols].mHits = 1;
-    gSymbols++;
-    return gSymbols-1;            
-}
 
-int get_number_id(char * s)
-{
-    int i;
-    for (i = 0; i < gNumbers; i++)
-    {
-        if (stricmp(gNumber[i].mName, s) == 0)
-        {
-            gNumber[i].mHits++;
-            return i;
-        }
-    }
-    gNumber[gNumbers].mName = strdup(s);
-    gNumber[gNumbers].mHits = 1;
-    gNumbers++;
-    return gNumbers-1;            
-}
-
-int get_image_id(char * s)
-{
-    int i;
-    for (i = 0; i < gImages; i++)
-    {
-        if (stricmp(gImage[i].mName, s) == 0)
-        {
-            gImage[i].mHits++;
-            return i + gFirstImageId;
-        }
-    }
-    gImage[gImages].mName = strdup(s);
-    gImage[gImages].mHits = 1;
-    gImages++;
-    return gImages - 1 + gFirstImageId;            
-}
-
-int get_code_id(char * s)
-{
-    int i;
-    for (i = 0; i < gCodes; i++)
-    {
-        if (stricmp(gCode[i].mName, s) == 0)
-        {
-            gCode[i].mHits++;
-            return i + gFirstCodeId;
-        }
-    }
-    gCode[gCodes].mName = strdup(s);
-    gCode[gCodes].mHits = 1;
-    gCodes++;
-    return gCodes - 1 + gFirstCodeId;            
-}
 
 
 void flush_packbuf()
@@ -400,10 +477,10 @@ void flush_room()
         gDataBuffer.putByte(0); // add a zero byte for good measure.
         if (gDataBuffer.mLen > 4096)
         {
-            printf("Room %s data too large; max 4096 bytes, has %d bytes\n", gSymbol[gRoomNo].mName, gDataBuffer.mLen);
+            printf("Room %s data too large; max 4096 bytes, has %d bytes\n", gSymbol.mName[gRoomNo], gDataBuffer.mLen);
             exit(-1);
         }
-        gRoom[gRooms].mName = gSymbol[gRoomNo].mName;
+        gRoom[gRooms].mName = gSymbol.mName[gRoomNo];
         gRoom[gRooms].mData = new unsigned char[gDataBuffer.mLen];
         gRoom[gRooms].mLen = gDataBuffer.mLen;
         gRoom[gRooms].mUsed = 0;
@@ -501,18 +578,18 @@ void set_op(int opcode, int value)
     if (!gVerbose) printf("    Opcode: ");
     switch(opcode)
     {
-        case OP_HAS: if (!gVerbose) printf("HAS(%s)", gSymbol[value].mName); break;
-        case OP_NOT: if (!gVerbose) printf("NOT(%s)", gSymbol[value].mName); break;
-        case OP_SET: if (!gVerbose) printf("SET(%s)", gSymbol[value].mName); break;
-        case OP_CLR: if (!gVerbose) printf("CLR(%s)", gSymbol[value].mName); break;
-        case OP_XOR: if (!gVerbose) printf("XOR(%s)", gSymbol[value].mName); break;
+        case OP_HAS: if (!gVerbose) printf("HAS(%s)", gSymbol.mName[value]); break;
+        case OP_NOT: if (!gVerbose) printf("NOT(%s)", gSymbol.mName[value]); break;
+        case OP_SET: if (!gVerbose) printf("SET(%s)", gSymbol.mName[value]); break;
+        case OP_CLR: if (!gVerbose) printf("CLR(%s)", gSymbol.mName[value]); break;
+        case OP_XOR: if (!gVerbose) printf("XOR(%s)", gSymbol.mName[value]); break;
         case OP_RND: if (!gVerbose) printf("RND(%d)", value); break;
         case OP_ATTR: if (!gVerbose) printf("ATTR(%d)", value); break;
         case OP_EXT: if (!gVerbose) printf("EXT(%d)", value); break;
         case OP_IATTR: if (!gVerbose) printf("IATTR(%d)", value); break;
         case OP_DATTR: if (!gVerbose) printf("DATTR(%d)", value); break;
-        case OP_GO:  if (!gVerbose) printf("GO(%s)", gSymbol[value].mName); break;
-        case OP_GOSUB:  if (!gVerbose) printf("GOSUB(%s)", gSymbol[value].mName); break;
+        case OP_GO:  if (!gVerbose) printf("GO(%s)", gSymbol.mName[value]); break;
+        case OP_GOSUB:  if (!gVerbose) printf("GOSUB(%s)", gSymbol.mName[value]); break;
     }
     if (!gVerbose) printf("\n");
     store_cmd(opcode, value);
@@ -528,24 +605,24 @@ void set_number_op(int opcode, int value1, int value2)
     if (!gVerbose) printf("    Opcode: ");
     switch(opcode)
     {
-        case OP_GT: if (!gVerbose) printf("GT(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
-        case OP_GTC: if (!gVerbose) printf("GTC(%s,%d)", gNumber[value1].mName, value2); break;
-        case OP_LT: if (!gVerbose) printf("LT(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
-        case OP_LTC: if (!gVerbose) printf("LTC(%s,%d)", gNumber[value1].mName, value2); break;
-        case OP_GTE: if (!gVerbose) printf("GTE(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
-        case OP_GTEC: if (!gVerbose) printf("GTEC(%s,%d)", gNumber[value1].mName, value2); break;
-        case OP_LTE: if (!gVerbose) printf("LTE(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
-        case OP_LTEC: if (!gVerbose) printf("LTEC(%s,%d)", gNumber[value1].mName, value2); break;
-        case OP_EQ: if (!gVerbose) printf("EQ(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
-        case OP_EQC: if (!gVerbose) printf("EQC(%s,%d)", gNumber[value1].mName, value2); break;
-        case OP_IEQ: if (!gVerbose) printf("IEQ(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
-        case OP_IEQC: if (!gVerbose) printf("IEQC(%s,%d)", gNumber[value1].mName, value2); break;
-        case OP_ASSIGN: if (!gVerbose) printf("ASSIGN(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
-        case OP_ASSIGNC: if (!gVerbose) printf("ASSIGNC(%s,%d)", gNumber[value1].mName, value2); break;
-        case OP_ADD: if (!gVerbose) printf("ADD(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
-        case OP_ADDC: if (!gVerbose) printf("ADDC(%s,%d)", gNumber[value1].mName, value2); break;
-        case OP_SUB: if (!gVerbose) printf("SUB(%s,%s)", gNumber[value1].mName, gNumber[value2].mName); break;
-        case OP_SUBC: if (!gVerbose) printf("SUBC(%s,%d)", gNumber[value1].mName, value2); break;
+        case OP_GT: if (!gVerbose) printf("GT(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
+        case OP_GTC: if (!gVerbose) printf("GTC(%s,%d)", gNumber.mName[value1], value2); break;
+        case OP_LT: if (!gVerbose) printf("LT(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
+        case OP_LTC: if (!gVerbose) printf("LTC(%s,%d)", gNumber.mName[value1], value2); break;
+        case OP_GTE: if (!gVerbose) printf("GTE(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
+        case OP_GTEC: if (!gVerbose) printf("GTEC(%s,%d)", gNumber.mName[value1], value2); break;
+        case OP_LTE: if (!gVerbose) printf("LTE(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
+        case OP_LTEC: if (!gVerbose) printf("LTEC(%s,%d)", gNumber.mName[value1], value2); break;
+        case OP_EQ: if (!gVerbose) printf("EQ(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
+        case OP_EQC: if (!gVerbose) printf("EQC(%s,%d)", gNumber.mName[value1], value2); break;
+        case OP_IEQ: if (!gVerbose) printf("IEQ(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
+        case OP_IEQC: if (!gVerbose) printf("IEQC(%s,%d)", gNumber.mName[value1], value2); break;
+        case OP_ASSIGN: if (!gVerbose) printf("ASSIGN(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
+        case OP_ASSIGNC: if (!gVerbose) printf("ASSIGNC(%s,%d)", gNumber.mName[value1], value2); break;
+        case OP_ADD: if (!gVerbose) printf("ADD(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
+        case OP_ADDC: if (!gVerbose) printf("ADDC(%s,%d)", gNumber.mName[value1], value2); break;
+        case OP_SUB: if (!gVerbose) printf("SUB(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
+        case OP_SUBC: if (!gVerbose) printf("SUBC(%s,%d)", gNumber.mName[value1], value2); break;
     }
     if (!gVerbose) printf("\n");
     store_number_cmd(opcode, value1, value2);
@@ -557,7 +634,7 @@ void set_opgo(int op, int value)
     {
         printf("Invalid GO%s parameter: symbol \"%s\" is not a room, gLine %d\n", 
             op==OP_GOSUB?"SUB":"",
-            gSymbol[value].mName,
+            gSymbol.mName[value],
             gLine);
         exit(-1);
     }
@@ -623,11 +700,11 @@ void parse_op(char *op)
     {
         if (op[0] == '!')
         {        
-            set_op(OP_NOT, get_symbol_id(op+1));
+            set_op(OP_NOT, gSymbol.getId(op+1));
         }
         else
         {
-            set_op(OP_HAS, get_symbol_id(op));
+            set_op(OP_HAS, gSymbol.getId(op));
         }
     }
     else
@@ -651,15 +728,15 @@ void parse_op(char *op)
         {
             sym = op+i+1;
     
-            if (stricmp(cmd, "has") == 0) set_op(OP_HAS, get_symbol_id(sym)); else
-            if (stricmp(cmd, "need") == 0) set_op(OP_HAS, get_symbol_id(sym)); else
-            if (stricmp(cmd, "not") == 0) set_op(OP_NOT, get_symbol_id(sym)); else
-            if (stricmp(cmd, "set") == 0) set_op(OP_SET, get_symbol_id(sym)); else
-            if (stricmp(cmd, "clear") == 0) set_op(OP_CLR, get_symbol_id(sym)); else
-            if (stricmp(cmd, "clr") == 0) set_op(OP_CLR, get_symbol_id(sym)); else
-            if (stricmp(cmd, "toggle") == 0) set_op(OP_XOR, get_symbol_id(sym)); else
-            if (stricmp(cmd, "xor") == 0) set_op(OP_XOR, get_symbol_id(sym)); else
-            if (stricmp(cmd, "flip") == 0) set_op(OP_XOR, get_symbol_id(sym)); else
+            if (stricmp(cmd, "has") == 0) set_op(OP_HAS, gSymbol.getId(sym)); else
+            if (stricmp(cmd, "need") == 0) set_op(OP_HAS, gSymbol.getId(sym)); else
+            if (stricmp(cmd, "not") == 0) set_op(OP_NOT, gSymbol.getId(sym)); else
+            if (stricmp(cmd, "set") == 0) set_op(OP_SET, gSymbol.getId(sym)); else
+            if (stricmp(cmd, "clear") == 0) set_op(OP_CLR, gSymbol.getId(sym)); else
+            if (stricmp(cmd, "clr") == 0) set_op(OP_CLR, gSymbol.getId(sym)); else
+            if (stricmp(cmd, "toggle") == 0) set_op(OP_XOR, gSymbol.getId(sym)); else
+            if (stricmp(cmd, "xor") == 0) set_op(OP_XOR, gSymbol.getId(sym)); else
+            if (stricmp(cmd, "flip") == 0) set_op(OP_XOR, gSymbol.getId(sym)); else
             if (stricmp(cmd, "random") == 0) set_op(OP_RND, atoi(sym)); else
             if (stricmp(cmd, "rand") == 0) set_op(OP_RND, atoi(sym)); else
             if (stricmp(cmd, "rnd") == 0) set_op(OP_RND, atoi(sym)); else
@@ -673,10 +750,10 @@ void parse_op(char *op)
             if (stricmp(cmd, "ext") == 0) set_op(OP_EXT, atoi(sym)); else
             if (stricmp(cmd, "border") == 0) set_eop(atoi(sym), 7); else
             if (stricmp(cmd, "cls") == 0) set_eop(atoi(sym)+8, 10); else
-            if (stricmp(cmd, "go") == 0) set_opgo(OP_GO,get_symbol_id(sym)); else
-            if (stricmp(cmd, "goto") == 0) set_opgo(OP_GO,get_symbol_id(sym)); else
-            if (stricmp(cmd, "gosub") == 0) set_opgo(OP_GOSUB,get_symbol_id(sym)); else
-            if (stricmp(cmd, "call") == 0) set_opgo(OP_GOSUB,get_symbol_id(sym)); else
+            if (stricmp(cmd, "go") == 0) set_opgo(OP_GO,gSymbol.getId(sym)); else
+            if (stricmp(cmd, "goto") == 0) set_opgo(OP_GO,gSymbol.getId(sym)); else
+            if (stricmp(cmd, "gosub") == 0) set_opgo(OP_GOSUB,gSymbol.getId(sym)); else
+            if (stricmp(cmd, "call") == 0) set_opgo(OP_GOSUB,gSymbol.getId(sym)); else
             {
                 printf("Syntax error: unknown operation \"%s\", gLine %d\n", cmd, gLine);
                 exit(-1);
@@ -684,7 +761,7 @@ void parse_op(char *op)
         }
         else
         {
-            int first = get_number_id(cmd);
+            int first = gNumber.getId(cmd);
             // numeric op <,>,<=,>=,==,!=,=,+,-
             int v = 0;
             if (op[i] == '<' && op[i+1] != '=') v = OP_LT;
@@ -713,7 +790,7 @@ void parse_op(char *op)
             }
             else
             {
-                second = get_number_id(sym);
+                second = gNumber.getId(sym);
             }
             set_number_op(v, first, second);
         }
@@ -744,7 +821,7 @@ void parse()
     case 'Q':
         flush_room(); // flush previous room
         token(1, gScratch, t);
-        i = get_symbol_id(t);
+        i = gSymbol.getId(t);
         gCommandPtrOpOfs = 2; // $Q + roomno
         store_section('Q', i);  
         if (!gVerbose) printf("Room: \"%s\" (%d)\n", t, i);
@@ -752,7 +829,7 @@ void parse()
         break;
     case 'A':
         token(1, gScratch, t);
-        i = get_symbol_id(t);
+        i = gSymbol.getId(t);
         gCommandPtrOpOfs = 2; // $A + roomno
         store_section('A', i);          
         if (!gVerbose) printf("Choice: %s (%d)\n", t, i);
@@ -786,7 +863,7 @@ void parse()
         }
         token(1, gScratch, t);
         gCommandPtrOpOfs = 2; // $I + imageid
-        store_section('I', get_image_id(t));
+        store_section('I', gImage.getId(t));
         if (!gVerbose) printf("Image: \"%s\"\n", t);
         previous_section = 'I';
         break;
@@ -800,7 +877,7 @@ void parse()
         i = strtol(t, 0, 0);
         token(1, gScratch, t);
         gCommandPtrOpOfs = 3; // $C + codeblock + HL
-        store_section('C', get_code_id(t), i);
+        store_section('C', gCode.getId(t), i);
         if (!gVerbose) printf("Code: \"%s\", %d\n", t, i);
         previous_section = 'C';
         break;
@@ -959,113 +1036,20 @@ void scan(char *aFilename)
 }
 
 
-int calchash(char *s)
-{
-    unsigned int i = 0;
-    while (*s)
-    {
-        i = (i << 11) | (i >> 21);
-        i ^= *s;
-        s++;
-    }    
-    
-    return 0;
-}    
-
-void tokenref(int cur)
-{
-    int prev = gPrevToken;
-    gPrevToken = cur;
-    if (prev != -1)
-    {
-        int i;
-        for (i = 0; i < gToken[prev].mNexts; i++)
-        {
-            if (gToken[prev].mNext[i] == cur)
-            {
-                gToken[prev].mNextHit[i]++;
-                return;
-            }
-        }
-        if (gToken[prev].mNexts < 128)
-        {
-            i = gToken[prev].mNexts;
-            gToken[prev].mNext[i] = cur;
-            gToken[prev].mNextHit[i] = 1;
-            gToken[prev].mNexts++;
-        }
-    }
-}
-
-
-void addwordcounttoken(char *aToken)
-{    
-    int h = calchash(aToken);
-    int i;	
-	if (aToken == NULL || *aToken == 0)
-		return;
-    for (i = 0; i < gTokens; i++)
-    {
-        if (gToken[i].mHash == h && strcmp(gToken[i].mData, aToken) == 0)
-        {
-            tokenref(i);
-            gToken[i].mHits++;
-            return;
-        }
-    }
-    if (gTokens < MAXTOKENS)
-    {
-        tokenref(gTokens);
-        gToken[gTokens].mData = strdup(aToken);
-        gToken[gTokens].mHash = h;
-        gToken[gTokens].mHits = 1;
-        gToken[gTokens].mUsed = 0;
-        gToken[gTokens].mNexts = 0;
-        gTokens++;        
-    }
-	else
-		gPrevToken = -1;
-}
-
-void wordcount(char *aString)
-{
-    char temp[256];
-    int p = 0;
-    while (*aString)
-    {
-        temp[p] = *aString;
-        if (*aString == ' ' || *aString == 0 || *aString == '\t' || *aString == '\r' || *aString == '\n')
-        {
-            temp[p] = 0;
-            if (p > 0)
-            {
-                addwordcounttoken(temp);
-            }
-            p = 0;
-        }
-        else
-        {
-            p++;
-        }
-        aString++;
-    }
-	temp[p] = 0;
-	addwordcounttoken(temp);
-}
-
 int tokencmp (const void * a, const void * b)
 {
-    int idx1 = *(int*)a;
-    int idx2 = *(int*)b;
-    return gToken[idx2].mHits - gToken[idx1].mHits;
+	int idx1 = *(int*)a;
+	int idx2 = *(int*)b;
+	return gWordCounter.mHits[idx2] - gWordCounter.mHits[idx1];
 }
 
 int findidx(int *idx, int i)
 {
-    int c = 0;
-    while (c < MAXTOKENS && idx[c] != i) c++;
-    return c;
+	int c = 0;
+	while (c < MAXTOKENS && idx[c] != i) c++;
+	return c;
 }
+
 
 void maketrainer()
 {
@@ -1074,14 +1058,16 @@ void maketrainer()
     for (i = 0; i < MAXTOKENS; i++)
         idx[i] = i;
         
-    qsort(idx, gTokens, sizeof(int), tokencmp);
+	qsort(idx, gWordCounter.mTokens, sizeof(int), tokencmp);
 
     if (!gVerbose)
     {    
         printf("Most frequent words in source material:\n");
-        for (i = 0; i < ((gTokens < 25)?gTokens:25); i++)
+		int total = gWordCounter.mTokens;
+		if (total > 25) total = 25;
+        for (i = 0; i < total; i++)
         {
-            printf("%d. \"%s\"\t(%d)\n", i, gToken[idx[i]].mData, gToken[idx[i]].mHits);
+            printf("%d. \"%s\"\t(%d)\n", i, gWordCounter.mWord[idx[i]], gWordCounter.mHits[idx[i]]);
         }
     }
         
@@ -1089,9 +1075,9 @@ void maketrainer()
     int done = 0;
     i = 0;
     
-    while (c < MAX_TRAINER && i < gTokens)
+    while (c < MAX_TRAINER && i < gWordCounter.mTokens)
     {
-        c += strlen(gToken[idx[i]].mData) + 1;
+        c += strlen(gWordCounter.mWord[idx[i]]) + 1;
         i++;
     }
     int maxtoken = i;
@@ -1099,9 +1085,9 @@ void maketrainer()
     i = 0;
     while (c < MAX_TRAINER && !done)
     {   
-        if (gToken[idx[i]].mUsed) i = 0;
-        while (gToken[idx[i]].mUsed && i < gTokens) i++;
-        if (i >= gTokens) 
+        if (gWordCounter.mUsed[idx[i]]) i = 0;
+        while (gWordCounter.mUsed[idx[i]] && i < gWordCounter.mTokens) i++;
+        if (i >= gWordCounter.mTokens) 
 		{ 
 			done = 1; 
 			i = 0; 
@@ -1109,7 +1095,7 @@ void maketrainer()
 		else
 		{
             
-			char * s = gToken[idx[i]].mData;
+			char * s = gWordCounter.mWord[idx[i]];
 			while (*s && c < MAX_TRAINER)
 			{
 				gTrainer[c] = *s;
@@ -1123,20 +1109,20 @@ void maketrainer()
 				c++;
 			}
         
-			gToken[idx[i]].mUsed = 1;
+			gWordCounter.mUsed[idx[i]] = 1;
         
 			// Try to chain the words together
 			int min = -1;
 			int mini = 0;
 			int j;
-			for (j = 0; j < gToken[idx[i]].mNexts; j++)
+			for (j = 0; j < gWordCounter.mNexts[idx[i]]; j++)
 			{
-				int n = gToken[idx[i]].mNext[j];
-				int h = gToken[idx[i]].mNextHit[j];
+				int n = gWordCounter.mNext[idx[i]][j];
+				int h = gWordCounter.mNextHit[idx[i]][j];
 				int nextidx = findidx(idx, n);
 				if (nextidx < maxtoken && 
 					h > min && 
-					gToken[n].mUsed == 0)
+					gWordCounter.mUsed[n] == 0)
 				{
 					min = h;
 					mini = nextidx;
@@ -1145,7 +1131,7 @@ void maketrainer()
 		
 			if (!gVerbose)
 			{    
-				printf("%s", gToken[idx[i]].mData);
+				printf("%s", gWordCounter.mWord[idx[i]]);
 				if (min == -1)
 				{
 					printf(" # ");
@@ -1187,8 +1173,8 @@ void scan_first_pass(char *aFilename)
     // Register beepfx as a possible code block. 
     // Won't be stored if not actually in use.
     int i;
-    i = get_code_id("beepfx.ihx");
-    gCode[i].mHits--;
+    i = gCode.getId("beepfx.ihx");
+    gCode.mHits[i]--;
 	
     while (!feof(f))
     {
@@ -1199,32 +1185,32 @@ void scan_first_pass(char *aFilename)
             token(1, gScratch, t);
             if (gScratch[1] == 'Q')
             {
-                i = get_symbol_id(t);
-                if (gSymbol[i].mHits > 1)
+                i = gSymbol.getId(t);
+                if (gSymbol.mHits[i] > 1)
                 {
                     printf("syntax error: room id \"%s\" used more than once, gLine %d\n", t, gLine);
                     exit(-1);
                 }
-                gSymbol[i].mHits--; // clear the hit, as it'll be scanned again
+                gSymbol.mHits[i]--; // clear the hit, as it'll be scanned again
             }
             if (gScratch[1] == 'I')
             {
-                i = get_image_id(t);
-                gImage[i].mHits--; // clear the hit, as it'll be scanned again
+                i = gImage.getId(t);
+                gImage.mHits[i]--; // clear the hit, as it'll be scanned again
             }
             if (gScratch[1] == 'C')
             {
-                i = get_code_id(t);
-                gCode[i].mHits--; // clear the hit, as it'll be scanned again
+                i = gCode.getId(t);
+                gCode.mHits[i]--; // clear the hit, as it'll be scanned again
             }
         }
         else
         {
 			// string literal
-			wordcount(gScratch);
+			gWordCounter.wordCount(gScratch);
         }
     }
-    gMaxRoomSymbol = gSymbols;
+	gMaxRoomSymbol = gSymbol.mCount;
     fclose(f);
 }
 
@@ -1234,38 +1220,38 @@ void report()
     int i;
     printf("\n");
     printf("Token Hits Symbol\n");
-    for (i = 0; i < gSymbols; i++)
+	for (i = 0; i < gSymbol.mCount; i++)
     {
-        printf("%5d %4d \"%s\"%s\n", i, gSymbol[i].mHits, gSymbol[i].mName, gSymbol[i].mHits < 2 ? " <- Warning":"");
+        printf("%5d %4d \"%s\"%s\n", i, gSymbol.mHits[i], gSymbol.mName[i], gSymbol.mHits[i] < 2 ? " <- Warning":"");
     }
 
-    if (gNumbers)
+	if (gNumber.mCount)
     {
 	    printf("\n");
         printf("Token Hits Number\n");
-        for (i = 0; i < gNumbers; i++)
+		for (i = 0; i < gNumber.mCount; i++)
         {
-            printf("%5d %4d \"%s\"\n", i, gNumber[i].mHits, gNumber[i].mName);
+            printf("%5d %4d \"%s\"\n", i, gNumber.mHits[i], gNumber.mName[i]);
         }
     }
 
-    if (gImages)
+	if (gImage.mCount)
     {
 	    printf("\n");
         printf("Token Hits Image\n");
-        for (i = 0; i < gImages; i++)
+		for (i = 0; i < gImage.mCount; i++)
         {
-            printf("%5d %4d \"%s\"\n", i, gImage[i].mHits, gImage[i].mName);
+            printf("%5d %4d \"%s\"\n", i, gImage.mHits[i], gImage.mName[i]);
         }
     }
 
-    if (gCodes > 1 || (gCodes == 1 && gCode[0].mHits > 0))
+	if (gCode.mCount > 1 || (gCode.mCount == 1 && gCode.mHits[0] > 0))
     {
 	    printf("\n");
         printf("Token Hits Code\n");
-        for (i = 0; i < gCodes; i++)
+		for (i = 0; i < gCode.mCount; i++)
         {
-            printf("%5d %4d \"%s\"\n", i, gCode[i].mHits, gCode[i].mName);
+            printf("%5d %4d \"%s\"\n", i, gCode.mHits[i], gCode.mName[i]);
         }
     }
 
@@ -1332,18 +1318,18 @@ void process_images()
 {
     int i;
     unsigned char t[6912];
-    for (i = 0; i < gImages; i++)
+	for (i = 0; i < gImage.mCount; i++)
     {
-        FILE * f = fopen(gImage[i].mName, "rb");
+        FILE * f = fopen(gImage.mName[i], "rb");
         if (!f)
         {
-            printf("Image \"%s\" not found.\n", gImage[i].mName);
+            printf("Image \"%s\" not found.\n", gImage.mName[i]);
             exit(-1);
         }
         fseek(f,0,SEEK_END);
         if (ftell(f) != 6912)
         {
-            printf("Image \"%s\" wrong size (has to be 6912 bytes).\n", gImage[i].mName);
+            printf("Image \"%s\" wrong size (has to be 6912 bytes).\n", gImage.mName[i]);
             exit(-1);
         }
         fseek(f,0,SEEK_SET);
@@ -1361,7 +1347,7 @@ void process_images()
         maxlive++;
         if (maxlive > 14)
         {
-            printf("Warning: image \"%s\" has %d live character rows, 14 used.\n", gImage[i].mName, maxlive);
+            printf("Warning: image \"%s\" has %d live character rows, 14 used.\n", gImage.mName[i], maxlive);
             maxlive = 14;
         }
         gDataBuffer.mLen = 0;
@@ -1376,14 +1362,14 @@ void process_images()
         gPack.mMax = 0;
         if (gDataBuffer.mLen > 4096)
         {
-            printf("Image %s data too large; max 4096 bytes, has %d bytes (%d lines)\n", gImage[i].mName, gDataBuffer.mLen, maxlive);
+            printf("Image %s data too large; max 4096 bytes, has %d bytes (%d lines)\n", gImage.mName[i], gDataBuffer.mLen, maxlive);
             exit(-1);
         }
         gPack.pack((unsigned char*)&gDataBuffer.mData[0], gDataBuffer.mLen);
         gOutBuffer.patchWord(0x5b00 + gOutBuffer.mLen, i + gFirstImageId);        
 
         if (!gQuiet)
-            printf("%25s (%02d) zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gImage[i].mName, maxlive, gDataBuffer.mLen, gPack.mMax, (gPack.mMax*100.0f)/gDataBuffer.mLen, 0x5b00+gOutBuffer.mLen);
+            printf("%25s (%02d) zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gImage.mName[i], maxlive, gDataBuffer.mLen, gPack.mMax, (gPack.mMax*100.0f)/gDataBuffer.mLen, 0x5b00+gOutBuffer.mLen);
         gOutBuffer.putArray(gPack.mPackedData, gPack.mMax);            
     }
 }
@@ -1391,13 +1377,13 @@ void process_images()
 void process_codes(char *path)
 {
     int i;
-    for (i = 0; i < gCodes; i++)
+	for (i = 0; i < gCode.mCount; i++)
     {
-        if (gCode[i].mHits > 0)
+        if (gCode.mHits[i] > 0)
         {
             FILE * f;
             
-            f = fopen(gCode[i].mName, "rb");
+            f = fopen(gCode.mName[i], "rb");
             if (!f)
             {
                 char temp[1024];
@@ -1405,13 +1391,13 @@ void process_codes(char *path)
                 char *d = strrchr(temp, '\\');
                 if (d)
                 {
-                    strcpy(d+1, gCode[i].mName);
+                    strcpy(d+1, gCode.mName[i]);
                     f = fopen(temp, "rb");
                 }
             }
             if (!f)
             {
-                printf("Code \"%s\" not found", gCode[i].mName);
+                printf("Code \"%s\" not found", gCode.mName[i]);
                 exit(-1);
             }
             fseek(f,0,SEEK_END);
@@ -1428,7 +1414,7 @@ void process_codes(char *path)
             {
                 if (!gQuiet)
                 {
-                    printf("Couldn't decode \"%s\" as .ihx, assuming binary\n", gCode[i].mName);
+                    printf("Couldn't decode \"%s\" as .ihx, assuming binary\n", gCode.mName[i]);
                 }
                 start = 0xd000;
                 l = len;
@@ -1441,11 +1427,11 @@ void process_codes(char *path)
             {
                 if (l > 4096)
                 {
-                    printf("Code %s data too large; max 4096 bytes, has %d bytes\n", gCode[i].mName, l);
+                    printf("Code %s data too large; max 4096 bytes, has %d bytes\n", gCode.mName[i], l);
                 }
                 if (start != 0xd000)
                 {
-                    printf("Code %s start address not 0xd000; 0x%04x found\n", gCode[i].mName, start);
+                    printf("Code %s start address not 0xd000; 0x%04x found\n", gCode.mName[i], start);
                 }
                 exit(-1);
             }
@@ -1461,7 +1447,7 @@ void process_codes(char *path)
             gOutBuffer.patchWord(0x5b00 + gOutBuffer.mLen, i + gFirstCodeId);        
     
             if (!gQuiet)
-                printf("%30s zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gCode[i].mName, gDataBuffer.mLen, gPack.mMax, (gPack.mMax*100.0f)/gDataBuffer.mLen, 0x5b00+gOutBuffer.mLen);
+                printf("%30s zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gCode.mName[i], gDataBuffer.mLen, gPack.mMax, (gPack.mMax*100.0f)/gDataBuffer.mLen, 0x5b00+gOutBuffer.mLen);
             gOutBuffer.putArray(gPack.mPackedData, gPack.mMax);            
         }
     }
@@ -1844,26 +1830,26 @@ void process_rooms()
 void sanity()
 {
     int i, j;
-    for (i = 0; i < gSymbols; i++)
+	for (i = 0; i < gSymbol.mCount; i++)
     {
-        for (j = 0; j < gNumbers; j++)
+		for (j = 0; j < gNumber.mCount; j++)
         {
-            if (stricmp(gSymbol[i].mName, gNumber[j].mName) == 0)
+            if (stricmp(gSymbol.mName[i], gNumber.mName[j]) == 0)
             {
-                printf("Warning: Symbol \"%s\" used both as a flag and a number. This probably isn't what you wanted.\n", gSymbol[i].mName);
+                printf("Warning: Symbol \"%s\" used both as a flag and a number. This probably isn't what you wanted.\n", gSymbol.mName[i]);
             }
         }
     }
 
-    if (gSymbols > MAX_SYMBOLS)
+	if (gSymbol.mCount > MAX_SYMBOLS)
     {
-        printf("Too many symbols in use (%d > %d)\n", gSymbols, MAX_SYMBOLS);
+		printf("Too many symbols in use (%d > %d)\n", gSymbol.mCount, MAX_SYMBOLS);
         exit(-1);
     }
     
-    if (gNumbers > MAX_NUMBERS)
+	if (gNumber.mCount > MAX_NUMBERS)
     {
-        printf("Too many numeric variables in use (%d > %d)\n", gNumbers, MAX_NUMBERS);
+		printf("Too many numeric variables in use (%d > %d)\n", gNumber.mCount, MAX_NUMBERS);
         exit(-1);
     }
 
@@ -1985,9 +1971,9 @@ int main(int parc, char **pars)
     memcpy(gPackBuf, gTrainer, gTrainers);
     gPackBufIdx = gTrainers;
     gDataBuffer.mLen = 0;
-    gFirstImageId = gSymbols + 1;
-    gFirstCodeId = gSymbols + gImages + 1;
-    gOutBuffer.mLen = gSymbols * 2 + gImages * 2 + gCodes * 2 + 2;
+	gFirstImageId = gSymbol.mCount + 1;
+	gFirstCodeId = gSymbol.mCount + gImage.mCount + 1;
+	gOutBuffer.mLen = gSymbol.mCount * 2 + gImage.mCount * 2 + gCode.mCount * 2 + 2;
 	gLine = 0;    
 
     scan(pars[infile]);
