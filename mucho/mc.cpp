@@ -139,7 +139,6 @@ RoomBuf gRoom[MAX_ROOMS];
 
 int gRoomNo = 0;
 
-
 int gMaxRoomSymbol = 0;
 
 unsigned char *gPropfontData = (unsigned char *)&builtin_data[0];
@@ -158,12 +157,6 @@ int gLine = 0;
 int gFirstImageId = 0;
 int gFirstCodeId = 0;
 
-char gOutBuf[1024*1024];
-int gOutLen = 0;
-
-char gDataBuf[1024*1024];
-int gDataLen = 0;
-
 char gScratch[64 * 1024];
 char gStringLit[64 * 1024];
 int gStringIdx;
@@ -176,62 +169,57 @@ int gPackBufIdx = 0;
 float *gCompressionResults;
 
 
-void patchword(unsigned short w, int pos)
+class Buffer
 {
-    gOutBuf[pos*2] = w & 0xff;
-    gOutBuf[pos*2+1] = w >> 8;
-}
+public:
+	char mData[1024*1024];
+	int mLen;
+	Buffer()
+	{
+		mLen = 0;
+	}
 
-void outbyte(unsigned char d)
-{
-    gOutBuf[gOutLen] = d;
-    gOutLen++;    
-}
+	void putByte(unsigned char aData)
+	{
+		mData[mLen] = aData;
+		mLen++;
+	}
 
-void outdata(unsigned char *d, int len, int skip = 0)
-{
-    while (len)
-    {
-        if (!skip)
-            outbyte(*d);
-        else
-            skip--;
-        len--;
-        d++;
-    }
-}
+	void putArray(unsigned char *aData, int aLen)
+	{
+		putByte(aLen);
+		while (aLen)
+		{
+			putByte(*aData);
+			aLen--;
+			aData++;
+		}
+	}
 
-void putbyte(unsigned char d)
-{
-    gDataBuf[gDataLen] = d;
-    gDataLen++;
-}
+	void putString(char *aData)
+	{
+		putByte(strlen((const char*)aData));
+		while (*aData)
+		{
+			if (*aData < 32 || *aData > 126)
+			{
+				printf("Invalid character \"%c\" found near line %d\n", *aData, gLine);
+				exit(-1);
+			}
+			putByte(*aData);
+			aData++;
+		}
+	}
 
-void putbuf(unsigned char *d, int len)
-{
-    putbyte(len);
-    while (len)
-    {
-        putbyte(*d);
-        len--;
-        d++;
-    }
-}
+	void patchWord(unsigned short aWord, int aPos)
+	{
+		mData[aPos * 2] = aWord & 0xff;
+		mData[aPos * 2 + 1] = aWord >> 8;
+	}
+};
 
-void putstring(char *d)
-{
-    putbyte(strlen((const char*)d));
-    while (*d)
-    {
-        if (*d < 32 || *d > 126)
-        {
-            printf("Invalid character \"%c\" found near line %d\n", *d, gLine);
-            exit(-1);
-        }
-        putbyte(*d);
-        d++;
-    }
-}
+Buffer gDataBuffer, gOutBuffer;
+
 
 int whitespace(char c)
 {
@@ -398,30 +386,30 @@ void flush_packbuf()
 #endif
     
         if (!gQuiet)
-            printf("zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gPackBufIdx-gTrainers, gPack.mMax, ((gPack.mMax)*100.0f)/(gPackBufIdx-gTrainers), 0x5b00+gOutLen);
+            printf("zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gPackBufIdx-gTrainers, gPack.mMax, ((gPack.mMax)*100.0f)/(gPackBufIdx-gTrainers), 0x5b00+gOutBuffer.mLen);
     
-        outdata(gPack.mPackedData, gPack.mMax);
+		gDataBuffer.putArray(gPack.mPackedData, gPack.mMax);
         gPackBufIdx = gTrainers;
     }
 }
 
 void flush_room()
 {
-    if (gDataLen > 0)
+    if (gDataBuffer.mLen > 0)
     {
-        putbyte(0); // add a zero byte for good measure.
-        if (gDataLen > 4096)
+        gDataBuffer.putByte(0); // add a zero byte for good measure.
+        if (gDataBuffer.mLen > 4096)
         {
-            printf("Room %s data too large; max 4096 bytes, has %d bytes\n", gSymbol[gRoomNo].mName, gDataLen);
+            printf("Room %s data too large; max 4096 bytes, has %d bytes\n", gSymbol[gRoomNo].mName, gDataBuffer.mLen);
             exit(-1);
         }
         gRoom[gRooms].mName = gSymbol[gRoomNo].mName;
-        gRoom[gRooms].mData = new unsigned char[gDataLen];
-        gRoom[gRooms].mLen = gDataLen;
+        gRoom[gRooms].mData = new unsigned char[gDataBuffer.mLen];
+        gRoom[gRooms].mLen = gDataBuffer.mLen;
         gRoom[gRooms].mUsed = 0;
-        memcpy(gRoom[gRooms].mData, gDataBuf, gDataLen);
+        memcpy(gRoom[gRooms].mData, gDataBuffer.mData, gDataBuffer.mLen);
         gRooms++;
-        gDataLen = 0;
+        gDataBuffer.mLen = 0;
                 
         gRoomNo++;
     }        
@@ -431,10 +419,10 @@ void flush_room()
 
 void flush_sect()
 {
-    if (gDataLen > 0)  // skip end if we're in the beginning
+    if (gDataBuffer.mLen > 0)  // skip end if we're in the beginning
     {
         if (!gVerbose) printf("End of section\n");
-        putbyte(0);
+        gDataBuffer.putByte(0);
     }
     
 }
@@ -459,7 +447,7 @@ void flush_cmd()
             printf("Syntax error - too many operations on one statement, gLine %d\n", gLine);
             exit(-1);
         }
-        putbuf(gCommandBuffer, gCommandPtr);
+        gDataBuffer.putArray(gCommandBuffer, gCommandPtr);
     }
     gCommandPtr = 0;
 }
@@ -777,7 +765,7 @@ void parse()
             exit(-1);
         }
         if (!gVerbose) printf("Empty paragraph\n");
-        putstring(" ");
+        gDataBuffer.putString(" ");
         break;
     case 'O':
         if (previous_section == 'A')
@@ -833,7 +821,7 @@ void parse()
 
 void store(char *lit)
 {
-    putstring(lit);
+    gDataBuffer.putString(lit);
     if (!gVerbose) printf("  String literal: \"%s\"\n", lit);
     previous_stringlits++;
 }
@@ -1376,27 +1364,27 @@ void process_images()
             printf("Warning: image \"%s\" has %d live character rows, 14 used.\n", gImage[i].mName, maxlive);
             maxlive = 14;
         }
-        gDataLen = 0;
-        putbyte(maxlive*8);
+        gDataBuffer.mLen = 0;
+        gDataBuffer.putByte(maxlive*8);
         int k;
         for (j = 0; j < 8*maxlive; j++)
             for (k = 0; k < 32; k++)
-                putbyte(t[yofs[j]-0x4000 + k]);
+                gDataBuffer.putByte(t[yofs[j]-0x4000 + k]);
         for (j = 0; j < 32*maxlive; j++)
-            putbyte(t[j + 192*32]);
+            gDataBuffer.putByte(t[j + 192*32]);
 
         gPack.mMax = 0;
-        if (gDataLen > 4096)
+        if (gDataBuffer.mLen > 4096)
         {
-            printf("Image %s data too large; max 4096 bytes, has %d bytes (%d lines)\n", gImage[i].mName, gDataLen, maxlive);
+            printf("Image %s data too large; max 4096 bytes, has %d bytes (%d lines)\n", gImage[i].mName, gDataBuffer.mLen, maxlive);
             exit(-1);
         }
-        gPack.pack((unsigned char*)&gDataBuf[0], gDataLen);
-        patchword(0x5b00 + gOutLen, i + gFirstImageId);        
+        gPack.pack((unsigned char*)&gDataBuffer.mData[0], gDataBuffer.mLen);
+        gOutBuffer.patchWord(0x5b00 + gOutBuffer.mLen, i + gFirstImageId);        
 
         if (!gQuiet)
-            printf("%25s (%02d) zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gImage[i].mName, maxlive, gDataLen, gPack.mMax, (gPack.mMax*100.0f)/gDataLen, 0x5b00+gOutLen);
-        outdata(gPack.mPackedData, gPack.mMax);            
+            printf("%25s (%02d) zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gImage[i].mName, maxlive, gDataBuffer.mLen, gPack.mMax, (gPack.mMax*100.0f)/gDataBuffer.mLen, 0x5b00+gOutBuffer.mLen);
+        gOutBuffer.putArray(gPack.mPackedData, gPack.mMax);            
     }
 }
 
@@ -1463,18 +1451,18 @@ void process_codes(char *path)
             }
     
     
-            gDataLen = 0;
+            gDataBuffer.mLen = 0;
             int j;
             for (j = 0; j < l; j++)
-                putbyte(codebuf[0xd000 + j]);
+                gDataBuffer.putByte(codebuf[0xd000 + j]);
     
             gPack.mMax = 0;
-            gPack.pack((unsigned char*)&gDataBuf[0], gDataLen);
-            patchword(0x5b00 + gOutLen, i + gFirstCodeId);        
+            gPack.pack((unsigned char*)&gDataBuffer.mData[0], gDataBuffer.mLen);
+            gOutBuffer.patchWord(0x5b00 + gOutBuffer.mLen, i + gFirstCodeId);        
     
             if (!gQuiet)
-                printf("%30s zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gCode[i].mName, gDataLen, gPack.mMax, (gPack.mMax*100.0f)/gDataLen, 0x5b00+gOutLen);
-            outdata(gPack.mPackedData, gPack.mMax);            
+                printf("%30s zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gCode[i].mName, gDataBuffer.mLen, gPack.mMax, (gPack.mMax*100.0f)/gDataBuffer.mLen, 0x5b00+gOutBuffer.mLen);
+            gOutBuffer.putArray(gPack.mPackedData, gPack.mMax);            
         }
     }
 }
@@ -1489,7 +1477,7 @@ void output(char *aFilename)
     }
     
 
-    fwrite(gOutBuf, 1, gOutLen, f);
+    fwrite(gOutBuffer.mData, 1, gOutBuffer.mLen, f);
     fclose(f);
 }
 
@@ -1709,10 +1697,10 @@ void scan_sel(char *aFilename)
 void output_trainer()
 {
     int i;
-    int freebytes = DATA_AREA_SIZE - gTrainers - gOutLen;
+    int freebytes = DATA_AREA_SIZE - gTrainers - gOutBuffer.mLen;
     for (i = 0; i < freebytes; i++)
-        outbyte(0);
-    outdata(gTrainer, gTrainers);
+        gOutBuffer.putByte(0);
+    gOutBuffer.putArray(gTrainer, gTrainers);
 }
 
 
@@ -1774,7 +1762,7 @@ void process_rooms()
     int minidx = best_compressible_room();
     idx = minidx;
     gRoom[idx].mUsed = 1;
-    patchword(0x5b00 + gOutLen, idx);
+    gOutBuffer.patchWord(0x5b00 + gOutBuffer.mLen, idx);
     memcpy(gPackBuf+gPackBufIdx, gRoom[idx].mData, gRoom[idx].mLen);
     gPackBufIdx += gRoom[idx].mLen;
     printf("%s ", gRoom[idx].mName);
@@ -1832,7 +1820,7 @@ void process_rooms()
             memcpy(gPackBuf+gPackBufIdx, gRoom[minidx].mData, gRoom[minidx].mLen);
             gPackBufIdx += gRoom[minidx].mLen;
              
-            patchword(0x5b00 + gOutLen, minidx); // N rooms will have same offset
+            gOutBuffer.patchWord(0x5b00 + gOutBuffer.mLen, minidx); // N rooms will have same offset
         }
     } while (minidx != -1);
     
@@ -1879,9 +1867,9 @@ void sanity()
         exit(-1);
     }
 
-    if (gOutLen > DATA_AREA_SIZE)
+    if (gOutBuffer.mLen > DATA_AREA_SIZE)
     {
-        printf("Total output size too large (%d bytes max, %d found)\n", DATA_AREA_SIZE, gOutLen);
+        printf("Total output size too large (%d bytes max, %d found)\n", DATA_AREA_SIZE, gOutBuffer.mLen);
         exit(-1);
     }
 }
@@ -1996,19 +1984,19 @@ int main(int parc, char **pars)
     maketrainer();    
     memcpy(gPackBuf, gTrainer, gTrainers);
     gPackBufIdx = gTrainers;
-    gDataLen = 0;
+    gDataBuffer.mLen = 0;
     gFirstImageId = gSymbols + 1;
     gFirstCodeId = gSymbols + gImages + 1;
-    gOutLen = gSymbols * 2 + gImages * 2 + gCodes * 2 + 2;
+    gOutBuffer.mLen = gSymbols * 2 + gImages * 2 + gCodes * 2 + 2;
 	gLine = 0;    
 
     scan(pars[infile]);
     process_rooms();
-    gPageData = gOutLen;
+    gPageData = gOutBuffer.mLen;
     process_images();
-    gImageData = gOutLen - gPageData;
+    gImageData = gOutBuffer.mLen - gPageData;
     process_codes(pars[0]);
-    gCodeData = gOutLen - gPageData - gImageData;
+    gCodeData = gOutBuffer.mLen - gPageData - gImageData;
     output_trainer();
     if (!gQuiet)
         report();
