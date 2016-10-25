@@ -96,6 +96,44 @@ struct RoomBuf
     int mUsed;
 };
 
+int gPageData = 0;
+int gImageData = 0;
+int gCodeData = 0;
+int gTrainers = 0;
+unsigned char gTrainer[MAX_TRAINER];
+
+int gRooms = 0;
+RoomBuf gRoom[MAX_ROOMS];
+
+int gRoomNo = 0;
+
+int gMaxRoomSymbol = 0;
+
+unsigned char *gPropfontData = (unsigned char *)&builtin_data[0];
+unsigned char *gPropfontWidth = (unsigned char *)&builtin_width[0];
+unsigned char *gDividerData = (unsigned char*)&gDividerPattern[0];
+unsigned char *gSelectorData = (unsigned char*)&gSelectorPattern[0];
+
+int gVerbose = 0;
+int gQuiet = 0;
+
+unsigned char gCommandBuffer[1024];
+int gCommandPtr = 0;
+int gCommandPtrOpOfs = 0;
+
+int gLine = 0;
+int gFirstImageId = 0;
+int gFirstCodeId = 0;
+
+char gScratch[64 * 1024];
+char gStringLit[64 * 1024];
+int gStringIdx;
+
+ZX7Pack gPack;
+
+float *gCompressionResults;
+
+
 class WordCounter
 {
 public:
@@ -215,51 +253,9 @@ public:
 
 WordCounter gWordCounter;
 
-
-
-
-int gPageData = 0;
-int gImageData = 0;
-int gCodeData = 0;
-int gTrainers = 0;
-unsigned char gTrainer[MAX_TRAINER];
-
-int gRooms = 0;
-RoomBuf gRoom[MAX_ROOMS];
-
-int gRoomNo = 0;
-
-int gMaxRoomSymbol = 0;
-
-unsigned char *gPropfontData = (unsigned char *)&builtin_data[0];
-unsigned char *gPropfontWidth = (unsigned char *)&builtin_width[0];
-unsigned char *gDividerData = (unsigned char*)&gDividerPattern[0];
-unsigned char *gSelectorData = (unsigned char*)&gSelectorPattern[0];
-
-int gVerbose = 0;
-int gQuiet = 0;
-
-unsigned char gCommandBuffer[1024];
-int gCommandPtr = 0;
-int gCommandPtrOpOfs = 0;
-
-int gLine = 0;
-int gFirstImageId = 0;
-int gFirstCodeId = 0;
-
-char gScratch[64 * 1024];
-char gStringLit[64 * 1024];
-int gStringIdx;
-
-ZX7Pack gPack;
-
-char gPackBuf[8192];
-int gPackBufIdx = 0;
-
-float *gCompressionResults;
-
-struct Symbol
+class Symbol
 {
+public:
     char *mName[MAX_SYMBOLS*2];
     int mHits[MAX_SYMBOLS*2];
 	int mHash[MAX_SYMBOLS*2];
@@ -361,8 +357,9 @@ public:
 	}
 };
 
-Buffer gDataBuffer, gOutBuffer;
-
+Buffer gDataBuffer;
+Buffer gOutBuffer;
+Buffer gPackBuffer;
 
 int whitespace(char c)
 {
@@ -449,24 +446,28 @@ void token(int n, char *src, char *dst)
 
 void flush_packbuf()
 {
-    if (gPackBufIdx > gTrainers)
+	if (gPackBuffer.mLen > gTrainers)
     {
         gPack.mMax = 0;
-        gPack.pack((unsigned char*)&gPackBuf[0], gPackBufIdx, gTrainers);
+		gPack.pack((unsigned char*)&gPackBuffer.mData[0], gPackBuffer.mLen, gTrainers);
 #ifdef DUMP_BINARY_BLOBS        
         char temp[64];
         static int blobno = 0;
         sprintf(temp, "blob%02d.bin", blobno);
         FILE * f = fopen(temp, "wb");
-        fwrite(gPackBuf+gTrainers,1,gPackBufIdx-gTrainers,f);
+        fwrite(gPackBuffer.mData + gTrainers, 1, gPackBuffer.mLen - gTrainers, f);
         fclose(f);
 #endif
     
         if (!gQuiet)
-            printf("zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", gPackBufIdx-gTrainers, gPack.mMax, ((gPack.mMax)*100.0f)/(gPackBufIdx-gTrainers), 0x5b00+gOutBuffer.mLen);
+            printf("zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", 
+				gPackBuffer.mLen - gTrainers, 
+				gPack.mMax, 
+				(gPack.mMax * 100.0f) / (gPackBuffer.mLen - gTrainers), 
+				0x5b00 + gOutBuffer.mLen);
     
 		gDataBuffer.putArray(gPack.mPackedData, gPack.mMax);
-        gPackBufIdx = gTrainers;
+		gPackBuffer.mLen = gTrainers;
     }
 }
 
@@ -498,7 +499,7 @@ void flush_sect()
 {
     if (gDataBuffer.mLen > 0)  // skip end if we're in the beginning
     {
-        if (!gVerbose) printf("End of section\n");
+        if (gVerbose) printf("End of section\n");
         gDataBuffer.putByte(0);
     }
     
@@ -509,7 +510,7 @@ void flush_cmd()
     if (gCommandPtr)
     {
         int ops = (gCommandPtr-1-(gCommandPtrOpOfs-1)*2) / 3;
-        if (!gVerbose) 
+        if (gVerbose) 
         {
             printf("  Command buffer '%c' (%d bytes) with %d bytes payload (%d ops) %d\n", 
             gCommandBuffer[0], 
@@ -575,23 +576,23 @@ void set_op(int opcode, int value)
         printf("Parameter value out of range, gLine %d\n", gLine);
         exit(-1);
     }
-    if (!gVerbose) printf("    Opcode: ");
+    if (gVerbose) printf("    Opcode: ");
     switch(opcode)
     {
-        case OP_HAS: if (!gVerbose) printf("HAS(%s)", gSymbol.mName[value]); break;
-        case OP_NOT: if (!gVerbose) printf("NOT(%s)", gSymbol.mName[value]); break;
-        case OP_SET: if (!gVerbose) printf("SET(%s)", gSymbol.mName[value]); break;
-        case OP_CLR: if (!gVerbose) printf("CLR(%s)", gSymbol.mName[value]); break;
-        case OP_XOR: if (!gVerbose) printf("XOR(%s)", gSymbol.mName[value]); break;
-        case OP_RND: if (!gVerbose) printf("RND(%d)", value); break;
-        case OP_ATTR: if (!gVerbose) printf("ATTR(%d)", value); break;
-        case OP_EXT: if (!gVerbose) printf("EXT(%d)", value); break;
-        case OP_IATTR: if (!gVerbose) printf("IATTR(%d)", value); break;
-        case OP_DATTR: if (!gVerbose) printf("DATTR(%d)", value); break;
-        case OP_GO:  if (!gVerbose) printf("GO(%s)", gSymbol.mName[value]); break;
-        case OP_GOSUB:  if (!gVerbose) printf("GOSUB(%s)", gSymbol.mName[value]); break;
+        case OP_HAS: if (gVerbose) printf("HAS(%s)", gSymbol.mName[value]); break;
+        case OP_NOT: if (gVerbose) printf("NOT(%s)", gSymbol.mName[value]); break;
+        case OP_SET: if (gVerbose) printf("SET(%s)", gSymbol.mName[value]); break;
+        case OP_CLR: if (gVerbose) printf("CLR(%s)", gSymbol.mName[value]); break;
+        case OP_XOR: if (gVerbose) printf("XOR(%s)", gSymbol.mName[value]); break;
+        case OP_RND: if (gVerbose) printf("RND(%d)", value); break;
+        case OP_ATTR: if (gVerbose) printf("ATTR(%d)", value); break;
+        case OP_EXT: if (gVerbose) printf("EXT(%d)", value); break;
+        case OP_IATTR: if (gVerbose) printf("IATTR(%d)", value); break;
+        case OP_DATTR: if (gVerbose) printf("DATTR(%d)", value); break;
+        case OP_GO:  if (gVerbose) printf("GO(%s)", gSymbol.mName[value]); break;
+        case OP_GOSUB:  if (gVerbose) printf("GOSUB(%s)", gSymbol.mName[value]); break;
     }
-    if (!gVerbose) printf("\n");
+    if (gVerbose) printf("\n");
     store_cmd(opcode, value);
 }
 
@@ -602,29 +603,29 @@ void set_number_op(int opcode, int value1, int value2)
         printf("Parameter value out of range, gLine %d\n", gLine);
         exit(-1); 
     }
-    if (!gVerbose) printf("    Opcode: ");
+    if (gVerbose) printf("    Opcode: ");
     switch(opcode)
     {
-        case OP_GT: if (!gVerbose) printf("GT(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
-        case OP_GTC: if (!gVerbose) printf("GTC(%s,%d)", gNumber.mName[value1], value2); break;
-        case OP_LT: if (!gVerbose) printf("LT(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
-        case OP_LTC: if (!gVerbose) printf("LTC(%s,%d)", gNumber.mName[value1], value2); break;
-        case OP_GTE: if (!gVerbose) printf("GTE(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
-        case OP_GTEC: if (!gVerbose) printf("GTEC(%s,%d)", gNumber.mName[value1], value2); break;
-        case OP_LTE: if (!gVerbose) printf("LTE(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
-        case OP_LTEC: if (!gVerbose) printf("LTEC(%s,%d)", gNumber.mName[value1], value2); break;
-        case OP_EQ: if (!gVerbose) printf("EQ(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
-        case OP_EQC: if (!gVerbose) printf("EQC(%s,%d)", gNumber.mName[value1], value2); break;
-        case OP_IEQ: if (!gVerbose) printf("IEQ(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
-        case OP_IEQC: if (!gVerbose) printf("IEQC(%s,%d)", gNumber.mName[value1], value2); break;
-        case OP_ASSIGN: if (!gVerbose) printf("ASSIGN(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
-        case OP_ASSIGNC: if (!gVerbose) printf("ASSIGNC(%s,%d)", gNumber.mName[value1], value2); break;
-        case OP_ADD: if (!gVerbose) printf("ADD(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
-        case OP_ADDC: if (!gVerbose) printf("ADDC(%s,%d)", gNumber.mName[value1], value2); break;
-        case OP_SUB: if (!gVerbose) printf("SUB(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
-        case OP_SUBC: if (!gVerbose) printf("SUBC(%s,%d)", gNumber.mName[value1], value2); break;
+        case OP_GT: if (gVerbose) printf("GT(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
+        case OP_GTC: if (gVerbose) printf("GTC(%s,%d)", gNumber.mName[value1], value2); break;
+        case OP_LT: if (gVerbose) printf("LT(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
+        case OP_LTC: if (gVerbose) printf("LTC(%s,%d)", gNumber.mName[value1], value2); break;
+        case OP_GTE: if (gVerbose) printf("GTE(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
+        case OP_GTEC: if (gVerbose) printf("GTEC(%s,%d)", gNumber.mName[value1], value2); break;
+        case OP_LTE: if (gVerbose) printf("LTE(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
+        case OP_LTEC: if (gVerbose) printf("LTEC(%s,%d)", gNumber.mName[value1], value2); break;
+        case OP_EQ: if (gVerbose) printf("EQ(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
+        case OP_EQC: if (gVerbose) printf("EQC(%s,%d)", gNumber.mName[value1], value2); break;
+        case OP_IEQ: if (gVerbose) printf("IEQ(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
+        case OP_IEQC: if (gVerbose) printf("IEQC(%s,%d)", gNumber.mName[value1], value2); break;
+        case OP_ASSIGN: if (gVerbose) printf("ASSIGN(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
+        case OP_ASSIGNC: if (gVerbose) printf("ASSIGNC(%s,%d)", gNumber.mName[value1], value2); break;
+        case OP_ADD: if (gVerbose) printf("ADD(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
+        case OP_ADDC: if (gVerbose) printf("ADDC(%s,%d)", gNumber.mName[value1], value2); break;
+        case OP_SUB: if (gVerbose) printf("SUB(%s,%s)", gNumber.mName[value1], gNumber.mName[value2]); break;
+        case OP_SUBC: if (gVerbose) printf("SUBC(%s,%d)", gNumber.mName[value1], value2); break;
     }
-    if (!gVerbose) printf("\n");
+    if (gVerbose) printf("\n");
     store_number_cmd(opcode, value1, value2);
 }
 
@@ -824,7 +825,7 @@ void parse()
         i = gSymbol.getId(t);
         gCommandPtrOpOfs = 2; // $Q + roomno
         store_section('Q', i);  
-        if (!gVerbose) printf("Room: \"%s\" (%d)\n", t, i);
+        if (gVerbose) printf("Room: \"%s\" (%d)\n", t, i);
         previous_section = 'Q';
         break;
     case 'A':
@@ -832,7 +833,7 @@ void parse()
         i = gSymbol.getId(t);
         gCommandPtrOpOfs = 2; // $A + roomno
         store_section('A', i);          
-        if (!gVerbose) printf("Choice: %s (%d)\n", t, i);
+        if (gVerbose) printf("Choice: %s (%d)\n", t, i);
         previous_section = 'A';
         break;
     case 'P':
@@ -841,7 +842,7 @@ void parse()
             printf("Syntax error - statement P may not be included in statement A, gLine %d\n", gLine);
             exit(-1);
         }
-        if (!gVerbose) printf("Empty paragraph\n");
+        if (gVerbose) printf("Empty paragraph\n");
         gDataBuffer.putString(" ");
         break;
     case 'O':
@@ -852,7 +853,7 @@ void parse()
         }
         gCommandPtrOpOfs = 1; // $O
         store_section('O');
-        if (!gVerbose) printf("Predicated section\n");
+        if (gVerbose) printf("Predicated section\n");
         previous_section = 'O';
         break;
     case 'I':
@@ -864,7 +865,7 @@ void parse()
         token(1, gScratch, t);
         gCommandPtrOpOfs = 2; // $I + imageid
         store_section('I', gImage.getId(t));
-        if (!gVerbose) printf("Image: \"%s\"\n", t);
+        if (gVerbose) printf("Image: \"%s\"\n", t);
         previous_section = 'I';
         break;
     case 'C':
@@ -878,7 +879,7 @@ void parse()
         token(1, gScratch, t);
         gCommandPtrOpOfs = 3; // $C + codeblock + HL
         store_section('C', gCode.getId(t), i);
-        if (!gVerbose) printf("Code: \"%s\", %d\n", t, i);
+        if (gVerbose) printf("Code: \"%s\", %d\n", t, i);
         previous_section = 'C';
         break;
     default:
@@ -899,7 +900,7 @@ void parse()
 void store(char *lit)
 {
     gDataBuffer.putString(lit);
-    if (!gVerbose) printf("  String literal: \"%s\"\n", lit);
+    if (gVerbose) printf("  String literal: \"%s\"\n", lit);
     previous_stringlits++;
 }
 
@@ -1060,7 +1061,7 @@ void maketrainer()
         
 	qsort(idx, gWordCounter.mTokens, sizeof(int), tokencmp);
 
-    if (!gVerbose)
+    if (gVerbose)
     {    
         printf("Most frequent words in source material:\n");
 		int total = gWordCounter.mTokens;
@@ -1129,7 +1130,7 @@ void maketrainer()
 				}
 			}
 		
-			if (!gVerbose)
+			if (gVerbose)
 			{    
 				printf("%s", gWordCounter.mWord[idx[i]]);
 				if (min == -1)
@@ -1300,16 +1301,16 @@ int scan_row(int row, unsigned char*d)
         if (hit)
         {
             ret = 1;
-            if (!gVerbose)
+            if (gVerbose)
                 printf("*");
         }
         else
         {
-            if (!gVerbose)
+            if (gVerbose)
                 printf(" ");
         }                
     }
-    if (!gVerbose)
+    if (gVerbose)
         printf(" row %d, live %d\n", row, ret);
     return ret;
 }
@@ -1749,8 +1750,7 @@ void process_rooms()
     idx = minidx;
     gRoom[idx].mUsed = 1;
     gOutBuffer.patchWord(0x5b00 + gOutBuffer.mLen, idx);
-    memcpy(gPackBuf+gPackBufIdx, gRoom[idx].mData, gRoom[idx].mLen);
-    gPackBufIdx += gRoom[idx].mLen;
+	gPackBuffer.putArray(gRoom[idx].mData, gRoom[idx].mLen);
     printf("%s ", gRoom[idx].mName);
     totaldata = gRoom[idx].mLen;
     do 
@@ -1803,8 +1803,7 @@ void process_rooms()
             gRoom[minidx].mUsed = 1;
             idx = minidx;
             
-            memcpy(gPackBuf+gPackBufIdx, gRoom[minidx].mData, gRoom[minidx].mLen);
-            gPackBufIdx += gRoom[minidx].mLen;
+			gPackBuffer.putArray(gRoom[minidx].mData, gRoom[minidx].mLen);
              
             gOutBuffer.patchWord(0x5b00 + gOutBuffer.mLen, minidx); // N rooms will have same offset
         }
@@ -1968,8 +1967,7 @@ int main(int parc, char **pars)
     gLine = 0;    
     scan_first_pass(pars[infile]);
     maketrainer();    
-    memcpy(gPackBuf, gTrainer, gTrainers);
-    gPackBufIdx = gTrainers;
+	gPackBuffer.putArray(gTrainer, gTrainers);
     gDataBuffer.mLen = 0;
 	gFirstImageId = gSymbol.mCount + 1;
 	gFirstCodeId = gSymbol.mCount + gImage.mCount + 1;
@@ -1987,8 +1985,7 @@ int main(int parc, char **pars)
     if (!gQuiet)
         report();
     sanity();
-    output(pars[outfile]);
-
+    output(pars[outfile]);	
     
     return 0;
 }
