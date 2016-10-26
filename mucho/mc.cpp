@@ -117,8 +117,6 @@ unsigned char *gSelectorData = (unsigned char*)&gSelectorPattern[0];
 int gVerbose = 0;
 int gQuiet = 0;
 
-unsigned char gCommandBuffer[1024];
-int gCommandPtr = 0;
 int gCommandPtrOpOfs = 0;
 
 int gLine = 0;
@@ -311,7 +309,7 @@ Symbol gNumber;
 class Buffer
 {
 public:
-	char mData[1024*1024];
+	unsigned char mData[1024*1024];
 	int mLen;
 	Buffer()
 	{
@@ -366,6 +364,7 @@ public:
 Buffer gDataBuffer; // Gathered data
 Buffer gOutBuffer;  // Data to be stored to disk
 Buffer gPackBuffer; // Data to be sent to compressor
+Buffer gCommandBuffer; 
 
 int whitespace(char c)
 {
@@ -514,48 +513,48 @@ void flush_sect()
 
 void flush_cmd()
 {
-    if (gCommandPtr)
+	if (gCommandBuffer.mLen)
     {
-        int ops = (gCommandPtr-1-(gCommandPtrOpOfs-1)*2) / 3;
+        int ops = (gCommandBuffer.mLen-1-(gCommandPtrOpOfs-1)*2) / 3;
         if (gVerbose) 
         {
             printf("  Command buffer '%c' (%d bytes) with %d bytes payload (%d ops) %d\n", 
-            gCommandBuffer[0], 
-            //commandptropofs+1,
-            gCommandPtr,
-            gCommandPtr-1-(gCommandPtrOpOfs-1)*2, 
-            ops);
+				gCommandBuffer.mData[0], 
+				//commandptropofs + 1,
+				gCommandBuffer.mLen,
+				gCommandBuffer.mLen - 1 - (gCommandPtrOpOfs - 1) * 2, 
+				ops);
         }
                 
-        if (gCommandPtr > 255)
+        if (gCommandBuffer.mLen > 255)
         {
             printf("Syntax error - too many operations on one statement, gLine %d\n", gLine);
             exit(-1);
         }
-        gDataBuffer.putArray(gCommandBuffer, gCommandPtr);
+		gDataBuffer.putArray(gCommandBuffer.mData, gCommandBuffer.mLen);
     }
-    gCommandPtr = 0;
+    gCommandBuffer.mLen = 0;
 }
 
 void store_cmd(int op, int param)
 {
-    gCommandBuffer[gCommandPtr] = op; gCommandPtr++;
-    gCommandBuffer[gCommandPtr] = param & 0xff; gCommandPtr++;
-    gCommandBuffer[gCommandPtr] = param >> 8; gCommandPtr++;
+	gCommandBuffer.putByte(op);
+    gCommandBuffer.putByte(param & 0xff);
+    gCommandBuffer.putByte(param >> 8);
 }
 
 void store_number_cmd(int op, int param1, int param2)
 {
-    gCommandBuffer[gCommandPtr] = op; gCommandPtr++;
-    gCommandBuffer[gCommandPtr] = param1 & 0xff; gCommandPtr++;
-    gCommandBuffer[gCommandPtr] = param2 & 0xff; gCommandPtr++;
+    gCommandBuffer.putByte(op);
+    gCommandBuffer.putByte(param1 & 0xff);
+    gCommandBuffer.putByte(param2 & 0xff);
 }
 
 void store_section(int section)
 {
     flush_cmd();
     flush_sect();
-    gCommandBuffer[gCommandPtr] = section; gCommandPtr++;
+    gCommandBuffer.putByte(section);
 }
 
 void store_section(int section, int param)
@@ -569,11 +568,11 @@ void store_section(int section, int param, int param2)
 {
     flush_cmd();
     flush_sect();
-    gCommandBuffer[gCommandPtr] = section; gCommandPtr++;
-    gCommandBuffer[gCommandPtr] = param & 0xff; gCommandPtr++;
-    gCommandBuffer[gCommandPtr] = param >> 8; gCommandPtr++;
-    gCommandBuffer[gCommandPtr] = param2 & 0xff; gCommandPtr++;
-    gCommandBuffer[gCommandPtr] = param2 >> 8; gCommandPtr++;
+    gCommandBuffer.putByte(section);
+    gCommandBuffer.putByte(param & 0xff);
+    gCommandBuffer.putByte(param >> 8);
+    gCommandBuffer.putByte(param2 & 0xff);
+    gCommandBuffer.putByte(param2 >> 8);
 }
 
 void set_op(int opcode, int value)
