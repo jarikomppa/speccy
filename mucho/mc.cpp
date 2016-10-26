@@ -16,12 +16,18 @@
 #define strdup _strdup
 #define stricmp _stricmp
 
-#define DATA_AREA_SIZE 29952
-#define MAX_SYMBOLS (8*256) // 2k symbols should be enough for everybody
-#define MAX_NUMBERS 16
-#define MAXTOKENS 1024
-#define MAX_TRAINER 1024
-#define MAX_ROOMS 1024
+// the space we have on the device
+#define DATA_AREA_SIZE 29952 
+// 2k symbols should be enough for everybody
+#define MAX_SYMBOLS (8*256) 
+// max number of numeric variables
+#define MAX_NUMBERS 16 
+// max word count tokens
+#define MAXTOKENS 2048 
+// max bytes for the trainer data (1024 is a good value, +512 may help or harm)
+#define MAX_TRAINER 1024 
+// max number of rooms
+#define MAX_ROOMS 1024 
 
 enum opcodeval
 {
@@ -42,25 +48,26 @@ enum opcodeval
     OP_GO,
     OP_GOSUB,
     
-    OP_GT,
-    OP_GTC,
-    OP_LT,
-    OP_LTC,
-    OP_GTE,
-    OP_GTEC,
-    OP_LTE,
-    OP_LTEC,
-    OP_EQ,
-    OP_EQC,
-    OP_IEQ,
-    OP_IEQC,
+    // variable-constant pairs. The code below depends on the pairing.
+	OP_GT,  // a>b
+    OP_GTC, // a>n
+    OP_LT,  // a<b
+    OP_LTC, // a<n
+    OP_GTE, // a>=b
+    OP_GTEC,// a>=n
+    OP_LTE, // a<=b
+    OP_LTEC,// a<=n
+    OP_EQ,  // a==b
+    OP_EQC, // a==n
+    OP_IEQ, // a!=b
+    OP_IEQC,// a!=n
     
-    OP_ASSIGN,
-    OP_ASSIGNC,
-    OP_ADD,
-    OP_ADDC,
-    OP_SUB,
-    OP_SUBC    
+    OP_ASSIGN,  // a=b
+    OP_ASSIGNC, // a=n
+    OP_ADD,     // a+b
+    OP_ADDC,    // a+n
+    OP_SUB,     // a-b
+    OP_SUBC     // a-n
 };
 
 
@@ -215,6 +222,11 @@ public:
 				return;
 			}
 		}
+		// We don't actually care if we run out of tokens,
+		// as we're looking for the most frequent N tokens
+		// anyway; if a token hasn't appeared during the 
+		// MAXTOKENS, it's probably not all that frequent
+		// anyway.
 		if (mTokens < MAXTOKENS)
 		{
 			tokenRef(mTokens);
@@ -302,6 +314,11 @@ public:
 				return i + mFirstIndex;
 			}
 		}
+		if (mCount >= MAX_SYMBOLS)
+		{
+			printf("Too many symbols, line %d\n", MAX_SYMBOLS);
+			exit(-1);
+		}
 		mName[mCount] = strdup(aString);
 		mHits[mCount] = 1;
 		mHash[mCount] = hash;
@@ -316,11 +333,11 @@ Symbol gImage;
 Symbol gCode;
 Symbol gNumber;
 
-
+#define MAX_BUFFER_SIZE (1024*256)
 class Buffer
 {
 public:
-	unsigned char mData[1024*256];
+	unsigned char mData[MAX_BUFFER_SIZE];
 	int mLen;
 	Buffer()
 	{
@@ -329,6 +346,11 @@ public:
 
 	void putByte(unsigned char aData)
 	{
+		if (mLen >= MAX_BUFFER_SIZE)
+		{
+			printf("Max buffer size overrun. This should never happen, line %d\n", gLine);
+			exit(-1);
+		}
 		mData[mLen] = aData;
 		mLen++;
 	}
@@ -794,8 +816,10 @@ void parse_op(char *aOperation)
             if (aOperation[i] == '=' && aOperation[i+1] != '=') v = OP_ASSIGN;
             if (aOperation[i] == '=' && aOperation[i+1] == '=') v = OP_EQ;
             if (aOperation[i] == '!' && aOperation[i+1] == '=') v = OP_IEQ;
-            if (aOperation[i] == '+' && aOperation[i+1] != '=') v = OP_ADD;
+            if (aOperation[i] == '+' && aOperation[i+1] != '=') v = OP_ADD; // allow a+b
             if (aOperation[i] == '-' && aOperation[i+1] != '=') v = OP_SUB;
+            if (aOperation[i] == '+' && aOperation[i+1] == '=') v = OP_ADD; // allow a+=b
+            if (aOperation[i] == '-' && aOperation[i+1] == '=') v = OP_SUB;
                 
             if (v == 0)
             {
@@ -1986,27 +2010,36 @@ int main(int aParc, char **aPars)
 
     gLine = 0;    
     scan_first_pass(aPars[infile]);
-    maketrainer();    
+
+	maketrainer();    
 	gPackBuffer.putRawArray(gTrainer, gTrainers);
-    gDataBuffer.mLen = 0;
+    
+	gDataBuffer.mLen = 0;
 	gImage.mFirstIndex = gSymbol.mCount + 1;
 	gCode.mFirstIndex = gSymbol.mCount + gImage.mCount + 1;
+	// reserve space for resource pointers, 2 bytes per pointer
 	gOutBuffer.mLen = gSymbol.mCount * 2 + gImage.mCount * 2 + gCode.mCount * 2 + 2;
+	
 	gLine = 0;    
-
     scan(aPars[infile]);
-    process_rooms();
+
+	process_rooms();
     gPageData = gOutBuffer.mLen;
-    process_images();
-    gImageData = gOutBuffer.mLen - gPageData;
-    process_code_blocks(aPars[0]);
-    gCodeData = gOutBuffer.mLen - gPageData - gImageData;
-    output_trainer();
-    if (!gQuiet)
-        report();
-    sanity_check();
-    output(aPars[outfile]);	
     
+	process_images();
+    gImageData = gOutBuffer.mLen - gPageData;
+    
+	process_code_blocks(aPars[0]);
+    gCodeData = gOutBuffer.mLen - gPageData - gImageData;
+    
+	output_trainer();
+    
+	if (!gQuiet) report();
+
+	sanity_check();
+    
+	output(aPars[outfile]);	
+
     return 0;
 }
 
