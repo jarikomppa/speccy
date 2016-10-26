@@ -583,21 +583,18 @@ void store_number_cmd(int aOperation, int aParameter1, int aParameter2)
 
 void store_section(int aSection)
 {
-    flush_cmd();
     flush_sect();
     gCommandBuffer.putByte(aSection);
 }
 
 void store_section(int aSection, int aParameter)
 {
-    flush_cmd();
     flush_sect();
     store_cmd(aSection, aParameter);
 }
 
 void store_section(int aSection, int aParameter1, int aParameter2)
 {
-    flush_cmd();
     flush_sect();
     gCommandBuffer.putByte(aSection);
     gCommandBuffer.putByte(aParameter1 & 0xff);
@@ -951,7 +948,6 @@ void store_stringlit(char *aStringLiteral)
 
 void process_wordwrap()
 {
-    flush_cmd();
     if (gStringIdx != 0)
     {
         char temp[256];
@@ -1062,6 +1058,8 @@ void scan(char *aFilename)
 			process_wordwrap();
             // opcode
             parse_statement();
+			// Flush the command
+			flush_cmd();
         }
         else
         {
@@ -1072,7 +1070,6 @@ void scan(char *aFilename)
     // process final string literal
     process_wordwrap();
     // flush any pending commands
-    flush_cmd();
     flush_sect();
     // end with empty section
     flush_sect();
