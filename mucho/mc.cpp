@@ -96,6 +96,14 @@ struct RoomBuf
     int mUsed;
 };
 
+struct GlyphData
+{
+    int mXMin, mXMax;
+    unsigned char mPixelData[20];
+};
+
+GlyphData gGlyphData[94];
+
 int gPageData = 0;
 int gImageData = 0;
 int gCodeData = 0;
@@ -128,6 +136,9 @@ int gStringIdx;
 ZX7Pack gPack;
 
 float *gCompressionResults;
+
+int gPreviousSection = 0;
+int gPreviousStringLiterals = 0;
 
 
 class WordCounter
@@ -309,7 +320,7 @@ Symbol gNumber;
 class Buffer
 {
 public:
-	unsigned char mData[1024*1024];
+	unsigned char mData[1024*256];
 	int mLen;
 	Buffer()
 	{
@@ -444,9 +455,6 @@ void token(int n, char *src, char *dst)
     }
     *dst = 0;
 }
-
-
-
 
 
 void flush_packbuf()
@@ -635,7 +643,7 @@ void set_number_op(int opcode, int value1, int value2)
     store_number_cmd(opcode, value1, value2);
 }
 
-void set_opgo(int op, int value)
+void set_go_op(int op, int value)
 {
     if (value >= gMaxRoomSymbol)
     {
@@ -648,7 +656,7 @@ void set_opgo(int op, int value)
     set_op(op, value);
 }
 
-void set_eop(int value, int maxvalue)
+void set_ext_op(int value, int maxvalue)
 {
     if (value > maxvalue)
     {
@@ -755,12 +763,12 @@ void parse_op(char *op)
             if (stricmp(cmd, "dattrib") == 0) set_op(OP_DATTR, atoi(sym)); else
             if (stricmp(cmd, "color") == 0) set_op(OP_ATTR, atoi(sym)); else
             if (stricmp(cmd, "ext") == 0) set_op(OP_EXT, atoi(sym)); else
-            if (stricmp(cmd, "border") == 0) set_eop(atoi(sym), 7); else
-            if (stricmp(cmd, "cls") == 0) set_eop(atoi(sym)+8, 10); else
-            if (stricmp(cmd, "go") == 0) set_opgo(OP_GO,gSymbol.getId(sym)); else
-            if (stricmp(cmd, "goto") == 0) set_opgo(OP_GO,gSymbol.getId(sym)); else
-            if (stricmp(cmd, "gosub") == 0) set_opgo(OP_GOSUB,gSymbol.getId(sym)); else
-            if (stricmp(cmd, "call") == 0) set_opgo(OP_GOSUB,gSymbol.getId(sym)); else
+            if (stricmp(cmd, "border") == 0) set_ext_op(atoi(sym), 7); else
+            if (stricmp(cmd, "cls") == 0) set_ext_op(atoi(sym)+8, 10); else
+            if (stricmp(cmd, "go") == 0) set_go_op(OP_GO, gSymbol.getId(sym)); else
+            if (stricmp(cmd, "goto") == 0) set_go_op(OP_GO, gSymbol.getId(sym)); else
+            if (stricmp(cmd, "gosub") == 0) set_go_op(OP_GOSUB, gSymbol.getId(sym)); else
+            if (stricmp(cmd, "call") == 0) set_go_op(OP_GOSUB, gSymbol.getId(sym)); else
             {
                 printf("Syntax error: unknown operation \"%s\", gLine %d\n", cmd, gLine);
                 exit(-1);
@@ -804,20 +812,18 @@ void parse_op(char *op)
     }
 }
 
-int previous_section = 0;
-int previous_stringlits = 0;
 
-void parse()
+void parse_statement()
 {
-    if (previous_section == 'A' && previous_stringlits != 1)
+    if (gPreviousSection == 'A' && gPreviousStringLiterals != 1)
     {
         printf("Statement A must have exactly one line of printable text (%d found)\n"
                "(Multiple lines may be caused by word wrapping; see verbose output\n"
-               "to see what's going on), near line %d\n", previous_stringlits, gLine);
+               "to see what's going on), near line %d\n", gPreviousStringLiterals, gLine);
                exit(-1);
     }
 
-    previous_stringlits = 0;
+    gPreviousStringLiterals = 0;
     
     // parse statement
     gCommandPtrOpOfs = 0;
@@ -832,7 +838,7 @@ void parse()
         gCommandPtrOpOfs = 2; // $Q + roomno
         store_section('Q', i);  
         if (gVerbose) printf("Room: \"%s\" (%d)\n", t, i);
-        previous_section = 'Q';
+        gPreviousSection = 'Q';
         break;
     case 'A':
         token(1, gScratch, t);
@@ -840,10 +846,10 @@ void parse()
         gCommandPtrOpOfs = 2; // $A + roomno
         store_section('A', i);          
         if (gVerbose) printf("Choice: %s (%d)\n", t, i);
-        previous_section = 'A';
+        gPreviousSection = 'A';
         break;
     case 'P':
-        if (previous_section == 'A')
+        if (gPreviousSection == 'A')
         {
             printf("Syntax error - statement P may not be included in statement A, gLine %d\n", gLine);
             exit(-1);
@@ -853,7 +859,7 @@ void parse()
 		gCommandPtrOpOfs = 10000;
         break;
     case 'O':
-        if (previous_section == 'A')
+        if (gPreviousSection == 'A')
         {
             printf("Syntax error - statement O may not be included in statement A, gLine %d\n", gLine);
             exit(-1);
@@ -861,10 +867,10 @@ void parse()
         gCommandPtrOpOfs = 1; // $O
         store_section('O');
         if (gVerbose) printf("Predicated section\n");
-        previous_section = 'O';
+        gPreviousSection = 'O';
         break;
     case 'I':
-        if (previous_section == 'A')
+        if (gPreviousSection == 'A')
         {
             printf("Syntax error - statement I may not be included in statement A, gLine %d\n", gLine);
             exit(-1);
@@ -873,10 +879,10 @@ void parse()
         gCommandPtrOpOfs = 2; // $I + imageid
         store_section('I', gImage.getId(t));
         if (gVerbose) printf("Image: \"%s\"\n", t);
-        previous_section = 'I';
+        gPreviousSection = 'I';
         break;
     case 'C':
-        if (previous_section == 'A')
+        if (gPreviousSection == 'A')
         {
             printf("Syntax error - statement C may not be included in statement A, gLine %d\n", gLine);
             exit(-1);
@@ -887,7 +893,7 @@ void parse()
         gCommandPtrOpOfs = 3; // $C + codeblock + HL
         store_section('C', gCode.getId(t), i);
         if (gVerbose) printf("Code: \"%s\", %d\n", t, i);
-        previous_section = 'C';
+        gPreviousSection = 'C';
         break;
     default:
         printf("Syntax error: unknown statement \"%s\", gLine %d\n", gScratch, gLine);
@@ -904,20 +910,19 @@ void parse()
     while (t[0]);
 }
 
-void store(char *lit)
+void store_stringlit(char *lit)
 {
     gDataBuffer.putString(lit);
     if (gVerbose) printf("  String literal: \"%s\"\n", lit);
-    previous_stringlits++;
+    gPreviousStringLiterals++;
 }
 
-void process()
+void process_wordwrap()
 {
     flush_cmd();
     if (gStringIdx != 0)
     {
         char temp[256];
-//        temp[0] = 0;
         int c = 0;
         int width = 0;
 		char *s = gStringLit;
@@ -941,21 +946,21 @@ void process()
                 }
                 s++;
                 temp[c] = 0;
-                store(temp);
+                store_stringlit(temp);
                 c = 0;
                 width = 0;
             }
             s++;
         }
         temp[c] = 0;
-        store(temp);
+        store_stringlit(temp);
     
         gStringIdx = 0;
         gStringLit[0] = 0;
     }
 }
 
-void capture()
+void capture_stringlit()
 {
     // capture string literal
     char *s = gScratch;
@@ -963,7 +968,7 @@ void capture()
     if (*s == 0)
     {
         // Empty line, cut to separate string lit
-        process();
+        process_wordwrap();
         return;
     }
     
@@ -1022,18 +1027,18 @@ void scan(char *aFilename)
         if (gScratch[0] == '$')
         {
             // process last string literal
-            process();
+			process_wordwrap();
             // opcode
-            parse();
+            parse_statement();
         }
         else
         {
             // string literal
-            capture();
+            capture_stringlit();
         }
     }
     // process final string literal
-    process();
+    process_wordwrap();
     // flush any pending commands
     flush_cmd();
     flush_sect();
@@ -1044,7 +1049,7 @@ void scan(char *aFilename)
 }
 
 
-int tokencmp (const void * a, const void * b)
+int tokencmp_for_qsort(const void * a, const void * b)
 {
 	int idx1 = *(int*)a;
 	int idx2 = *(int*)b;
@@ -1066,7 +1071,7 @@ void maketrainer()
     for (i = 0; i < MAXTOKENS; i++)
         idx[i] = i;
         
-	qsort(idx, gWordCounter.mTokens, sizeof(int), tokencmp);
+	qsort(idx, gWordCounter.mTokens, sizeof(int), tokencmp_for_qsort);
 
     if (gVerbose)
     {    
@@ -1177,13 +1182,8 @@ void scan_first_pass(char *aFilename)
         printf("File \"%s\" not found.\n", aFilename);
         exit(-1);
     }
-    
-    // Register beepfx as a possible code block. 
-    // Won't be stored if not actually in use.
-    int i;
-    i = gCode.getId("beepfx.ihx");
-    gCode.mHits[i]--;
 	
+	int i = 0;
     while (!feof(f))
     {
         readline(gScratch, f);
@@ -1239,7 +1239,7 @@ void report()
         printf("Token Hits Number\n");
 		for (i = 0; i < gNumber.mCount; i++)
         {
-            printf("%5d %4d \"%s\"\n", i, gNumber.mHits[i], gNumber.mName[i]);
+            printf("%5d %4d \"%s\"%s\n", i, gNumber.mHits[i], gNumber.mName[i], gNumber.mHits[i] < 2 ? " <- Warning":"");
         }
     }
 
@@ -1253,7 +1253,7 @@ void report()
         }
     }
 
-	if (gCode.mCount > 1 || (gCode.mCount == 1 && gCode.mHits[0] > 0))
+	if (gCode.mCount)
     {
 	    printf("\n");
         printf("Token Hits Code\n");
@@ -1288,7 +1288,7 @@ void report()
         
 }
 
-int scan_row(int row, unsigned char*d)
+int scan_image_row(int row, unsigned char*d)
 {
     int i, j;
     int ret = 0;
@@ -1347,7 +1347,7 @@ void process_images()
         int maxlive = 0;
         for (j = 0; j < 24; j++)
         {
-            if (scan_row(j, t))
+            if (scan_image_row(j, t))
             {
                 maxlive = j;
             }
@@ -1392,7 +1392,7 @@ void process_images()
     }
 }
 
-void process_codes(char *path)
+void process_code_blocks(char *path)
 {
     int i;
 	for (i = 0; i < gCode.mCount; i++)
@@ -1566,13 +1566,6 @@ void patch_ihx(char *path)
     write_ihx("patched.ihx", codebuf, start, end);
 }
 
-struct CharData
-{
-    int xmin, xmax;
-    unsigned char pixdata[20];
-};
-
-CharData chardata[94];
 
 void shift()
 {
@@ -1581,33 +1574,33 @@ void shift()
     {
         for (j = 0; j < 8; j++)
         {
-            chardata[i].pixdata[j] <<= chardata[i].xmin;
+            gGlyphData[i].mPixelData[j] <<= gGlyphData[i].mXMin;
         }
     }
 }
 
-void scan_glyph(unsigned int *data, CharData &parsed)
+void scan_glyph(unsigned int *data, GlyphData &parsed)
 {
-    parsed.xmin = 8;
-    parsed.xmax = 0;
+    parsed.mXMin = 8;
+    parsed.mXMax = 0;
     int i, j;
     for (i = 0; i < 8; i++)
     {        
-        parsed.pixdata[i] = 0;
+        parsed.mPixelData[i] = 0;
         for (j = 0; j < 8; j++)
         {
             if (data[i*8+j] & 0xffffff)
             {
-                if (parsed.xmin > j) parsed.xmin = j;
-                if (parsed.xmax < j) parsed.xmax = j;
-                parsed.pixdata[i] |= 0x80 >> j;
+                if (parsed.mXMin > j) parsed.mXMin = j;
+                if (parsed.mXMax < j) parsed.mXMax = j;
+                parsed.mPixelData[i] |= 0x80 >> j;
             }            
         }
     }
-    if (parsed.xmin > parsed.xmax)
+    if (parsed.mXMin > parsed.mXMax)
     {
-        parsed.xmin = 0;
-        parsed.xmax = 4-1;
+        parsed.mXMin = 0;
+        parsed.mXMax = 4 - 1;
     }
 }
 
@@ -1629,7 +1622,7 @@ void scan_font(char *aFilename)
     
     for (n = 0; n < 94; n++)
     {
-        scan_glyph(data+8*8*n, chardata[n]);
+        scan_glyph(data + 8 * 8 * n, gGlyphData[n]);
     }
     
     shift();
@@ -1642,17 +1635,17 @@ void scan_font(char *aFilename)
     {
         for (j = 0; j < 8; j++, c++)
         {
-            gPropfontData[c] = chardata[i].pixdata[j];
+            gPropfontData[c] = gGlyphData[i].mPixelData[j];
         }
     }
 
     for (i = 0; i < 94; i++)
     {
-        gPropfontWidth[i] = chardata[i].xmax-chardata[i].xmin+1+1;
+        gPropfontWidth[i] = gGlyphData[i].mXMax - gGlyphData[i].mXMin + 1 + 1;
     }
 }
 
-void scan_div(char *aFilename)
+void scan_divider(char *aFilename)
 {
     int x,y,n,i,j;
     unsigned int *data = (unsigned int*)stbi_load(aFilename, &x, &y, &n, 4);
@@ -1677,7 +1670,7 @@ void scan_div(char *aFilename)
     }              
 }
 
-void scan_sel(char *aFilename)
+void scan_selector(char *aFilename)
 {
     int x,y,n,i,j;
     unsigned int *data = (unsigned int*)stbi_load(aFilename, &x, &y, &n, 4);
@@ -1710,8 +1703,6 @@ void output_trainer()
         gOutBuffer.putByte(0);
     gOutBuffer.putRawArray(gTrainer, gTrainers);
 }
-
-
 
 int best_compressible_room()
 {
@@ -1847,7 +1838,7 @@ void process_rooms()
     delete[] gCompressionResults;
 }
 
-void sanity()
+void sanity_check()
 {
     int i, j;
 	for (i = 0; i < gSymbol.mCount; i++)
@@ -1975,12 +1966,12 @@ int main(int parc, char **pars)
 
     if (divfile != -1)
     {
-        scan_div(pars[divfile]);
+        scan_divider(pars[divfile]);
     }
 
     if (selfile != -1)
     {
-        scan_sel(pars[selfile]);
+        scan_selector(pars[selfile]);
     }
 
     patch_ihx(pars[0]);
@@ -2000,12 +1991,12 @@ int main(int parc, char **pars)
     gPageData = gOutBuffer.mLen;
     process_images();
     gImageData = gOutBuffer.mLen - gPageData;
-    process_codes(pars[0]);
+    process_code_blocks(pars[0]);
     gCodeData = gOutBuffer.mLen - gPageData - gImageData;
     output_trainer();
     if (!gQuiet)
         report();
-    sanity();
+    sanity_check();
     output(pars[outfile]);	
     
     return 0;
