@@ -423,7 +423,7 @@ void image(unsigned char *dataptr, unsigned char *aYOfs)
             dst++;
         }
     }
-    *aYOfs = yp;
+    *aYOfs = yp;    
 }
 
 unsigned char * find_room(unsigned short id)
@@ -556,6 +556,13 @@ restart:
             goto restart;
         }
                 
+        if ((*dataptr == 0 || dataptr[1] == 'Q') && subreturn != 0)
+        {
+            dataptr = subreturn;
+            subreturn = 0;
+            unpack_resource(room_id);
+        }
+
         if (gosub != 0xffff && subreturn == 0)
         {
             output_enable = 1;
@@ -564,15 +571,7 @@ restart:
             SET_BIT(gosub);
             gosub = 0xffff;
             q = 0;
-        }
-        
-        if (*dataptr == 0 && subreturn != 0)
-        {
-            dataptr = subreturn;
-            subreturn = 0;
-            unpack_resource(room_id);
-        }
-        
+        }                
     }
     // if we get here, this was the last room in the data
 }
