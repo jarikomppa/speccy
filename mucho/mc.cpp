@@ -1,4 +1,4 @@
-//#define DUMP_BINARY_BLOBS
+//#define DEBUG_DECODING
 
 #define _CRT_SECURE_NO_WARNINGS
 #include <ctype.h>
@@ -346,6 +346,10 @@ public:
 
 	void putByte(unsigned char aData)
 	{
+		if (aData == 0)
+		{
+			aData = aData;
+		}
 		if (mLen >= MAX_BUFFER_SIZE)
 		{
 			printf("Max buffer size overrun. This should never happen, line %d\n", gLine);
@@ -479,6 +483,41 @@ void token(int aTokenIndex, char *aSource, char *aDestination)
     *aDestination = 0;
 }
 
+#ifdef DEBUG_DECODING
+void debug_decode(unsigned char *aData, int aLen)
+{
+        char temp[64];
+        static int blobno = 0;
+        sprintf(temp, "blob%02d.bin", blobno);
+        blobno++;
+        FILE * f = fopen(temp, "wb");
+        fwrite(aData, 1, aLen, f);
+        fclose(f);
+
+		printf("\n");
+		printf("Decoding block:\n");
+		int ofs = 0;
+		while (ofs < aLen)
+		{
+			printf("Segment '%c', %d bytes\n", aData[ofs+1], aData[ofs]);
+			ofs += aData[ofs]+1;
+			while (aData[ofs])
+			{
+				int len = aData[ofs];
+				int i;
+				
+				printf("  Stringlit \"");
+				for (i = 0; i < len; i++)
+					printf("%c", aData[ofs + 1 + i]);
+				printf("\"\n");
+
+				ofs += aData[ofs] + 1;
+			}
+			printf("End of segment\n");
+			ofs++;
+		}
+}
+#endif
 
 void flush_packbuf()
 {
@@ -486,16 +525,11 @@ void flush_packbuf()
     {
         gPack.mMax = 0;
 		gPack.pack((unsigned char*)&gPackBuffer.mData[0], gPackBuffer.mLen, gTrainers);
-#ifdef DUMP_BINARY_BLOBS        
-        char temp[64];
-        static int blobno = 0;
-        sprintf(temp, "blob%02d.bin", blobno);
-        blobno++;
-        FILE * f = fopen(temp, "wb");
-        fwrite(gPackBuffer.mData + gTrainers, 1, gPackBuffer.mLen - gTrainers, f);
-        fclose(f);
+
+#ifdef DEBUG_DECODING
+		debug_decode(gPackBuffer.mData + gTrainers, gPackBuffer.mLen - gTrainers);
 #endif
-    
+
         if (!gQuiet)
             printf("zx7: %4d -> %4d (%3.3f%%), 0x%04x\n", 
 				gPackBuffer.mLen - gTrainers, 
@@ -512,7 +546,6 @@ void flush_room()
 {
     if (gDataBuffer.mLen > 0)
     {
-        gDataBuffer.putByte(0); // add a zero byte for good measure.
         if (gDataBuffer.mLen > 4096)
         {
             printf("Room %s data too large; max 4096 bytes, has %d bytes\n", gSymbol.mName[gRoomNo], gDataBuffer.mLen);
@@ -531,7 +564,6 @@ void flush_room()
 }
 
 
-
 void flush_sect()
 {
     if (gDataBuffer.mLen > 0)  // skip end if we're in the beginning
@@ -546,7 +578,7 @@ void flush_cmd()
 {
 	if (gCommandBuffer.mLen)
     {
-        int ops = (gCommandBuffer.mLen-1-(gCommandPtrOpOfs-1)*2) / 3;
+        int ops = (gCommandBuffer.mLen - 1 - (gCommandPtrOpOfs - 1) * 2) / 3;
         if (gVerbose) 
         {
             printf("  Command buffer '%c' (%d bytes) with %d bytes payload (%d ops) %d\n", 
@@ -583,19 +615,16 @@ void store_number_cmd(int aOperation, int aParameter1, int aParameter2)
 
 void store_section(int aSection)
 {
-    flush_sect();
     gCommandBuffer.putByte(aSection);
 }
 
 void store_section(int aSection, int aParameter)
 {
-    flush_sect();
     store_cmd(aSection, aParameter);
 }
 
 void store_section(int aSection, int aParameter1, int aParameter2)
 {
-    flush_sect();
     gCommandBuffer.putByte(aSection);
     gCommandBuffer.putByte(aParameter1 & 0xff);
     gCommandBuffer.putByte(aParameter1 >> 8);
@@ -1036,7 +1065,7 @@ void capture_stringlit()
     gStringLit[gStringIdx] = 0;
 }
 
-void scan(char *aFilename)
+void scan_second_pass(char *aFilename)
 {
     FILE * f = fopen(aFilename, "rb");
     if (!f)
@@ -1045,6 +1074,11 @@ void scan(char *aFilename)
         exit(-1);
     }
     
+	if (gVerbose)
+	{
+		printf("\n");
+		printf("Parsing %s:\n", aFilename);
+	}
     
     gStringIdx = 0;
     gStringLit[0] = 0;
@@ -1056,6 +1090,8 @@ void scan(char *aFilename)
         {
             // process last string literal
 			process_wordwrap();
+			// end previous section
+		    flush_sect();
             // opcode
             parse_statement();
 			// Flush the command
@@ -1069,12 +1105,15 @@ void scan(char *aFilename)
     }
     // process final string literal
     process_wordwrap();
-    // flush any pending commands
-    flush_sect();
-    // end with empty section
     flush_sect();
     flush_room(); 
     fclose(f);
+
+	if (gVerbose)
+	{
+		printf("\n");
+	}
+
 }
 
 
@@ -1104,13 +1143,16 @@ void maketrainer()
 
     if (gVerbose)
     {    
-        printf("Most frequent words in source material:\n");
+        printf("\n");
+		printf("Most frequent words in source material:\n");
 		int total = gWordCounter.mTokens;
 		if (total > 25) total = 25;
         for (i = 0; i < total; i++)
         {
             printf("%d. \"%s\"\t(%d)\n", i, gWordCounter.mWord[idx[i]], gWordCounter.mHits[idx[i]]);
         }
+		printf("\n");
+		printf("Making word chains:\n");
     }
         
     int c = 0;
@@ -1187,6 +1229,9 @@ void maketrainer()
 		}
     }
     gTrainers = c;
+
+	if (gVerbose)
+		printf("\n\n");
     
     if (!gQuiet)
     {
@@ -2018,7 +2063,7 @@ int main(int aParc, char **aPars)
 	gOutBuffer.mLen = gSymbol.mCount * 2 + gImage.mCount * 2 + gCode.mCount * 2 + 2;
 	
 	gLine = 0;    
-    scan(aPars[infile]);
+    scan_second_pass(aPars[infile]);
 
 	process_rooms();
     gPageData = gOutBuffer.mLen;
