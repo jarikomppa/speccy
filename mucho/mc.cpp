@@ -1817,6 +1817,17 @@ int best_compressible_room()
             }
         }
     }
+	if (ratio == 1000)
+	{
+		// No compressible pairs found. Find unused one.
+		for (i = 0; i < gRooms; i++)
+		{
+			if (gRoom[i].mUsed == 0)
+			{
+				idx = i;
+			}
+		}
+	}
     return idx;
 }
    
@@ -1847,7 +1858,7 @@ void process_rooms()
         {
             if (idx != j && gRoom[j].mUsed == 0)
             {
-                int total = gRoom[idx].mLen+gRoom[j].mLen;
+                int total = gRoom[idx].mLen + gRoom[j].mLen;
                 if (total < 4096)
                 {
                     float r;
@@ -1901,7 +1912,7 @@ void process_rooms()
     {
         if (gRoom[j].mUsed == 0)
         {
-            printf("ERROR Room \"%s\" didn't compress with anything\n", gRoom[j].mName);
+            printf("ERROR Room \"%s\" didn't get included\n", gRoom[j].mName);
             panic = 1;
         }
     }
