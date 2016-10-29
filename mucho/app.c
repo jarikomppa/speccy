@@ -70,13 +70,13 @@ enum opcodeval
     OP_SUBC    
 };
 
-unsigned char state[256]; // game state
-unsigned char number[16]; // number store
+unsigned char gState[128]; // game state - 128x8=1024 bits, which "shold" be enough
+unsigned char gNumber[32]; // number store - 32 variables "should" be enough
 unsigned char y8; // prg state
-unsigned char *answer[16];
-unsigned char answers;
+unsigned char *answer[16]; // collected answers
+unsigned char answers; // count of answers
 unsigned char attrib, iattrib, dattrib, attrib_c, iattrib_c;
-unsigned short go, gosub;
+unsigned short go, gosub; // room id:s for go and gosub values
 
 void cls()
 {
@@ -113,6 +113,40 @@ const unsigned char selectpattern[8] =
     0x00  
 };
 
+char decimal(unsigned char *d, unsigned char v, unsigned char step)
+{
+    unsigned char c;
+    c = '0';
+    while (v >= step) 
+    {
+        v -= step;
+        c++;
+    }
+    *d = c;
+    return v;
+}
+
+void patchstring(unsigned char *aDataPtr)
+{    
+    unsigned char c = aDataPtr[0];
+    
+    aDataPtr++; // skip len byte
+    
+    while (c)
+    {
+        if (aDataPtr[0] == 1)
+        {
+            unsigned char ov, v;     
+            v = gNumber[aDataPtr[1]];
+            ov = v;
+            if (ov > 99) v = decimal(aDataPtr, v, 100); else aDataPtr[0] = 128;
+            if (ov > 9)  v = decimal(aDataPtr+1, v, 10); else aDataPtr[1] = 128;
+            decimal(aDataPtr + 2, v, 1);
+        }
+        aDataPtr++; c--;
+    }
+}
+
 void clearbottom()
 {
     unsigned short i, j;
@@ -130,24 +164,17 @@ void clearbottom()
 
 }
 
-unsigned short current_resource;
-
 void unpack_resource(unsigned short id)
 {
     // dest = 0xd000, ~4k of scratch. A bit tight?
        
     unsigned short res = *((unsigned short*)(unsigned char*)(0x5b00 + id * 2));
 
-    if (res != current_resource)
-    {
-        unsigned short v;
-        for (v = 0; v < 4096; v++)
-            *((unsigned char*)0xd000 + v) = 0;    
-    
-        zx7_unpack((unsigned char*)res);    
-        
-        current_resource = res;
-    }
+    unsigned short v;
+    for (v = 0; v < 4096; v++)
+        *((unsigned char*)0xd000 + v) = 0;    
+
+    zx7_unpack((unsigned char*)res);        
 }
 
 unsigned char xorshift8(void) 
@@ -159,7 +186,7 @@ unsigned char xorshift8(void)
 
 unsigned char get_bit(unsigned short id)
 {
-    return !!(state[id & 0xff] & 1 << (id >> 8));
+    return !!(gState[id & 0xff] & 1 << (id >> 8));
 }
 
 void set_ext(unsigned short id)
@@ -183,7 +210,7 @@ void set_ext(unsigned short id)
     }
 }
 
-#define SET_BIT(x) state[(x) & 0xff] |= 1 << ((x) >> 8)
+#define SET_BIT(x) gState[(x) & 0xff] |= 1 << ((x) >> 8)
 
 void exec(unsigned char *dataptr)
 {
@@ -217,10 +244,10 @@ void exec(unsigned char *dataptr)
                 SET_BIT(id);
                 break;
             case OP_CLR:
-                state[id & 0xff] &= (1 << (id >> 8))^0xff;
+                gState[id & 0xff] &= (1 << (id >> 8))^0xff;
                 break;
             case OP_XOR:
-                state[id & 0xff] ^= 1 << (id >> 8);
+                gState[id & 0xff] ^= 1 << (id >> 8);
                 break;
             case OP_ATTR:
                 attrib = id;
@@ -237,22 +264,22 @@ void exec(unsigned char *dataptr)
                 set_ext(id);
                 break;                
             case OP_ASSIGN:
-                number[dataptr[1]] = number[dataptr[2]];
+                gNumber[dataptr[1]] = gNumber[dataptr[2]];
                 break;
             case OP_ASSIGNC:
-                number[dataptr[1]] = dataptr[2];
+                gNumber[dataptr[1]] = dataptr[2];
                 break;
             case OP_ADD:
-                number[dataptr[1]] += number[dataptr[2]];
+                gNumber[dataptr[1]] += gNumber[dataptr[2]];
                 break;
             case OP_ADDC:
-                number[dataptr[1]] += dataptr[2];
+                gNumber[dataptr[1]] += dataptr[2];
                 break;
             case OP_SUB:
-                number[dataptr[1]] -= number[dataptr[2]];
+                gNumber[dataptr[1]] -= gNumber[dataptr[2]];
                 break;
             case OP_SUBC:    
-                number[dataptr[1]] -= dataptr[2];
+                gNumber[dataptr[1]] -= dataptr[2];
                 break;
             case OP_GO:
                 go = id;
@@ -293,9 +320,9 @@ unsigned char pred(unsigned char *dataptr)
     {
         // ignore exec ops
         unsigned short id = *((unsigned short*)&dataptr[1]);
-        unsigned char first = number[dataptr[1]];
+        unsigned char first = gNumber[dataptr[1]];
         unsigned char secondc = dataptr[2];
-        unsigned char second = number[secondc];
+        unsigned char second = gNumber[secondc];
         switch (*dataptr)
         {
             case OP_HAS: if (!get_bit(id))        ret = 0; break;
@@ -339,6 +366,7 @@ void drawattrib(unsigned char yofs, unsigned char attrib)
         dst++;
     }
 }
+
 
 void hitkeytocontinue()
 {
@@ -542,6 +570,7 @@ restart:
                 } 
 
                 drawattrib(yofs, attrib_c);
+                patchstring(dataptr);
                 drawstring(dataptr, 0, yofs);
                 drawattrib(yofs, attrib);
                 yofs += 8;
@@ -582,9 +611,9 @@ void reset()
     unsigned short i;
 
     for (i = 0; i < 256; i++)
-        state[i] = 0;
-    for (i = 0; i < 16; i++)
-        number[i] = 0;
+        gState[i] = 0;
+    for (i = 0; i < 32; i++)
+        gNumber[i] = 0;
 
     attrib = 070;
     attrib_c = 077;
@@ -628,7 +657,8 @@ void main()
     unsigned short current_room = 0;    
     unsigned char current_answer = 0;
     unsigned char selecting;    
-    current_resource = 0;
+    unsigned char *widthp = (unsigned char*)(int*)builtin_width - 32;
+    widthp[128] = 0;
 
     reset();     
 
@@ -699,6 +729,7 @@ void main()
                         unsigned char *dataptr = answer[answer_ofs + i];
                         unsigned char roll = 0;
                         dataptr += *dataptr + 1;
+                        patchstring(dataptr);
                         drawstring(dataptr, 1, yofs);
                     }
                 }
@@ -713,7 +744,7 @@ void main()
                     i = 22*8;
                     if (current_answer == 0) i = 21*8;
                     if (current_answer == answers-1 && answers > 2) i = 23*8;
-                    //drawstring("\x03>>>", 0, i);
+                    
                     drawselector(i);
                     
                     readkeyboard();
