@@ -208,6 +208,7 @@ public:
 
 	void addWordcountToken(char *aToken)
 	{    
+		if (strstr(aToken, "<<") != NULL) return; // discard tokens with numeric output
 		int h = calcHash(aToken);
 		int i;	
 		if (aToken == NULL || *aToken == 0)
@@ -378,17 +379,24 @@ public:
 
 	void putString(char *aData)
 	{
-		putByte(strlen((const char*)aData));
-		while (*aData)
+		int pass = 0;
+		int len = 0;
+		unsigned char *lenbyte = mData + mLen;
+		putByte(0);
+		while (*aData || pass)
 		{
-			if (*aData < 32 || *aData > 126)
+			if (pass == 0 && *aData == 1) pass = 3;
+			if (pass == 0 && (*aData < 32 || *aData > 126))
 			{
 				printf("Invalid character \"%c\" found near line %d\n", *aData, gLine);
 				exit(-1);
 			}
 			putByte(*aData);
 			aData++;
+			if (pass) pass--;
+			len++;
 		}
+		*lenbyte = len;
 	}
 
 	void patchWord(unsigned short aWord, int aPos)
@@ -591,7 +599,7 @@ void flush_cmd()
                 
         if (gCommandBuffer.mLen > 255)
         {
-            printf("Syntax error - too many operations on one statement, gLine %d\n", gLine);
+            printf("Syntax error - too many operations on one statement, line %d\n", gLine);
             exit(-1);
         }
 		gDataBuffer.putArray(gCommandBuffer.mData, gCommandBuffer.mLen);
@@ -636,7 +644,7 @@ void set_op(int aOpCode, int aValue)
 {
     if (aValue > 255)
     {
-        printf("Parameter value out of range, gLine %d\n", gLine);
+        printf("Parameter value out of range, line %d\n", gLine);
         exit(-1);
     }
     if (gVerbose) printf("    Opcode: ");
@@ -663,7 +671,7 @@ void set_number_op(int aOpCode, int aValue1, int aValue2)
 {
     if (aValue1 > 255 || aValue2 > 255)
     {
-        printf("Parameter value out of range, gLine %d\n", gLine);
+        printf("Parameter value out of range, line %d\n", gLine);
         exit(-1); 
     }
     if (gVerbose) printf("    Opcode: ");
@@ -696,7 +704,7 @@ void set_go_op(int aOperation, int aValue)
 {
     if (aValue >= gMaxRoomSymbol)
     {
-        printf("Invalid GO%s parameter: symbol \"%s\" is not a room, gLine %d\n", 
+        printf("Invalid GO%s parameter: symbol \"%s\" is not a room, line %d\n", 
             aOperation==OP_GOSUB?"SUB":"",
             gSymbol.mName[aValue],
             gLine);
@@ -709,7 +717,7 @@ void set_ext_op(int aValue, int aMaxValue)
 {
     if (aValue > aMaxValue)
     {
-        printf("Parameter value out of range, gLine %d\n", gLine);
+        printf("Parameter value out of range, line %d\n", gLine);
         exit(-1);
     }
     set_op(OP_EXT, aValue);
@@ -720,7 +728,7 @@ void parse_op(char *aOperation)
     // Op may be of form "foo" "!foo" or "foo:bar" or "foo[intop]bar" where intop is <,>,<=,>=,==,!=,=,+,-
     if (aOperation[0] == 0)
     {
-        printf("Syntax error (op=null), gLine %d\n", gLine);
+        printf("Syntax error (op=null), line %d\n", gLine);
         exit(-1);
     }
     if (aOperation[0] == ':' || 
@@ -732,7 +740,7 @@ void parse_op(char *aOperation)
 		(aOperation[0] == '!' && 
 		aOperation[1] == '='))
     {
-        printf("Syntax error (op starting with '%c') \"%s\", gLine %d\n", aOperation[0], aOperation, gLine);
+        printf("Syntax error (op starting with '%c') \"%s\", line %d\n", aOperation[0], aOperation, gLine);
         exit(-1);
     }
 
@@ -763,7 +771,7 @@ void parse_op(char *aOperation)
 
     if (operations > 1)
     {
-        printf("Syntax error (op with more than one instruction) \"%s\", gLine %d\n", aOperation, gLine);
+        printf("Syntax error (op with more than one instruction) \"%s\", line %d\n", aOperation, gLine);
         exit(-1);
     }
     
@@ -826,7 +834,7 @@ void parse_op(char *aOperation)
             if (stricmp(cmd, "gosub") == 0) set_go_op(OP_GOSUB, gSymbol.getId(sym)); else
             if (stricmp(cmd, "call") == 0) set_go_op(OP_GOSUB, gSymbol.getId(sym)); else
             {
-                printf("Syntax error: unknown operation \"%s\", gLine %d\n", cmd, gLine);
+                printf("Syntax error: unknown operation \"%s\", line %d\n", cmd, gLine);
                 exit(-1);
             }                
         }
@@ -849,7 +857,7 @@ void parse_op(char *aOperation)
                 
             if (v == 0)
             {
-                printf("Parse error near \"%s\" (\"%s\"), gLine %d\n", aOperation + i, aOperation, gLine);
+                printf("Parse error near \"%s\" (\"%s\"), line %d\n", aOperation + i, aOperation, gLine);
                 exit(-1);
             }
             
@@ -909,17 +917,23 @@ void parse_statement()
     case 'P':
         if (gPreviousSection == 'A')
         {
-            printf("Syntax error - statement P may not be included in statement A, gLine %d\n", gLine);
+            printf("Syntax error - statement P may not be included in statement A, line %d\n", gLine);
             exit(-1);
         }
-        if (gVerbose) printf("Empty paragraph\n");
-        gDataBuffer.putString(" ");
+        if (gVerbose) printf("Empty paragraph\n");        
+		gDataBuffer.mLen--; // overwrite end of section
+		gDataBuffer.putString(" ");
 		gCommandPtrOpOfs = 10000;
+		token(1, gScratch, t);
+		if (t[0])
+		{
+			printf("Syntax error - statement P may not include any operations, line %d\n", gLine);
+		}
         break;
     case 'O':
         if (gPreviousSection == 'A')
         {
-            printf("Syntax error - statement O may not be included in statement A, gLine %d\n", gLine);
+            printf("Syntax error - statement O may not be included in statement A, line %d\n", gLine);
             exit(-1);
         }
         gCommandPtrOpOfs = 1; // $O
@@ -930,7 +944,7 @@ void parse_statement()
     case 'I':
         if (gPreviousSection == 'A')
         {
-            printf("Syntax error - statement I may not be included in statement A, gLine %d\n", gLine);
+            printf("Syntax error - statement I may not be included in statement A, line %d\n", gLine);
             exit(-1);
         }
         token(1, gScratch, t);
@@ -942,7 +956,7 @@ void parse_statement()
     case 'C':
         if (gPreviousSection == 'A')
         {
-            printf("Syntax error - statement C may not be included in statement A, gLine %d\n", gLine);
+            printf("Syntax error - statement C may not be included in statement A, line %d\n", gLine);
             exit(-1);
         }
         token(2, gScratch, t);
@@ -954,7 +968,7 @@ void parse_statement()
         gPreviousSection = 'C';
         break;
     default:
-        printf("Syntax error: unknown statement \"%s\", gLine %d\n", gScratch, gLine);
+        printf("Syntax error: unknown statement \"%s\", line %d\n", gScratch, gLine);
         exit(-1);            
     }
     
@@ -968,11 +982,34 @@ void parse_statement()
     while (t[0]);
 }
 
+void print_stringliteral(char *aStringLiteral)
+{
+	while (*aStringLiteral)
+	{
+		if (*aStringLiteral == 1)
+		{
+			aStringLiteral++; // skip 1
+			printf("<<%s>>", gNumber.mName[*aStringLiteral]);
+			aStringLiteral++; // skip 2, and skip 3 down there.
+		}
+		else
+		{
+			printf("%c", *aStringLiteral);
+		}
+		aStringLiteral++;
+	}
+}
+
 void store_stringlit(char *aStringLiteral)
 {
     gDataBuffer.putString(aStringLiteral);
-    if (gVerbose) printf("  String literal: \"%s\"\n", aStringLiteral);
-    gPreviousStringLiterals++;
+    if (gVerbose) 
+	{
+		printf("  String literal: \"");
+		print_stringliteral(aStringLiteral);
+		printf("\"\n");
+	}
+	gPreviousStringLiterals++;
 }
 
 void process_wordwrap()
@@ -991,12 +1028,26 @@ void process_wordwrap()
         {
             temp[c] = *s;
             c++;
-            width += gPropfontWidth[*s-32];
+			if (*s == 1)
+			{
+				s++;
+                temp[c] = *s;
+				c++;
+				s++;
+                temp[c] = *s;
+				c++;
+				width += gPropfontWidth['8'-32] * 3; // consider number output as wide as three 8's
+			}
+			else
+			{
+				width += gPropfontWidth[*s-32];
+			}
+			
             if (width > 248)
             {
                 c--;
                 s--;
-                while (temp[c] != ' ')
+                while (temp[c] != ' ' && temp[c-1] != 1)
                 {
                     c--;
                     s--;
@@ -1056,8 +1107,37 @@ void capture_stringlit()
                 
         if (!ws)
         {
-            gStringLit[gStringIdx] = *s;
-            gStringIdx++;
+			if (s[0] == '<' && s[1] == '<')
+			{
+				s += 2;
+				char temp[256];
+				// number output
+				int i = 0;
+				while (!whitespace(s[0]) && s[0] != 0 && !(s[0] == '>' && s[1] == '>'))
+				{
+					temp[i] = *s;
+					s++;
+					i++;
+				}
+				temp[i] = 0;
+				if (!(s[0] == '>' && s[1] == '>'))
+				{
+					printf("Error parsing numeric output on line %s\n", gLine);
+					exit(-1);
+				}
+				s++;
+				gStringLit[gStringIdx] = 1;
+				gStringIdx++;
+				gStringLit[gStringIdx] = gNumber.getId(temp);
+				gStringIdx++;
+				gStringLit[gStringIdx] = '.'; // make sure there's 3 bytes for the number.
+				gStringIdx++;
+			}
+			else
+			{
+				gStringLit[gStringIdx] = *s;
+				gStringIdx++;
+			}
         }
         
         s++;
@@ -1270,7 +1350,7 @@ void scan_first_pass(char *aFilename)
                 i = gSymbol.getId(t);
                 if (gSymbol.mHits[i] > 1)
                 {
-                    printf("syntax error: room id \"%s\" used more than once, gLine %d\n", t, gLine);
+                    printf("syntax error: room id \"%s\" used more than once, line %d\n", t, gLine);
                     exit(-1);
                 }
                 gSymbol.mHits[i]--; // clear the hit, as it'll be scanned again
