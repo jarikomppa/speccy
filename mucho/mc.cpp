@@ -18,10 +18,10 @@
 
 // the space we have on the device
 #define DATA_AREA_SIZE 29952 
-// 2k symbols should be enough for everybody
-#define MAX_SYMBOLS (8*256) 
+// 1k symbols should be enough for everybody
+#define MAX_SYMBOLS (8*128) 
 // max number of numeric variables
-#define MAX_NUMBERS 16 
+#define MAX_NUMBERS 32 
 // max word count tokens
 #define MAXTOKENS 2048 
 // max bytes for the trainer data (1024 is a good value, +512 may help or harm)
