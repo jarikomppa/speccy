@@ -79,16 +79,6 @@ unsigned char attrib, iattrib, dattrib, attrib_c, iattrib_c;
 unsigned short go, gosub; // room id:s for go and gosub values
 unsigned short current_resource; // currently decompressed resource
 
-void cls()
-{
-    unsigned short i, j;
-
-    for (i = 0; i < 20*32; i++)
-        *(unsigned char*)(0x5800+i) = attrib_c; 
-    for (j = 0; j < 20*8; j++)
-        for (i = 0; i < 32; i++)
-            *(unsigned char*)(yofs[j]+i) = 0;
-}
    
 const unsigned char pattern[8] = 
 { 
@@ -179,11 +169,18 @@ void clearbottom()
     for (i = 20*32; i < 21*32; i++)
         *(unsigned char*)(0x5800+i) = dattrib; 
 
-    for (j = 21*8; j < 24*8; j++)
-        for (i = 0; i < 32; i++)
-            *(unsigned char*)(yofs[j]+i) = 0;
+    for (j = 21*8; j < 24*8; j+=8)
+        clearline(j);
+}
 
+void cls()
+{
+    unsigned short i, j;
 
+    for (i = 0; i < 20*32; i++)
+        *(unsigned char*)(0x5800+i) = attrib_c; 
+    for (j = 0; j < 20*8; j+=8)
+        clearline(j);    
 }
 
 void unpack_resource(unsigned short id)
@@ -673,8 +670,6 @@ void drawselector(unsigned char y)
             (selectpattern[i & 7] >> v) | (selectpattern[i & 7] << (8-v));
         *(unsigned char*)(yofs[y]+0) = p & 0x1f | (*(unsigned char*)(yofs[y]+0) & 0x80);
         *(unsigned char*)(yofs[y]+1) = p & 0xf8;
-            
-            //pattern[i & 7];
     }
 }
 
