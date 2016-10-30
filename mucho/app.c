@@ -174,11 +174,11 @@ void unpack_resource(unsigned short id)
 
     if (res != current_resource)
     {
-    unsigned short v;
-    for (v = 0; v < 4096; v++)
-        *((unsigned char*)0xd000 + v) = 0;    
-
-    zx7_unpack((unsigned char*)res);        
+        unsigned short v;
+        for (v = 0; v < 4096; v++)
+            *((unsigned char*)0xd000 + v) = 0;    
+    
+        zx7_unpack((unsigned char*)res);        
         current_resource = res;
     }
 }
@@ -689,9 +689,7 @@ void main()
             unsigned short t;
             clearbottom();
             // delay..
-            for (t = 0; t < 30000; t++);
-            for (t = 0; t < 30000; t++);
-            for (t = 0; t < 30000; t++);
+            for (j = 0; j < 4; j++)
             for (t = 0; t < 30000; t++);
             //              0123456789ABCDEF0123456789ABCDEF01
             drawstring("\x21[The end. Press enter to restart]", 6, 22*8);
