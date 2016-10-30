@@ -149,6 +149,26 @@ void patchstring(unsigned char *aDataPtr)
     }
 }
 
+void clearline(unsigned char startline)
+{
+    unsigned char i;
+    unsigned char j;
+    unsigned char* p = (unsigned char*)yofs[startline];
+    for (i = 0; i < 8; i++, p += 256-32)
+        for (j = 0; j < 32; j++, p++)
+            *p = 0;    
+}
+
+void moveline(unsigned char from, unsigned char to)
+{
+    unsigned char i, j;
+    unsigned char* s = (unsigned char*)yofs[from];
+    unsigned char* d = (unsigned char*)yofs[to];
+    for (i = 0; i < 8; i++, s += 256-32, d += 256-32)
+        for (j = 0; j < 32; j++, s++, d++)
+            *d = *s;
+}
+
 void clearbottom()
 {
     unsigned short i, j;
@@ -651,11 +671,27 @@ void drawselector(unsigned char y)
     {
         unsigned char p = 
             (selectpattern[i & 7] >> v) | (selectpattern[i & 7] << (8-v));
-        *(unsigned char*)(yofs[y]+0) = p & 0x1f;
+        *(unsigned char*)(yofs[y]+0) = p & 0x1f | (*(unsigned char*)(yofs[y]+0) & 0x80);
         *(unsigned char*)(yofs[y]+1) = p & 0xf8;
             
             //pattern[i & 7];
     }
+}
+
+const unsigned char prop_ht[16] = {24,24,24,18, 16,14,12,10, 8,15,14,13, 12,11,10,9};
+const unsigned char prop_step[16] = {0,0,0,2, 2,2,2,2, 2,1,1,1, 1,1,1,1};
+
+void prop_indicator(unsigned char current_answer)
+{
+    unsigned char ht = prop_ht[answers];
+    unsigned char step = prop_step[answers];
+    unsigned char ofs;
+    unsigned char i;
+    ofs = 168;
+    for (i = 0; i < current_answer; i++)
+        ofs += step;    
+    for (i = 0; i < ht; i++)
+        *((unsigned char*)yofs[ofs+i]) |= 0x80;
 }
 
 void main()
@@ -711,50 +747,124 @@ void main()
         }
         else
         {
+            unsigned char renderstate = 0;
+            unsigned char last_answer_ofs = 0;
     
             if (current_answer >= answers)
                 current_answer = 0;
-                
+            
             selecting = 1;
             while (selecting)
             {
-                unsigned char answer_ofs;
-                unsigned char yofs;
-                clearbottom();
+                unsigned char answer_ofs = 0;
+                unsigned char answer_yofs = 0;
+                unsigned char selector_y = 0;
+                                
                 answer_ofs = current_answer;
+                
                 if (current_answer > 0)
                     answer_ofs -= 1;
                 if (current_answer == answers-1)
                     answer_ofs -= 1;
                 if (answers < 4) answer_ofs = 0;
-                yofs = 21*8;
-                for (i = 0; i < 3; i++, yofs += 8)
+
+                selector_y = 22*8;
+                if (current_answer == 0) selector_y = 21*8;
+                if (current_answer == answers-1 && answers > 2) selector_y = 23*8;
+                
+                /*
+                 Four cases:
+                 0. Open page: have to draw everything in any case.
+                 1. Just move pointer, don't draw text (top/bottom/less than 4 answers)
+                 2. Move answers up, draw one
+                 3. Move answers down, draw one
+                 */
+
+                if (renderstate)
                 {
-                    if (answer_ofs + i < answers)
-                    {
-                        unsigned char *dataptr = answer[answer_ofs + i];
-                        unsigned char roll = 0;
-                        dataptr += *dataptr + 1;
-                        patchstring(dataptr);
-                        drawstring(dataptr, 1, yofs);
-                    }
+                    if (answer_ofs > last_answer_ofs)
+                        renderstate = 2;
+                    if (answer_ofs < last_answer_ofs)
+                        renderstate = 3;
                 }
-                drawattrib(21*8, iattrib);
-                drawattrib(22*8, iattrib);
-                drawattrib(23*8, iattrib);
+
+                last_answer_ofs = answer_ofs;                
+                 
+                if (renderstate == 0)
+                {
+                    clearbottom();
+                    
+                    answer_yofs = 21*8;
+                    for (i = 0; i < 3; i++, answer_yofs += 8)
+                    {
+                        if (answer_ofs + i < answers)
+                        {
+                            unsigned char *dataptr = answer[answer_ofs + i];
+                            unsigned char roll = 0;
+                            dataptr += *dataptr + 1;
+                            patchstring(dataptr);
+                            drawstring(dataptr, 1, answer_yofs);
+                        }
+                    }
+                    
+                    drawattrib(21*8, iattrib);
+                    drawattrib(22*8, iattrib);
+                    drawattrib(23*8, iattrib);
+                }
+                else
+                {
+                    // clear the selector area
+                    for (j = 168; j < 192; j++)
+                    {
+                        *(unsigned char*)(yofs[j]) = 0;
+                        *(unsigned char*)(yofs[j]+1) = 0;
+                    }
+                }                                                             
+                
+                if (renderstate == 2)
+                {
+                    // move up
+                    moveline(22*8,21*8);
+                    moveline(23*8,22*8);
+                    // clear one line
+                    clearline(23*8);
+                    // draw one line
+                    answer_yofs = 184;
+                    answer_ofs += 2;
+                }
+                
+                if (renderstate == 3)
+                {
+                    // move down
+                    moveline(22*8,23*8);
+                    moveline(21*8,22*8);
+                    // clear one line
+                    clearline(21*8);
+                    // draw one line
+                    answer_yofs = 168;
+                }
+
+                if (renderstate > 1)
+                {
+                    unsigned char *dataptr = answer[answer_ofs];
+                    dataptr += *dataptr + 1;
+                    patchstring(dataptr);
+                    drawstring(dataptr, 1, answer_yofs);
+                }
+                
+                renderstate = 1;
+                
+                prop_indicator(current_answer);
                                                     
                 readkeyboard();
 
                 while (!KEY_PRESSED_UP && !KEY_PRESSED_DOWN && !KEY_PRESSED_FIRE)
-                {            
-                    i = 22*8;
-                    if (current_answer == 0) i = 21*8;
-                    if (current_answer == answers-1 && answers > 2) i = 23*8;
-                    
-                    drawselector(i);
+                {                                
+                    drawselector(selector_y);
                     
                     readkeyboard();
                 }
+                
                 if (KEY_PRESSED_FIRE)
                 {
                     unsigned char *dataptr = answer[current_answer];
@@ -769,6 +879,7 @@ void main()
                         current_answer = 0;
                     current_room = id;
                 }
+                
                 if (KEY_PRESSED_UP)
                 {
                     while (KEY_PRESSED_UP)
@@ -778,6 +889,7 @@ void main()
                     if (current_answer > 0)
                         current_answer--;
                 }
+                
                 if (KEY_PRESSED_DOWN)
                 {
                     while (KEY_PRESSED_DOWN)
@@ -786,7 +898,8 @@ void main()
                     }
                     if (current_answer+1 < answers)
                         current_answer++;
-                }
+                }                                
+                
                 xorshift8();    
             }
         }
