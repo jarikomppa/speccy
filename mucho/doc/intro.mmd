@@ -64,16 +64,19 @@ pretty much on your own, though).
 --
 
 MuCho was written in C and compiled with SDCC
+
 <http://sdcc.sourceforge.net/>
 
 --
 
 Uses BeepFX by Shiru, public domain
+
 <https://shiru.untergrund.net/software.shtml>
 
 --
 
 Uses ZX7 compression by Einar Saukas
+
 <http://www.worldofspectrum.org/infoseekid.cgi?id=0027996>
 
 ZX7 Copyright 2012 by Einar Saukas. All rights reserved.
@@ -128,13 +131,18 @@ OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 
-For more information, please refer to <http://unlicense.org/>
+For more information, please refer to 
+
+<http://unlicense.org/>
 
 # MuCho Story Definition Language
 
 The MuCho story definition language may sound scary, but it is actually very simple. The MuCho scripts are plain text
 files, such as those that can be created with Windows Notepad, although the author recommends using something more
 advanced, such as UltraEdit, Sublime Text or Notepad++.
+
+Not all of the features of the language are needed to write adventures; this document is structured so that more 
+complicated features are described later, so you won't need to read all of it to get started.
 
 ## Structure
 
@@ -185,7 +193,7 @@ If a room has no $A lines, it is considered an "end node", and the adventure end
 
 ### Text
 
-The text in the page descriptions is automatically formatted, removing any unnecessary "whitespace" like line breaks or additional spaces. To start a new paragraph, add an empty line in your text.
+The text in the page descriptions is automatically formatted, removing any unnecessary "white space" like line breaks or additional spaces. To start a new paragraph, add an empty line in your text.
 
     All of
     these go
@@ -195,6 +203,8 @@ The text in the page descriptions is automatically formatted, removing any unnec
     This is a new paragraph.
     
         Adding   more   spaces   does   nothing.
+
+To add an empty line, use the $P line (see below).
 
 ### Comments
 
@@ -212,13 +222,29 @@ Images can be added to a page's description portion by using an $I line.
     $I fountain.scr
     Water from the fountain sparkles in the sunlight.
     
-The first word after the $I is considered to be a filename. The files should be standard spectrum screen files (6912 bytes).
+The first word after the $I is considered to be a file name. The files should be standard spectrum screen files (6912 bytes).
 
 Empty space at the bottom of the .scr image is trimmed. A maximum of 14 character rows, or 112 pixels is used. If bigger images are desired, you have to use several images.
 
 If you use the same image several times in your adventure, the image data is still only stored once.
 
 Images can not be used after a $A line.
+
+### Paragraph Breaks
+
+While the text is often expected to flow, sometimes empty lines may be desirable. To output an empty line, use the $P
+statement.
+
+    $Q fountain
+    You arrive at a picturesque fountain. Assume there's a long description here.
+    $P
+    You can see some mushrooms here.
+    
+Technically the $P is not a real statement and cannot be used with commands or flags (see below). Its effect is part of the
+text, and thus will not break an $O line segment (again, see below). This may be relevant later on, but for the time being
+just consider $P something that adds an empty line in your text.
+
+The $P line cannot be used after a $A line, as text after $A must fit on a single line.
 
 ## Flags
 
@@ -311,10 +337,91 @@ to switch between two states.
     Wait for a while
     $A sleepytown !trafficlights
     Cross the street
-    
-## Additional Commands
 
-In addition to manipulating and checking flags, there are commands to change attributes, border color, and even to play sound.
+## Numbers
+
+Sometimes it's useful to handle numbers instead. Many gamebooks have concept of hit points, for instance.
+
+There can be a maximum of 32 numeric variables, and each holds a number from 0 to 255.
+
+### Setting Numbers
+
+To set the value of a number, use the = operator.
+
+    $A fountain hitpoints=7
+    Drink from the fountain
+
+You can set a number variable to the value of another variable or to a fixed value.
+
+    $A tavern temp=player_money player_money=strager_money stranger_money=temp
+    Swap purses with the stranger
+
+### Adding and Subtracting Numbers
+
+Adding and subtracting are done with the - and + operators.
+
+    $A fountain hitpoints-1
+    Eat a mushroom
+    $A fountain hitpoints+1
+    Eat a biscuit
+    
+Again, fixed values or other variables can be used.
+
+    $A fountain hitpoints+potion potion-1 potion>0
+    Drink from the healing potion
+    
+Note that the variables can over- and under-run. This means that if you subtract 1 from 0, you'll get 255, and if you add 1 to 255, you'll get 0.
+
+If you prefer, you can use -= and += instead of - and +:
+
+    $A fountain score+=3 darts-=1 darts>0
+    Throw a dart at the board
+
+### Comparing Numbers
+
+Numeric variables can be compared in various ways, to each other and to fixed numbers.
+
+    $O a==42
+    a is 42
+    $O a!=42
+    a is not 42
+    $O a>42
+    a is bigger than 42
+    $O a>=42
+    a is bigger or equal to 42
+    $O a<42
+    a is smaller than 42
+    $O a<=42
+    a is smaller or equal to 42
+    
+Note that a=1 means "assign 1 to a", while a==1 means "is a equal to 1".
+
+### Printing Numbers
+
+It is also possible to print out the values of the numeric variables, by simply putting
+the variable name between << and >> in the text. Note that there must be no spaces between
+these characters.
+
+    $Q store
+    The shopkeeper polishes an apple while he's waiting for you
+    to make a selection. You currently have <<gold>> gold.
+    $A store gold>5 gold-5 set:dagger
+    Buy the dagger for 5 gold
+
+### Mixing Flags and Numbers
+
+Numbers and flags do not mix. If you try to assign flag to a numeric variable, for instance,
+it won't do what you expect:
+
+    $O set:parrot
+    $O bird=parrot
+    
+This will create a new numeric variable called "parrot", which will live alongside the flag "parrot". The
+compiler will warn you if you try to do this.
+
+## Display Attributes
+
+It is also possible to change the display attributes (e.g, text color) as well as border color.
 
 ### Text Attributes
 
@@ -374,7 +481,7 @@ is drawn), use the cls: command.
 |:-------------|-----|
 |Everything    |0    |
 |Page          |1    |
-|Interface      |2    |
+|Interface     |2    |
 
 In most cases you can just use cls:0.
 
@@ -401,45 +508,52 @@ multiple times. Playing sound may also change the border color.
     $O trafficlight border:2
     $O !trafficlight border:4
     
-### Playing Sound Effects
-
-Playing sounds is done with the sound: command. The sounds are played wherever the command is, and some sounds are
-rather long, so if they are played at the middle of the page, the page drawing is paused while the sound is played.
-
-(The sound effects are basically most of the BeepFX v1.11 demo sounds, except those that take large amount of memory)
-
-|Id	    |Sound	     |Id |Sound       |
-|:------|:-----------|:--|:-----------|
-|0	    |Shot 1      |28 |Item 1      |
-|1	    |Shot 2      |29 |Item 2      |
-|2	    |Jump 1      |30 |Item 3      |
-|3	    |Jump 2      |31 |Item 4      |
-|4	    |Pick        |32 |Item 5      |
-|5	    |Drop 1      |33 |Item 6      |
-|6	    |Drop 2      |34 |Switch 1    |
-|7	    |Grab 1      |35 |Switch 2    |
-|8	    |Grab 2      |36 |Power off   |
-|9	    |Fat beep 1  |37 |Score       |
-|10	    |Fat beep 2  |38 |Clang       |
-|11	    |Fat beep 3  |39 |Water tap   |
-|12	    |Harsh beep 1|40 |Select 1    |
-|13	    |Harsh beep 2|41 |Select 2    |
-|14	    |Harsh beep 3|42 |Select 3    |
-|15	    |Hit 1       |43 |Select 4    |
-|16	    |Hit 2       |44 |Select 5    |
-|17	    |Hit 3       |45 |Select 6    |
-|18	    |Hit 4       |46 |Select 7    |
-|19	    |Jet burst   |47 |Alarm 1     |
-|20	    |Boom 1      |48 |Alarm 2     |
-|21	    |Boom 2      |49 |Alarm 3     |
-|22	    |Boom 3      |50 |Eat         |
-|23	    |Boom 4      |51 |Gulp        |
-|24	    |Boom 5      |52 |Roboblip    |
-|25	    |Boom 6      |53 |Nope        |
-|26	    |Boom 7      |54 |Uh-huh?     |
-|27	    |Boom 8      |55 |Old computer|
-
 \newpage
+
+## Go and Gosub
+
+Sometimes it is useful to interrupt the normal page flow and do something else for a change.
+
+For example, if your game has a hit point mechanism, it would be wasteful to add checking if the player has died on every single page.
+
+    $Q healthcheck
+    $O hitpoints==0 go:dead
+    $O hitpoints<5
+    You're not feeling too good.
+    
+    $Q fountain
+    The fountain.
+    $O gosub:healthcheck
+    You find yourself near a marble fountain in the forest 
+    clearing. There are some mushrooms nearby.
+
+In the example above, whenever the player arrives at the "fountain" page, the game will load the healthcheck page, which will
+first check if player is dead, and if so, will turn to the "dead" page immediately. If the player is still alive, the 
+page will output the "You're not feeling too good" message if hitpoints are low. Otherwise the processing of that sub-page
+is done and drawing of the "fountain" page resumes from where we were at.
+
+Only one subpage can be used at a time, so you can't "call" subpages from subpages. Subpages can also not have any $A 
+statements; if any exist, they will be ignored.
+
+The exact point at which the go and gosub commands are executed is at the end of the statement, meaning that:
+
+    $Q mysubpage
+    Hello
+    
+    $Q normalpage
+    $O gosub:mysubpage
+    World
+
+..will actually output World Hello instead of Hello World. To get the result you might expect, simply add another $O
+statement:
+
+    $Q mysubpage
+    Hello
+    
+    $Q normalpage
+    $O gosub:mysubpage
+    $O
+    World
 
 ## More Technically Speaking
 
@@ -492,7 +606,9 @@ Maximum size for the compiled and compressed data is 29952 bytes (a bit over 29k
                                                       
 Images may be up to 112 pixels high. If more is needed, split images in pieces.                               
                                                       
-There's a maximum of 2048 flags. You will most likely run out of space before running out of flags.
+There's a maximum of 1024 flags. You will most likely run out of space before running out of flags.
+
+There's a maximum of 32 numeric variables. The numbers in numeric variables can range from 0 to 255.
                                                       
 Maximum of 16 active options at the same time. If there are more, the game will simply stop showing more options.
 
@@ -767,6 +883,8 @@ to hop to the start of any of the five chapters from the start page.
 The Dukes example is a stress test: it's Frederik Pohl's "The day of the boomer dukes" 
 novella (about 46kB of text, public domain) in MuCho format.
 
+\newpage
+
 ### Traveller
 
 ![Flow chart of the Traveller example](images/traveller)\ 
@@ -793,6 +911,42 @@ Then, if the creature is in this room and is not staying, depending on whether f
 from this room to one of the other ones.
 
 If the creature is still in this room after those checks, we announce it.
+
+\newpage
+
+### Waiting
+
+![Flow chart of the Waiting example](images/waiting)\ 
+
+This is the whole "Waiting for the Light" gamebook by Kieran Coghlan, consisting of
+a hundred locations, flags and numbers, converted to MuCho.
+
+To understand the structure, let's look at some sub-graphs.
+
+![Flow chart of the Waiting example, base pages](images/waiting_base)\ 
+
+The base structure is as follows: we start, have a couple simple trap choises, then arrive at the hall of lights (page 49), visit some other segments but eventually pick the white light (page 25) which checks if we've gone through all the other segments (via checking the various items), and then presents one of the 16 endings depending on the player choises in the other colored light segments.
+
+![Flow chart of the Waiting example, green pages](images/waiting_green)\ 
+
+The green segment is relatively simple (in context of this gamebook). Note that the player can die here in a few ways (p30). In the end, the player can either be aggressive or not (pages 15 and 16).
+
+![Flow chart of the Waiting example, pink pages](images/waiting_pink)\ 
+
+The pink segment represents a relatively complex dialogue. Basically you get to recommend various options, one being a good one and the rest are less so.
+
+![Flow chart of the Waiting example, red pages](images/waiting_red)\ 
+
+The red segment is again relatively simple, in the end you get to pick whether to be aggressive or not.
+
+![Flow chart of the Waiting example, red pages](images/waiting_yellow)\ 
+
+The yellow segment is super complicated: it's a game show. Not only can you answer right or wrong, or let the opponent answer instead, if you get the answers right, you can either take a point or take a card that has various results. And if either you or your opponent reaches 3 points, you hop to an ending.
+
+This uses a subpage to check (and display) the scores and a couple numeric variables to keep the score.
+
+The spectrum version is actually more difficult than the paper version because the player keeps track of the variables in the book version; the 
+spectrum version hides them, so you don't know which result you're getting from your choises until the end.
 
 # Compiling Stories
 
@@ -824,7 +978,7 @@ If you run mc.exe without parameters, it gives brief help:
     -v   verbose (useful for debugging)
     -q   quiet (minimal output)
 
-The help means that at minimum, the compiler expects input and output filenames as
+The help means that at minimum, the compiler expects input and output file names as
 a parameter. In addition, you may include a custom font image, custom divider image,
 custom selector image, as well as one of the two optional flags.
 
@@ -947,7 +1101,7 @@ The IHXFILE is either the crt0.ihx that hosts the game engine's compiled z80 cod
 case) patched.ihx which the MuCho compiler produces when compiling the data. If you're not using
 custom fonts, selectors or dividers, it doesn't matter which one you use.
 
-The TAPFILE is the output filename.
+The TAPFILE is the output file name.
 
 The APPNAME is the name the user first sees when running LOAD "". The APPNAME is also used in the
 generated loading screens.
@@ -959,7 +1113,7 @@ won't make it possible to return to BASIC).
 The -lowblock GAMEDATA 0x5b00 parameters tell Mackarel that we want to load the GAMEDATA file
 to address 0x5b00.
 
-Typically you'll want to change the TAPFILE, APPNAME and GAMEDATA filenames when running
+Typically you'll want to change the TAPFILE, APPNAME and GAMEDATA file names when running
 Mackarel. 
 
 Unless something totally weird happens, Mackarel should always succeed in building MuCho .TAP files.
@@ -1013,13 +1167,72 @@ The report tells how well different parts (code, loading screen and game data) g
 game data doesn't compress, because it is already compressed. 
 
 Following this, there's some statistics, followed by approximate memory maps on load and on game boot time. 
-Not all of the memory can be filled by game code, since we need somewhere to uncompress the game data on the 
+Not all of the memory can be filled by game code, since we need somewhere to decompress the game data on the 
 fly, as well as space for some buffers (such as stack). 
 
 # Advanced Topics
 
 And finally we're here, some advanced tidbits for additional modification of the game, as well as 
 more information about error messages, should you ever see any.
+
+## Using Custom Code
+
+You can bundle custom code blocks inside MuCho stories using the $C statement. Like with images, the same
+code block can be called several times but will only be stored once. The code will be loaded to address 0xd000
+and must be 4096 bytes or smaller. The $C statements can also be predicated like any other normal statement.
+
+    $C beepfx.ihx 47 !alarm_disabled
+
+The code can be either Intel hex or raw binary. In case of raw binary, the start address is expected to
+be 0xd000. 
+
+The second parameter is loaded to HL before calling. The code is expected to preserve registers. You can expect
+to have at least 100 bytes of stack available.
+
+After the call, the memory is overwritten with something else, so don't expect any changes to stick.
+
+### Playing Sound Effects
+
+MuCho comes with BeepFX 1.11 which can be used through the code loading system.
+
+The sounds are played wherever the code is run, and some sounds are rather long, so if they are played at 
+the middle of the page, the page drawing is paused while the sound is played.
+
+The sound effects are basically most of the BeepFX v1.11 demo sounds, 
+except those that take large amount of memory.
+
+|Id	    |Sound	     |Id |Sound       |
+|:------|:-----------|:--|:-----------|
+|0	    |Shot 1      |28 |Item 1      |
+|1	    |Shot 2      |29 |Item 2      |
+|2	    |Jump 1      |30 |Item 3      |
+|3	    |Jump 2      |31 |Item 4      |
+|4	    |Pick        |32 |Item 5      |
+|5	    |Drop 1      |33 |Item 6      |
+|6	    |Drop 2      |34 |Switch 1    |
+|7	    |Grab 1      |35 |Switch 2    |
+|8	    |Grab 2      |36 |Power off   |
+|9	    |Fat beep 1  |37 |Score       |
+|10	    |Fat beep 2  |38 |Clang       |
+|11	    |Fat beep 3  |39 |Water tap   |
+|12	    |Harsh beep 1|40 |Select 1    |
+|13	    |Harsh beep 2|41 |Select 2    |
+|14	    |Harsh beep 3|42 |Select 3    |
+|15	    |Hit 1       |43 |Select 4    |
+|16	    |Hit 2       |44 |Select 5    |
+|17	    |Hit 3       |45 |Select 6    |
+|18	    |Hit 4       |46 |Select 7    |
+|19	    |Jet burst   |47 |Alarm 1     |
+|20	    |Boom 1      |48 |Alarm 2     |
+|21	    |Boom 2      |49 |Alarm 3     |
+|22	    |Boom 3      |50 |Eat         |
+|23	    |Boom 4      |51 |Gulp        |
+|24	    |Boom 5      |52 |Roboblip    |
+|25	    |Boom 6      |53 |Nope        |
+|26	    |Boom 7      |54 |Uh-huh?     |
+|27	    |Boom 8      |55 |Old computer|
+
+\newpage
 
 ## Patching the Code
 
@@ -1048,7 +1261,7 @@ The characters in the font are in ASCII order, starting from the space character
       !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMN
      OPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}
      
-In order to use a custom font, simply add the font filename after the other parameters to the MuCho
+In order to use a custom font, simply add the font file name after the other parameters to the MuCho
 compiler:
 
     mc story.txt story.dat myfont.png
@@ -1063,7 +1276,7 @@ every 8 pixels. I.e, the divider pattern is 8 by 8 pixels.
 
 A bunch of sample dividers are included in the kit, under "dividers" directory.
 
-In order to use a custom divider, simply add the font filename after the other parameters to the MuCho
+In order to use a custom divider, simply add the font file name after the other parameters to the MuCho
 compiler:
 
     mc story.txt story.dat myfont.png mydivider.png
@@ -1089,7 +1302,7 @@ pattern. The way most fonts work, it's best to bias the selector above the middl
     
 A bunch of sample selectors are included in the kit, under "selectors" directory.
 
-In order to use a custom selector, simply add the font filename after the other parameters to the MuCho
+In order to use a custom selector, simply add the font file name after the other parameters to the MuCho
 compiler:
 
     mc story.txt story.dat myfont.png mydivider.png myselector.png
@@ -1107,7 +1320,7 @@ Adding custom loading screens requires a modification to how you call Mackarel t
 
     mackarel IHXFILE TAPFILE APPNAME LOADINGSCREEN -nosprestore -noei -lowblock GAMEDATA 0x5b00
 
-Add the loading screen .scr filename after the APPNAME, and you're set.
+Add the loading screen .scr file name after the APPNAME, and you're set.
 
 ## Error messages
 
@@ -1160,7 +1373,7 @@ that's not Q, A, I or O. Note that O is not the number zero, but uppercase o.
     
     File "..." not found.
     
-You've probably mistyped the filename.
+You've probably mistyped the file name.
     
     syntax error: room id "..." used more than once, line ...
     
@@ -1169,7 +1382,7 @@ to send the player to!
     
     Image "..." not found.
     
-You've probably mistyped the filename.
+You've probably mistyped the file name.
        
     Image "..." wrong size (has to be 6912 bytes).
     
@@ -1187,7 +1400,7 @@ some images?
     
     Can't open "..." for writing.
     
-For some reason, MuCho can't open the destination filename. Is the directory read only?
+For some reason, MuCho can't open the destination file name. Is the directory read only?
     
     Can't find data to patch in crt0.ihx!
 
@@ -1200,7 +1413,7 @@ it resides. mc.exe is confused and sad. Don't let mc.exe be confused and sad.
     
     unable to load "..."
     
-You've probably typoed yet another filename.
+You've probably typoed yet another file name.
     
     Bad image dimensions; should be 8x752 (found ...x...)
 
