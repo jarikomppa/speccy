@@ -77,6 +77,7 @@ unsigned char *answer[16]; // collected answers
 unsigned char answers; // count of answers
 unsigned char attrib, iattrib, dattrib, attrib_c, iattrib_c;
 unsigned short go, gosub; // room id:s for go and gosub values
+unsigned short current_resource; // currently decompressed resource
 
 void cls()
 {
@@ -137,6 +138,7 @@ void patchstring(unsigned char *aDataPtr)
         if (aDataPtr[0] == 1)
         {
             unsigned char ov, v;     
+            current_resource = 0; // reset current resource so re-patching works
             v = gNumber[aDataPtr[1]];
             ov = v;
             if (ov > 99) v = decimal(aDataPtr, v, 100); else aDataPtr[0] = 128;
@@ -170,11 +172,15 @@ void unpack_resource(unsigned short id)
        
     unsigned short res = *((unsigned short*)(unsigned char*)(0x5b00 + id * 2));
 
+    if (res != current_resource)
+    {
     unsigned short v;
     for (v = 0; v < 4096; v++)
         *((unsigned char*)0xd000 + v) = 0;    
 
     zx7_unpack((unsigned char*)res);        
+        current_resource = res;
+    }
 }
 
 unsigned char xorshift8(void) 
@@ -629,6 +635,8 @@ void reset()
 
     y8 = 1;
     answers = 0;
+    
+    current_resource = 0;
 }
 
 unsigned char roller;
