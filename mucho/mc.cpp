@@ -928,6 +928,7 @@ void parse_statement()
 		if (t[0])
 		{
 			printf("Syntax error - statement P may not include any operations, line %d\n", gLine);
+			exit(-1);
 		}
         break;
     case 'O':
@@ -2131,7 +2132,7 @@ int main(int aParc, char **aPars)
     
     if (outfile == -1)
     {
-        printf("Invalid parameters (run without params for help\n");
+        printf("Invalid parameters (run without params for help)\n");
         exit(-1);
     }
 
