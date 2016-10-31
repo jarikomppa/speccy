@@ -1072,6 +1072,7 @@ void capture_stringlit()
 {
     // capture string literal
     char *s = gScratch;
+	int column = 0;
     
     if (*s == 0)
     {
@@ -1110,22 +1111,31 @@ void capture_stringlit()
 			if (s[0] == '<' && s[1] == '<')
 			{
 				s += 2;
+				column += 2;
 				char temp[256];
 				// number output
 				int i = 0;
 				while (!whitespace(s[0]) && s[0] != 0 && !(s[0] == '>' && s[1] == '>'))
 				{
 					temp[i] = *s;
+					column++;
 					s++;
 					i++;
 				}
 				temp[i] = 0;
 				if (!(s[0] == '>' && s[1] == '>'))
 				{
-					printf("Error parsing numeric output on line %s\n", gLine);
+					printf("Error parsing numeric output on line %d, near column %d\n", gLine, column);
+					printf("\"%s\"\n", gScratch);
+					for (i = 0; i < column; i++)
+						printf(" ");
+					printf("^\n");
+
 					exit(-1);
 				}
 				s++;
+				column++;
+
 				gStringLit[gStringIdx] = 1;
 				gStringIdx++;
 				gStringLit[gStringIdx] = gNumber.getId(temp);
@@ -1141,6 +1151,7 @@ void capture_stringlit()
         }
         
         s++;
+		column++;
     }
     gStringLit[gStringIdx] = 0;
 }
