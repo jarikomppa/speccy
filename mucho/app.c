@@ -18,9 +18,39 @@
 #define COLOR(BLINK, BRIGHT, PAPER, INK) (((BLINK) << 7) | ((BRIGHT) << 6) | ((PAPER) << 3) | (INK))
 
 #include "yofstab.h"
+#include "propfont.h"
+
+const unsigned char nonvisiblespace[4] = {0,0,0,0};
+
+const unsigned char pattern[8] = 
+{ 
+    0x00, 
+    0xC1, 
+    0x32, 
+    0x18, 
+    0x0C, 
+    0x26, 
+    0xC1, 
+    0x00  
+};
+
+const unsigned char selectpattern[8] = 
+{ 
+    0x00, 
+    0x88, 
+    0xcc, 
+    0xee, 
+    0xcc, 
+    0x88, 
+    0x00, 
+    0x00  
+};
+
+const unsigned char prop_ht[16] = {24,24,24,18, 16,14,12,10, 8,15,14,13, 12,11,10,9};
+const unsigned char prop_step[16] = {0,0,0,2, 2,2,2,2, 2,1,1,1, 1,1,1,1};
+
 #define HWIF_IMPLEMENTATION
 #include "hwif.c"
-#include "propfont.h"
 #include "drawstring.c"
 
 //extern void zx7_unpack(unsigned char *src, unsigned char *dst) __z88dk_callee __z88dk_fastcall;
@@ -78,31 +108,6 @@ unsigned char answers; // count of answers
 unsigned char attrib, iattrib, dattrib, attrib_c, iattrib_c;
 unsigned short go, gosub; // room id:s for go and gosub values
 unsigned short current_resource; // currently decompressed resource
-
-   
-const unsigned char pattern[8] = 
-{ 
-    0x00, 
-    0xC1, 
-    0x32, 
-    0x18, 
-    0x0C, 
-    0x26, 
-    0xC1, 
-    0x00  
-};
-
-const unsigned char selectpattern[8] = 
-{ 
-    0x00, 
-    0x88, 
-    0xcc, 
-    0xee, 
-    0xcc, 
-    0x88, 
-    0x00, 
-    0x00  
-};
 
 char decimal(unsigned char *d, unsigned char v, unsigned char step)
 {
@@ -673,8 +678,6 @@ void drawselector(unsigned char y)
     }
 }
 
-const unsigned char prop_ht[16] = {24,24,24,18, 16,14,12,10, 8,15,14,13, 12,11,10,9};
-const unsigned char prop_step[16] = {0,0,0,2, 2,2,2,2, 2,1,1,1, 1,1,1,1};
 
 void prop_indicator(unsigned char current_answer)
 {
@@ -696,8 +699,6 @@ void main()
     unsigned short current_room = 0;    
     unsigned char current_answer = 0;
     unsigned char selecting;    
-    unsigned char *widthp = (unsigned char*)(int*)builtin_width - 32;
-    widthp[128] = 0;
 
     reset();     
 
