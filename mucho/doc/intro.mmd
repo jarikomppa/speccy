@@ -929,7 +929,7 @@ The base structure is as follows: we start, have a couple simple trap choises, t
 
 ![Flow chart of the Waiting example, green pages](images/waiting_green)\ 
 
-The green segment is relatively simple (in context of this gamebook). Note that the player can die here in a few ways (p30). In the end, the player can either be aggressive or not (pages 15 and 16).
+The green segment is relatively simple (in context of this gamebook). Note that the player can die here in a few ways (p30). In the end, the player can either be kill the beast or not (pages 15 and 16).
 
 ![Flow chart of the Waiting example, pink pages](images/waiting_pink)\ 
 
@@ -1327,6 +1327,18 @@ Add the loading screen .scr file name after the APPNAME, and you're set.
 Here's a list of MuCho compiler error messages, and short explanations of what
 they mean. 
 
+    Too many symbols, line ...
+    
+You've tried to use more symbols than we have room for. Congratulations! You must be doing something super complicated.
+
+    Max buffer size overrun. This should never happen, line ...
+    
+So yeah, there may be bugs. You can try to bug the author about this, maybe he'll figure it out.
+
+    Invalid character "..." found near line ...
+    
+Sorry, only ASCII characters are supported.       
+
     Room ... data too large; max 4096 bytes, has ... bytes
     
 One room, in uncompressed form, may take a maximum of 4096 bytes. You'll probably
@@ -1341,23 +1353,47 @@ them to several lines.
     
 You've used a value that's out of range for some command, like doing cls:5, where
 the only legal values are 0, 1 and 2.
+
+    Invalid GO parameter: symbol "..." is not a room, like ...    
+    Invalid GOSUB parameter: symbol "..." is not a room, like ...
+    
+You've most likely typoed the room name. Or are trying to jump to another dimension. Not sure.
     
     Syntax error (op=null), line ...
     
 This probably should never happen. But who knows!
     
-    Syntax error (op starting with ':') "..."
+    Syntax error (op starting with '...') "...", line ...
     
-Labels may not start with a ":". Probably a typo.
+Labels may not start with a :, >, <, =, +, - or a !=. Probably a typo.
     
-    Syntax error (op with more than one ':') "...", line ...
+    Syntax error (op with more than one instruction) "...", line ...
     
-Again, probably a typo. The compiler found more than one ":" in one command.
+Again, probably a typo. The compiler found more than one operator (a : or a numeric one) in one command.
     
     Syntax error: unknown operation "...", line ...
     
-Likely a typo again, like using attr:7 instead of attr:7
+Likely a typo again, like using atr:7 instead of attr:7
+
+    Parse error near "..." ("..."), line ...
     
+While trying to figure out numeric values, something went wrong. Check for typos.
+
+    Statement A must have exactly one line of printable text (... found)
+    (Multiple lines may be caused by word wrapping; see verbose output
+    to see what's going on), near line ...
+    
+Like it says, it found an $A line with more than one line of text, possibly caused by word wrapping. Write shorter.
+    
+    Syntax error - statement P may not be included in statement A, line ...
+
+The $P lines may only happen between $Q and $A lines, not after $A.
+
+    Syntax error - statement P may not include any operations, line ...
+    
+The $P lines are special in that way that they are not "actual" statements, and as such can't be predicated or
+run commands. 
+
     Syntax error - statement O may not be included in statement A, line ...
 
 The $O lines may only happen between $Q and $A lines, not after $A.
@@ -1365,12 +1401,20 @@ The $O lines may only happen between $Q and $A lines, not after $A.
     Syntax error - statement I may not be included in statement A, line ...
 
 The $I lines may only happen between $Q and $A lines, not after $A.
+
+    Syntax error - statement C may not be included in statement A, line ...
+
+The $C lines may only happen between $Q and $A lines, not after $A.
     
     Syntax error: unknown statement "...", line ...
     
 Another probable typo. You've started a line with $, but followed up with a character
-that's not Q, A, I or O. Note that O is not the number zero, but uppercase o.
+that's not Q, A, I, P, C or O. Note that O is not the number zero, but uppercase o.
     
+    Error parsing numeric output on line ..., near column ...
+
+You've probably made a typo, like "Player has <<gold> gold" instead of "Player has <<gold>> gold".    
+
     File "..." not found.
     
 You've probably mistyped the file name.
@@ -1393,10 +1437,17 @@ Only standard .scr files supported.
 This also probably should never happen, as we crop the images, but hey, better
 safe than sorrier.
     
-    Total output size too large (29952 bytes max, ... found)
+    Code "...\" not found
+
+Guess what? You've probably mistyped the file name.
+
+    Code ... data too large; max 4096 bytes, has ... bytes
     
-You've been busy! You've hit the limit of how large a game in MuCho can be. Maybe trim
-some images?
+Sorry, we can only fit 4KB of code in there.
+
+    Code ... start address not 0xd000; ... found
+
+Sorry, the code must be loaded at address 0xd000, no exceptions.    
     
     Can't open "..." for writing.
     
@@ -1426,3 +1477,33 @@ We're rather picky about the divider image size.
     Selector pattern image not 8x8 (found ...x...)
 
 We're rather picky about the selector image size. 
+
+    ERROR Room "..." didn't get included
+    
+Our super-intelligent content packer forgot to include a room again. Contact the author. He may have sympathy for you.
+
+    Too many symbols in use (... > 1024)
+
+You've managed to use too many symbols. You're probably making something super complicated.
+
+    Too many numeric variables in use (... > 32)
+
+Yeah, so, this is a multiple choise adventure engine, not a general purpose processing system. You're probably doing something weird. Do tell us what it is.
+
+    Total output size too large (29952 bytes max, ... found)
+    
+You've been busy! You've hit the limit of how large a game in MuCho can be. Maybe trim
+some images?
+
+    Unknown parameter "..."
+    
+You've given a parameter to mucho compiler that it doesn't recognize. Run without parameters for help.
+
+    Invalid parameter "..." (input, output, font, divider and selector image files already defined)
+    
+Mucho compiler figures you've given it too many filenames as a parameter.
+
+    Invalid parameters (run without params for help)
+    
+What are you reading this document for? Do what it says.
+
