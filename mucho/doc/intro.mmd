@@ -1091,7 +1091,10 @@ If you're curious, you can run mackarel without parameters to get parameter help
 
 For example, to build the complex example, we would run:
 
-    mackarel patched.ihx complex.tap Complex -nosprestore -noei -lowblock complex.dat 0x5b00
+    mackarel patched.ihx complex.tap Complex -nosprestore -noei 
+    -lowblock complex.dat 0x5b00
+
+(That should all be in one line. Line was split to not blow up documentation. Don't panic).    
     
 To understand what this does, let's look at the parameters separately:
 
@@ -1318,7 +1321,10 @@ customizations to show up.
 
 Adding custom loading screens requires a modification to how you call Mackarel to generate the .TAP files.
 
-    mackarel IHXFILE TAPFILE APPNAME LOADINGSCREEN -nosprestore -noei -lowblock GAMEDATA 0x5b00
+    mackarel IHXFILE TAPFILE APPNAME LOADINGSCREEN -nosprestore 
+    -noei -lowblock GAMEDATA 0x5b00
+
+(That should all be in one line. Line was split to not blow up documentation. Don't panic).
 
 Add the loading screen .scr file name after the APPNAME, and you're set.
 
@@ -1499,7 +1505,8 @@ some images?
     
 You've given a parameter to mucho compiler that it doesn't recognize. Run without parameters for help.
 
-    Invalid parameter "..." (input, output, font, divider and selector image files already defined)
+    Invalid parameter "..." (input, output, font, divider and 
+    selector image files already defined)
     
 Mucho compiler figures you've given it too many filenames as a parameter.
 
