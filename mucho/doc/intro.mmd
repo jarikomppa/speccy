@@ -148,6 +148,8 @@ complicated features are described later, so you won't need to read all of it to
 
 Structure of a multiple choice adventure is based on pages (other used terms include rooms, locations, nodes). Each page consists of description part as well as zero or more choices for the user (also known as answers, selections, options).
 
+Consider the computer asking the user a question, and offering several possible answers for the question.
+
 The script for a simple room looks like this:
 
     $Q roomname
@@ -248,7 +250,7 @@ The $P line cannot be used after a $A line, as text after $A must fit on a singl
 
 ## Flags
 
-In addition to the basic structure of the pages, flags can be used to introduce more complicated behavior. Every time the player goes to a page, the page's flag is turned on. Using a $O line (as in Oh, not 0, zero) an optional part can be added to a page's description.
+In addition to the basic structure of the pages, flags can be used to introduce more complicated behavior. Every time the player goes to a page, the flag with the page's name is turned on. Using a $O line (as in Oh, uppercase o, not 0, zero) an optional part can be added to a page's description.
 
     $Q alleyway
     You're in a dark alley. There's a door.
@@ -395,6 +397,23 @@ Numeric variables can be compared in various ways, to each other and to fixed nu
     a is smaller or equal to 42
     
 Note that a=1 means "assign 1 to a", while a==1 means "is a equal to 1".
+
+As you might expect, it's also possible to compare two variables.
+
+    $O a==b
+    a is equal to b
+    $O a!=b
+    a is not equal to b
+    $O a>b
+    a is bigger than b
+    $O a>=b
+    a is bigger or equal to b
+    $O a<b
+    a is smaller than b
+    $O a<=b
+    a is smaller or equal to b
+
+Here again, a=b means "assign a to value of b" and a==b means "is a equal to b".
 
 ### Printing Numbers
 
@@ -553,6 +572,8 @@ However, flag check is always performed first, and only if the whole flag check 
 are executed. Thus, if you write something as convoluted as:
 
     $O set:flaggy flaggy clear:flaggy toggle:flaggy
+
+\newpage
     
 what happens is:
 
@@ -567,7 +588,8 @@ Another example, just to be sure:
     
 This becomes:
     
-    If apple is on, and banana is on, and random is bigger than 64 and orange is on:
+    If apple is on, and banana is on, 
+    and random is bigger than 64 and orange is on:
         Set attribute to 7
         Clear the page
         Set strawberry
@@ -605,7 +627,7 @@ cleared, etc.
 
 ### The $P Statement
 
-Unlike other $-lines the $P line is completely processed in the compiler, by adding empty line to the previous set of text lines. The engine will never see that a $P line was here. This has a few implications:
+Unlike other $-lines the $P line is completely processed in the compiler, by adding empty line to the previous set of text lines. The game engine will never see that a $P line was here. This has a few implications:
 
 First, the $P line can not be predicated, i.e, it may not have any commands associated with it. Second, it does not break the previous block.
 
@@ -621,7 +643,7 @@ In the above example the "You can hear music in the distance" message is part of
 
 A compiled room must not take more than 4096 bytes. The MuCho compiler will tell you when you cross the limit.
 
-Maximum size for the compiled and compressed data is 29952 bytes (a bit over 29kB). All data is compressed, images are only stored once even if they are used several times, and labels are turned into numbers, so label length doesn't matter.
+Maximum size for the compiled and compressed data is 29952 bytes (a bit over 29kB). All data is compressed, images and code blocks are only stored once even if they are used several times, and labels (flags, variable names, room labels) are turned into numbers, so label length doesn't matter.
                                                       
 Images may be up to 112 pixels high. If more is needed, split images in pieces.                               
                                                       
@@ -631,6 +653,7 @@ There's a maximum of 32 numeric variables. The numbers in numeric variables can 
                                                       
 Maximum of 16 active options at the same time. If there are more, the game will simply stop showing more options.
 
+\newpage
 
 ## Example Snippets
 
@@ -898,7 +921,7 @@ Swapping the state of two flags can also be done through a temporary flag, but c
     $O b set:a clr:b
     $O t set:b
     
-
+\newpage
 
 ## Examples
 
@@ -1186,12 +1209,13 @@ First part of the verbose listing is the top list of the most frequent words in 
 story. The more often some word gets used, the better it will compress. Theoretically.
 
     Making word chains:
-    the[4]->door[1]->is[1]->not[1]->as[1]->opressive # You[1]->are[1]->in[1]->a[1]->
-    small[2]->silver[2]->key[2]->glitters # room[1]->with # The[1]->room.[1]->----[2
+    the[4]->door[1]->is[1]->not[1]->as[1]->opressive # You[1]->are[1]->
+    in[1]->a[1]->small[2]->silver[2]->key[2]->glitters # room[1]->with # 
 
 Next up, the compiler builds word chains. The process takes the most frequent word,
 looks for what most frequently follows that (and is not already in the list), and so
-on and so forth. This is all done to improve compression.
+on and so forth. This is all done to improve compression. The # marks show where
+chains get broken (no suitable next word was found).
 
 After the word chains there's the finished trainer data, which we already covered in
 the previous chapter.
