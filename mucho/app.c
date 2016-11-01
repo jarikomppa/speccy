@@ -20,8 +20,6 @@
 #include "yofstab.h"
 #include "propfont.h"
 
-const unsigned char nonvisiblespace[4] = {0,0,0,0};
-
 const unsigned char pattern[8] = 
 { 
     0x00, 

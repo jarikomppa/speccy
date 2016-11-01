@@ -13,21 +13,24 @@ void drawstring(unsigned char *aS, unsigned char aX, unsigned char aY)
         while (c)
         {
             unsigned char ch = *s;
-            unsigned char data = datap[ch * FONTHEIGHT];
-            unsigned char width = widthp[ch];
-            if (data)
+            if (ch != 128)
             {
-                *d |= data >> sx;
-            }
-            
-            sx += width;
-            if (sx > 8)
-            {
-                d++;
-                sx -= 8;
+                unsigned char data = datap[ch * FONTHEIGHT];
+                unsigned char width = widthp[ch];
                 if (data)
                 {
-                    *d = data << (width - sx);
+                    *d |= data >> sx;
+                }
+                
+                sx += width;
+                if (sx > 8)
+                {
+                    d++;
+                    sx -= 8;
+                    if (data)
+                    {
+                        *d = data << (width - sx);
+                    }
                 }
             }
             s++;
