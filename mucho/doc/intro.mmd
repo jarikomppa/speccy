@@ -532,28 +532,9 @@ first check if player is dead, and if so, will turn to the "dead" page immediate
 page will output the "You're not feeling too good" message if hitpoints are low. Otherwise the processing of that sub-page
 is done and drawing of the "fountain" page resumes from where we were at.
 
-Only one subpage can be used at a time, so you can't "call" subpages from subpages. Subpages can also not have any $A 
-statements; if any exist, they will be ignored.
+Only one subpage can be used at a time, so you can't "call" subpages from subpages. If you try to gosub to a subpage from a subpage, the results
+will be undefined, which is programmer speak for "bad things will happen". Subpages can also not have any $A statements; if any exist, they will be ignored.
 
-The exact point at which the go and gosub commands are executed is at the end of the statement, meaning that:
-
-    $Q mysubpage
-    Hello
-    
-    $Q normalpage
-    $O gosub:mysubpage
-    World
-
-..will actually output World Hello instead of Hello World. To get the result you might expect, simply add another $O
-statement:
-
-    $Q mysubpage
-    Hello
-    
-    $Q normalpage
-    $O gosub:mysubpage
-    $O
-    World
 
 ## More Technically Speaking
 
@@ -597,6 +578,44 @@ out to be true.
 
 If any of the checks fail, the rest are not executed.
 
+### Go and Gosub Revisited
+
+The exact point at which the go and gosub commands are executed is at the end of the statement, meaning that:
+
+    $Q mysubpage
+    Hello
+    
+    $Q normalpage
+    $O gosub:mysubpage
+    World
+
+..will actually output World Hello instead of Hello World. To get the result you might expect, simply add another $O
+statement:
+
+    $Q mysubpage
+    Hello
+    
+    $Q normalpage
+    $O gosub:mysubpage
+    $O
+    World
+
+Using the go: command will send the player to a new page just as if they had selected an option: the room's flag will be set, the screen
+cleared, etc.
+
+### The $P Statement
+
+Unlike other $-lines the $P line is completely processed in the compiler, by adding empty line to the previous set of text lines. The engine will never see that a $P line was here. This has a few implications:
+
+First, the $P line can not be predicated, i.e, it may not have any commands associated with it. Second, it does not break the previous block.
+
+    $O !light
+    It's pitch black here.
+    $P
+    You can hear music in the distance.
+    
+In the above example the "You can hear music in the distance" message is part of the $O line block, and thus the player won't see the text if the
+"light" flag is on.
 
 ### Limits
 
@@ -843,6 +862,43 @@ In order to exclusively-or two flags, you can use toggle.
     $O clr:thisxorthat
     $O this toggle:thisxorthat
     $O that toggle:thisxorthat
+
+### Number Overflow
+
+The 8-bit numeric variables overflow (and underflow) rather easily. You can check for this by
+using a temporary variable and seeing if the results are impossible:
+
+    $O temp=myvar temp+5
+    # Temp should now be 5 more than myvar
+    $O temp<myvar
+    Overflow!
+    $O temp>myvar myvar=temp
+    Business as usual-
+    
+Same goes for underflow.
+
+    $O temp=myvar temp-5
+    # Temp should now be 5 less than myvar
+    $O temp>myvar
+    Underflow!
+    $O temp<myvar myvar=temp
+    Business as usual.
+
+### Swapping Values
+
+A temporary variable can also be used to swap contents of two numeric variables.
+
+    $A tavern temp=player_money player_money=stranger_money stranger_money=temp
+    Swap purses with the stranger
+
+Swapping the state of two flags can also be done through a temporary flag, but can not be done on one line.
+
+    $O clr:t
+    $O a set:t clr:a
+    $O b set:a clr:b
+    $O t set:b
+    
+
 
 ## Examples
 
