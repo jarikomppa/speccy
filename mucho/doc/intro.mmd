@@ -353,7 +353,7 @@ To set the value of a number, use the = operator.
 
 You can set a number variable to the value of another variable or to a fixed value.
 
-    $A tavern temp=player_money player_money=strager_money stranger_money=temp
+    $A tavern temp=player_money player_money=stranger_money stranger_money=temp
     Swap purses with the stranger
 
 ### Adding and Subtracting Numbers
@@ -925,7 +925,7 @@ To understand the structure, let's look at some sub-graphs.
 
 ![Flow chart of the Waiting example, base pages](images/waiting_base)\ 
 
-The base structure is as follows: we start, have a couple simple trap choises, then arrive at the hall of lights (page 49), visit some other segments but eventually pick the white light (page 25) which checks if we've gone through all the other segments (via checking the various items), and then presents one of the 16 endings depending on the player choises in the other colored light segments.
+The base structure is as follows: we start, have a couple simple trap choices, then arrive at the hall of lights (page 49), visit some other segments but eventually pick the white light (page 25) which checks if we've gone through all the other segments (via checking the various items), and then presents one of the 16 endings depending on the player choices in the other colored light segments.
 
 ![Flow chart of the Waiting example, green pages](images/waiting_green)\ 
 
@@ -946,7 +946,32 @@ The yellow segment is super complicated: it's a game show. Not only can you answ
 This uses a subpage to check (and display) the scores and a couple numeric variables to keep the score.
 
 The spectrum version is actually more difficult than the paper version because the player keeps track of the variables in the book version; the 
-spectrum version hides them, so you don't know which result you're getting from your choises until the end.
+spectrum version hides them, so you don't know which result you're getting from your choices until the end.
+
+\newpage
+
+### Blackjack
+
+![Flow chart of the Blackjack example](images/blackjack)\ 
+
+The Blackjack example demonstrates some complex handling of numeric variables. The rules are a bit simplified as compared to actual blackjack; there's no actual card deck, and cards are valued from 0 to 10.
+
+After the intro page the player arrives at the start page where they can choose how much to bet. Note that the game makes sure the player never bets more than they have.
+
+Once a non-zero amount is bet, the player can proceed to the ingame page.
+
+The ingame page does sub-page calls to hit and dealerhit, checks for busts, and asks if player wants to hit or stand, if neither player has gone over 21. If one (or both) players have gone over 21, the player is sent to win, bust, or bothbust pages.
+
+In the stand page there are multiple calls to dealerhit, to make sure the dealer has reached 17 or more. Then the results are checked, and the player is sent to win, bust or bothbust pages. Bothbust is used in case of a tie.
+
+In the bothbust page the player gets the bet back, and is sent back to start to bet again. In the bust page the bet is lost, and we check if player has run out of money, and if so, end the game. There's no separate game over page, we simply won't show the option to start over.
+
+In the win page the player gets their money back twice, and we very, very carefully check if the sum goes over maximum. If it does, we show the good ending text and end the game there. There's no separate game over page in this case either.
+
+The hit and dealerhit pages generate 4 random flags, and then produce a value between 0 and 10 to add to either the player's, or the dealer's, score. Since there are 16 options, 3 of the options give 10 points and 4 of the options give 0 (9+4+3=16). (There's no looping in MuCho (yet, anyway), so we can't just ignore the zero results and randomize again).
+
+And there you have it - something that approximates blackjack in MuCho.
+
 
 # Compiling Stories
 
@@ -1080,7 +1105,7 @@ it should not be seeing.
 
 TL;DR: Mackarel builds your .tap file.
 
-Mackarel is a tool that takes compiled z80 code (in intel hex, or .ihx) format, and turns
+Mackarel is a tool that takes compiled z80 code (in Intel hex, or .ihx) format, and turns
 them into ZX Spectrum .tap files, alongside additional data file. It also compresses
 everything (if possible) and handles loading screens, generating one if necessary.
 
@@ -1494,7 +1519,7 @@ You've managed to use too many symbols. You're probably making something super c
 
     Too many numeric variables in use (... > 32)
 
-Yeah, so, this is a multiple choise adventure engine, not a general purpose processing system. You're probably doing something weird. Do tell us what it is.
+Yeah, so, this is a multiple choice adventure engine, not a general purpose processing system. You're probably doing something weird. Do tell us what it is.
 
     Total output size too large (29952 bytes max, ... found)
     
@@ -1503,12 +1528,12 @@ some images?
 
     Unknown parameter "..."
     
-You've given a parameter to mucho compiler that it doesn't recognize. Run without parameters for help.
+You've given a parameter to MuCho compiler that it doesn't recognize. Run without parameters for help.
 
     Invalid parameter "..." (input, output, font, divider and 
     selector image files already defined)
     
-Mucho compiler figures you've given it too many filenames as a parameter.
+Mucho compiler figures you've given it too many file names as a parameter.
 
     Invalid parameters (run without params for help)
     
