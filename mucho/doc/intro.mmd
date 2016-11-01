@@ -1071,46 +1071,91 @@ fonts, dividers and selectors below.
 
 If we run the complex example through mc, we get the following output:
 
-    C:\mucho\examples\complex>..\..\mc complex.txt complex.dat
     MuCho compiler, by Jari Komppa http://iki.fi/sol/
-                             start zx7:  801 ->  501 (62.547%), 0x5b0a
-                               end zx7:  116 ->   96 (82.759%), 0x5cff
-                     dark.scr (09) zx7: 2593 ->  537 (20.710%), 0x5d5f
-                    light.scr (10) zx7: 2881 ->  703 (24.401%), 0x5f78
+    Trainer data: 436 bytes
+    |---------1---------2---------3---------4---------5---------6----|
+     the door is not as opressive You are in a small silver key glitt
+     ers room with The room. ---- --- -- - to it. With A glows red. O
+     utside light. sign neon window, light switch next lights turned
+     on, for turns. it felt darkness. Lightning flashes window. open.
+      door, single has street. down blue. looking window dark lightni
+     ng's have key. Press Get Unlock Open Close Exit through Wait whi
+     le end. played left on. remembered turn off lights.
+    Compressing..
+    start end zx7: 1015 ->  399 (39.310%), 0x5b0c
+    
+                     dark.scr (09) zx7: 2593 ->  537 (20.710%), 0x5c9b
+                    light.scr (10) zx7: 2881 ->  703 (24.401%), 0x5eb4
+                        beepfx.ihx zx7: 1701 ->  879 (51.675%), 0x6173
+    
     Token Hits Symbol
         0    7 "start"
         1    2 "end"
         2    3 "neon"
-        3   11 "light"
-        4    2 "lightning"
+        3   12 "light"
+        4    4 "lightning"
         5    6 "open"
-        6    5 "key"
+        6    6 "key"
         7    4 "unlocked"
+    
+    Token Hits Number
+        0    2 "turns"
+    
     Token Hits Image
         0    1 "dark.scr"
         1    1 "light.scr"
+    
+    Token Hits Code
+        0    1 "beepfx.ihx"
+    
+    Memory map:
+    
+             5         10        15        20        25      29
+    ---------.---------|---------.---------|---------.--------
+    IIC.......................................................
+    
+    Page data :   411 bytes
+    Image data:  1240 bytes
+    Code data :   879 bytes
+    Free      : 27865 bytes
+    Trainer   :   436 bytes (used to improve compression by "training" it)
 
+The first bit after the compiler header is "trainer data". In order to maximize
+compression, the MuCho compiler figures out what are the most commonly used words
+in your story, and then builds most likely chains from these words. Sometimes this
+produces rather interesting beatnik poetry, but that's merely a side effect.
 
-The first four lines of output describe the items the MuCho compiler has compressed,
-how many bytes they take uncompressed, then compressed, and compression ratio. The
-hexadecimal number is for internal debugging, and you should never have to care about
-it. (It's the compressed block's start address in memory, if you have to know).
+After this, the MuCho compiler tries to figure out which if your pages compress
+the best together, and packs them as tightly as possible. In this case you can
+see that the pages get compressed down to 39% of their original size, largely 
+since pretty much all of the text can be found in the trainer.
 
-The two rooms are 801 and 116 bytes uncompressed, and 501 and 96 bytes compressed.
-The larger the room, the more it will (probably) compress, so writing less doesn't
-necessarily save you space.
+Next the MuCho compiler packs any images and code blocks. 
 
-The two images follow, with number of character rows of their height; so the light.scr
+There you can see the two images, with number of character rows of their height; so the light.scr
 above is 80 pixels tall. Empty space tends to compress well, which explains the rather
-impressive compression ratio.
+impressive compression ratio. This is followed by the beepfx code which gets compressed as well.
+It'll be uncompressed before it's executed during game play.
 
-Following this are two tables. First is table of symbols found in the script, their
+Following this are four tables. First is table of symbols found in the script, their
 internal representation token number, how many times the symbol was referenced in 
 the script, and the symbol's name. If you ever typo a label, you'll probably find out
 on this table. Just look for symbols with only one hit.
 
-The second table is for images. In this game, each image is only used once, but you can
+Second table is for numeric variables. Same deal here.
+
+The third table is for images. In this game, each image is only used once, but you can
 use images as many times as you wish, they'll only be stored once.
+
+The fourth table contains the code blocks. You can re-use your code blocks as many times
+as you wish.
+
+Next up is a simple visual representation of how much space you've used, and how much is
+left. Thanks to compression, this doesn't translate directly to number of words you 
+can still fit in, but it's some kind of a guideline. Images take a lot of space compared
+to text, so in this example the text takes insignificant amount of space.
+
+Finally there's the same data in numeric form.
 
 If the compiler finds something to complain about, like a clear mistake in the script,
 it will abort compilation and tell you the reason.
@@ -1126,6 +1171,31 @@ what they mean.
 If you're getting an error message and don't know what it refers to, running with the
 -v flag may help, as it shows what the compiler has been doing when it throws the error.
 
+    Most frequent words in source material:
+    0. "the"        (19)
+    1. "You"        (5)
+    2. "in" (5)
+    3. "a"  (5)
+    4. "door"       (5)
+    5. "room"       (4)
+    6. "The"        (4)
+    7. "key"        (3)
+    8. "small"      (3)
+
+First part of the verbose listing is the top list of the most frequent words in the
+story. The more often some word gets used, the better it will compress. Theoretically.
+
+    Making word chains:
+    the[4]->door[1]->is[1]->not[1]->as[1]->opressive # You[1]->are[1]->in[1]->a[1]->
+    small[2]->silver[2]->key[2]->glitters # room[1]->with # The[1]->room.[1]->----[2
+
+Next up, the compiler builds word chains. The process takes the most frequent word,
+looks for what most frequently follows that (and is not already in the list), and so
+on and so forth. This is all done to improve compression.
+
+After the word chains there's the finished trainer data, which we already covered in
+the previous chapter.
+
     Predicated section
         Opcode: HAS(light)
       Command buffer 'O' with 3 bytes payload (about 1 ops)
@@ -1133,7 +1203,7 @@ If you're getting an error message and don't know what it refers to, running wit
       lit 6: "as it felt in the darkness."
     End of section
 
-First part of the output is more detailed listing of what the compiler finds in the
+The next part of the output is more detailed listing of what the compiler finds in the
 script, including opcodes and lines of text.
 
              **************          row 0, live 1
@@ -1214,8 +1284,8 @@ When run, Mackarel gives out the following kind of report, which you can largely
     
     "patched.ihx":
             Exec address : 57344 (0xe000)
-            Image size   : 6644 bytes
-            Compressed to: 4273 bytes (64.314%) by ZX7
+            Image size   : 7501 bytes
+            Compressed to: 4695 bytes (62.592%) by ZX7
     
     Generated loading screen
             Image size   : 6912 bytes
@@ -1223,33 +1293,33 @@ When run, Mackarel gives out the following kind of report, which you can largely
     
     "complex.dat":
             LowBlock addr: 23296 (0x5b00)
-            LowBlock size: 1848 bytes
-            Compressed to: 1848 bytes (100.000%) by (uncompressed)
+            LowBlock size: 29952 bytes
+            Compressed to: 3023 bytes (10.093%) by ZX7
     
-    Boot exec address: 59122 (0xe6f2)
+    Boot exec address: 57527 (0xe0b7)
     BASIC part       : 51 bytes
     Screen unpacker  : 122 bytes
-    App bootstrap    : 125 bytes (69 codec, 56 rest)
-    "complex.tap" written: 6607 bytes
-    Estimated load time: 54 seconds (7 secs to loading screen).
+    App bootstrap    : 123 bytes (69 codec, 54 rest)
+    "complex.tap" written: 8202 bytes
+    Estimated load time: 64 seconds (7 secs to loading screen).
     
     Memory : 0       2       4       6       8       10      12      14      16
              |-------|-------|-------|-------|-------|-------|-------|-------|
     On load: rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
              sssssssssssssssssssssssssss..b..................................
              ................................................................
-             .......................................BLLLLLLLCCCCCCCCCCCCCCCCC
+             .................................BLLLLLLLLLLLLCCCCCCCCCCCCCCCCCC
     
     On boot: rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
-             sssssssssssssssssssssssssssLLLLLLLL.............................
-             ................................................................
-             ................................CCCCCCCCCCCCCCCCCCCCCCCCCC......
+             sssssssssssssssssssssssssssLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+             LLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL
+             LLLLLLLLLLLLLLLL................CCCCCCCCCCCCCCCCCCCCCCCCCCCCCC..
     
     Key    : r)om s)creen b)asic L)ow block C)ode block
              H)igh block .)unused -)reserved
-
-The report tells how well different parts (code, loading screen and game data) get compressed. Typically the
-game data doesn't compress, because it is already compressed. 
+         
+The report tells how well different parts (code, loading screen and game data) get compressed. If the game
+data is big enough, it won't get compressed - in this example most of the game data is actually empty space.
 
 Following this, there's some statistics, followed by approximate memory maps on load and on game boot time. 
 Not all of the memory can be filled by game code, since we need somewhere to decompress the game data on the 
