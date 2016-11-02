@@ -142,7 +142,8 @@ files, such as those that can be created with Windows Notepad, although the auth
 advanced, such as UltraEdit, Sublime Text or Notepad++.
 
 Not all of the features of the language are needed to write adventures; this document is structured so that more 
-complicated features are described later, so you won't need to read all of it to get started.
+complicated features are described later, so you won't need to read all of it to get started. If something feels
+complicated, don't worry about it - you can come back to it later.
 
 ## Structure
 
@@ -150,7 +151,7 @@ Structure of a multiple choice adventure is based on pages (other used terms inc
 
 Consider the computer asking the user a question, and offering several possible answers for the question.
 
-The script for a simple room looks like this:
+The script for a simple page looks like this:
 
     $Q roomname
     The description of the room
@@ -187,7 +188,7 @@ The choices link pages together. Here we'll describe three rooms and let the use
 
 Everything between two $Q lines goes to a single page. The first word after the $Q and $A is the label of the room. In programming terms, you could think of it as GOTO label. Two rooms may not have the same label, but any number of $A lines may point to the same label. Labels may not include spaces (i.e, they need to be a single word).
 
-It is also perfectly legal for a room to have an choice which goes to the same page. This is actually rather useful.
+It is also perfectly legal for a room to have an choice which goes back to the same page. This is actually rather useful.
 
 If a room has no $A lines, it is considered an "end node", and the adventure ends if player ends up on that page.
 
