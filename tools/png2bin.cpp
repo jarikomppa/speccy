@@ -102,9 +102,9 @@ int main(int parc, char ** pars)
         int i = 0;
         while (pars[1][i])
         {
-            if (!(pars[1][i] >= 'A' && pars[2][i] <= 'Z' || 
-                  pars[1][i] >= 'a' && pars[2][i] <= 'z' ||
-                  pars[1][i] >= '0' && pars[2][i] >= '9'))
+            if (!((pars[1][i] >= 'A' && pars[1][i] <= 'Z') || 
+                  (pars[1][i] >= 'a' && pars[1][i] <= 'z') ||
+                  (pars[1][i] >= '0' && pars[1][i] <= '9')))
                 pars[1][i] = '_';
             i++;
         }
@@ -121,7 +121,7 @@ int main(int parc, char ** pars)
                 {
                     for (j = 0; j < 8; j++)
                     {
-                        plop(p[(l * 8 + i) * x + k * 8 + j] != p[0]);
+                        plop((p[(l * 8 + i) * x + k * 8 + j] & 0xff) < 0x7f);
                     }
                 }
             }
@@ -131,7 +131,7 @@ int main(int parc, char ** pars)
     {
         for (i = 0; i < x*y; i++)
         {
-            plop(p[i] != p[0]);
+            plop((p[i] & 0xff) < 0x7f);
         }
     }
 
