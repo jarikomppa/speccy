@@ -33,14 +33,94 @@ int main(int parc, char ** pars)
     memset(spritemask,0,sizeof(int)*64);
     if (parc < 3)
     {
-        printf("Usage: %s pngfile outfile\n", pars[0]);
+        printf("Usage: %s pngfile outfile [-1 -2 -4 -8 -n]\n"
+			"Where\n"
+			" -0 - Only one shifted version, no shift padding\n"
+			" -1 - Only one shifted version\n"
+			" -2 - Two shifted versions\n"
+			" -4 - Four shifted versions\n"
+			" -8 - Eight shifted versions (default)\n"
+			" -n - No mask, just the sprite\n"
+			, pars[0]);
         return 0;
     }
-    stbi_uc * raw = stbi_load(pars[1], &x, &y, &comp, 4);
-    printf("%s - %d %d %d\n", pars[1], x, y, comp);
+	char *infile = 0;
+	char *outfile = 0;
+	int shifts = 8;
+	int mask = 1;
+	int padding = 1;
+	int i, j, c;
+	for (i = 1; i < parc; i++)
+	{
+		if (pars[i][0] == '-')
+		{
+			if (pars[i][2] != 0)
+			{
+				printf("Invalid parameter %s\n", pars[i]);
+				return -1;
+			}
+			switch (pars[i][1])
+			{
+			case '0':
+				shifts = 1;
+				padding = 0;
+				break;
+			case '1':
+				shifts = 1;
+				break;
+			case '2':
+				shifts = 2;
+				break;
+			case '4':
+				shifts = 4;
+				break;
+			case '8':
+				shifts = 8;
+				break;
+			case 'n':
+				mask = 0;
+				break;
+			default:
+				printf("Unexpected flag %s\n", pars[i]);
+				return -1;
+			}
+		}
+		else
+		{
+			if (infile == 0)
+			{
+				infile = pars[i];
+			}
+			else
+			{
+				if (outfile == 0)
+				{
+					outfile = pars[i];
+				}
+				else
+				{
+					printf("Unexpected non-flag parameter %s\n", pars[i]);
+					return -1;
+				}
+			}
+		}
+	}
+
+	if (infile == 0 || outfile == 0)
+	{
+		printf("Invalid parameters. Need at least input and output filenames.\n");
+		return -1;
+	}
+
+    stbi_uc * raw = stbi_load(infile, &x, &y, &comp, 4);
+    printf("%s - %d %d %d\n", infile, x, y, comp);
+	if (raw == 0)
+	{
+		printf("File %s load failed\n", infile);
+		return -1;
+	}
     unsigned int *p = (unsigned int *)raw;
     
-    int i, j, c;
     for (i = 0, c = 0; i < y; i++)
     {
         int d = 0;
@@ -63,27 +143,39 @@ int main(int parc, char ** pars)
         }
     }    
 
-    FILE * f = fopen(pars[2],"w");
-    char name[64];
+    FILE * f = fopen(outfile,"w");
+	if (f == NULL)
+	{
+		printf("Can't open %s for writing\n", outfile);
+		return -1;
+	}
+
+    char name[1024];
     i = 0;
-    while (pars[2][i] != '.')
+    while (outfile[i] != '.')
     {
-        name[i] = pars[2][i];
+        name[i] = outfile[i];
+		if (outfile[i] == '/' || outfile[i] == '\\')
+			name[i] = '_';
         i++;
     }
     name[i] = 0;
 
-    fprintf(f, "const unsigned char %s[(%d + 1) * %d * 2 * 8] = {\n", name, x/8, y);
+	fprintf(f, "const unsigned char %s[(%d%s) * %d%s * %d] = {\n", name, x / 8, padding ?" + 1":"",y, mask ? " * 2" : "", shifts);
     int shift;
-    for (shift = 0; shift < 8; shift++)
+	int shiftadd = 8 / shifts;
+    for (shift = 0; shift < 8; shift += shiftadd)
     {
         fprintf(f,"/* shift %d*/\n", shift);
         for (i = 0; i < y; i++)
         {
-            for (j = 0; j < (x/8)+1; j++)
+            for (j = 0; j < (x/8)+padding; j++)
             {
-                fprintbin(f, ~((spritemask[i]) >> shift) >> (8 * (3 - j)));
-                fprintf(f, ", ");            
+				if (mask)
+				{
+					fprintbin(f, ~((spritemask[i]) >> shift) >> (8 * (3 - j)));
+					fprintf(f, ", ");
+				}
                 fprintbin(f, (spritedata[i] >> shift) >> (8 * (3 - j)));
                 fprintf(f, ", ");            
             }
