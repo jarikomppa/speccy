@@ -469,19 +469,22 @@ void heal()
     while (1) do_halt();
 }
 
-void newcard()
+void newcard(unsigned char newcardid)
 {
     unsigned short i;
+    unsigned char pos = 0;
+    unsigned char commit = 0;
+    unsigned char frame = 0;
     fillback();
     for (i = 0; i < 5; i++)
     {
-        drawcard(i, 1 + i * 4, 0, COLOR(0,1,0,7));
+        drawcard(i+1, 1 + i * 4, 0, COLOR(0,1,0,7));
         drawcard(i+2, 1 + i * 4, 6, COLOR(0,1,0,7));
-        drawcard(i+4, 1 + i * 4, 12, COLOR(0,1,0,7));
-        drawcard(i+8, 1 + i * 4, 18, COLOR(0,1,0,7));
+        drawcard(i+3, 1 + i * 4, 12, COLOR(0,1,0,7));
+        drawcard(i+4, 1 + i * 4, 18, COLOR(0,1,0,7));
     }
     drawtextbox(22,0,4,7);
-    drawcard(CARD_ATK1DEF1, 22, 0, COLOR(0,1,0,7));
+    drawcard(newcardid, 22, 0, COLOR(0,1,0,7));
     drawstringz("New", 23, 6);
 
     drawtextbox(22, 13, 9, 10);
@@ -494,7 +497,45 @@ void newcard()
     drawstringz("you don't", 23, 20);
     drawstringz("want it.", 23, 21);
 
-    while (1) do_halt();    
+    while (1) 
+    {
+        static const unsigned char positionsx[21] = { 2, 6, 10, 14, 18, 23, 2, 6, 10, 14, 18, 2, 6, 10, 14, 18, 2, 6, 10, 14, 18 };            
+        static const unsigned char positionsy[21] = { 2, 2, 2, 2, 2, 2, 8, 8, 8, 8, 8, 14, 14, 14, 14, 14, 20, 20, 20, 20, 20 };
+        scan_input();
+        {
+            unsigned char triggered = 0;
+            unsigned char oldpos = pos;
+            if (TRIGGER(KEY_RIGHT)) { triggered = 1; pos++; if (pos == 21) pos = 0; }
+            if (TRIGGER(KEY_LEFT)) { triggered = 1; pos--; if (pos == 255) pos = 20; }
+            if (TRIGGER(KEY_DOWN)) { triggered = 1; if (pos < 5) pos += 6; else if (pos > 5) pos += 5; if (pos > 20) pos -= 21; }
+            if (TRIGGER(KEY_UP)) { triggered = 1; if (pos < 5) pos += 16; else if (pos > 10) pos -= 5; else if (pos > 5) pos -= 6;}
+            if (TRIGGER(KEY_FIRE)) { triggered = 1; commit = 1; }
+            if (triggered) 
+            {
+                if (commit)
+                {
+                    // Todo: replace card 
+                    return;
+                }
+                key_wasdown = 0;
+                if (oldpos < 5)
+                    drawcard(oldpos+1,oldpos * 4 + 1, 0 ,COLOR(0,1,0,7));
+                if (oldpos == 5)
+                    drawcard(newcardid, 22, 0, COLOR(0,1,0,7));
+                if (oldpos > 5 && oldpos < 11)
+                    drawcard(oldpos-4, (oldpos - 6) * 4 + 1, 6, COLOR(0,1,0,7));
+                if (oldpos > 10 && oldpos < 16)
+                    drawcard(oldpos-8, (oldpos - 11) * 4 + 1, 12, COLOR(0,1,0,7));
+                if (oldpos > 15)
+                    drawcard(oldpos-12, (oldpos - 16) * 4 + 1, 18, COLOR(0,1,0,7));                
+            }
+        }
+        frame++;
+        drawicon(littlesin[frame & 15], positionsx[pos], positionsy[pos]);
+        do_halt();
+        do_halt();
+                
+    }
 }
 
 void shop()
@@ -545,10 +586,10 @@ void main()
     input_mode = INPUT_WASD;
 
     do_port254(0);
-    ingame();
+    //ingame();
     //tour();
     //heal();
-    //newcard();
+    newcard(CARD_FOCUS);
     //shop();
     while (1);
 }
