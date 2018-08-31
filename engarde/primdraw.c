@@ -1,3 +1,5 @@
+#include "main.h"
+
 void colorbox(unsigned char x, unsigned char y, unsigned char w, unsigned char h, unsigned char c)
 {
     unsigned short o, i, j;
@@ -107,6 +109,31 @@ void drawicon(unsigned char iconno,  unsigned char x, unsigned char y)
         }
         sp += 30;
     }
+}
+
+
+void cleartextbox(unsigned char x, unsigned char y, unsigned char w, unsigned char h)
+{
+    unsigned short o, i, j;
+    unsigned char oh, oy;
+    oh = h;
+    oy = y;
+    colorbox(x+1,oy+1,w-2,oh-2,COLOR(0,1,7,7));
+
+    h *= 8;
+    y *= 8;
+    
+    for (j = y + 1; j < y + h - 1; j++)
+    {
+        o = yofs[j] + x + 1;
+        for (i = 1; i < w-1; i++)
+        {
+            *((unsigned char*)o) = 0;
+            o++;
+        }
+    }
+    
+    colorbox(x+1,oy+1,w-2,oh-2,COLOR(0,1,7,0));
 }
 
 void drawtextbox(unsigned char x, unsigned char y, unsigned char w, unsigned char h)

@@ -1,9 +1,11 @@
+#include "main.h"
+
 // 282 bytes as of c7f5295
 void drawstringz(unsigned char *aS, unsigned char aX, unsigned char aY)
 {
     unsigned char i, *s, *d, sx, c, len;
-    unsigned char *datap = (unsigned char*)(int*)propfont_data - 32 * 8;
-    unsigned char *widthp = (unsigned char*)(int*)propfont_width - 32;
+    const unsigned char *datap = (unsigned char*)propfont_data - 32 * 8; // font starts from space (32)
+    const unsigned char *widthp = (unsigned char*)propfont_width - 32;
     aY *= 8;
     len = 0;
     while (aS[len]) len++;
@@ -43,6 +45,7 @@ void drawstringz(unsigned char *aS, unsigned char aX, unsigned char aY)
         datap++;
     }
 }
+
 
 /*
 // 282 bytes as of c7f5295
@@ -92,25 +95,28 @@ void drawstring(unsigned char *aS, unsigned char aX, unsigned char aY)
 
 /*
 // 410 bytes (as of c7f5295)
-void drawstring(unsigned char *s, unsigned char x, unsigned char y)
+void drawstringz(unsigned char *aS, unsigned char x, unsigned char y)
 {
     unsigned char i;
     unsigned char c;
     char sx = 0;
     unsigned char *yp[8];
-    unsigned char *datap = (unsigned char*)(int*)builtin_data - 32 * FONTHEIGHT;
-    unsigned char *widthp = (unsigned char*)(int*)builtin_width - 32;
+    unsigned char *datap = (unsigned char*)(int*)propfont_data - 32 * 8;
+    unsigned char *widthp = (unsigned char*)(int*)propfont_width - 32;
+    unsigned char *s = aS;
+    unsigned char len = 0;
+    while (aS[len]) len++;
+    
     for (i = 0; i < 8; i++)
     {
         yp[i] = (unsigned char*)yofs[y + i] + x;
     }
-    c = *s;
-    s++;
+    c = len;    
     while (c)
     {
         unsigned char ch = *s;
         unsigned char wd = widthp[ch];
-        unsigned char *chp = datap + ch * FONTHEIGHT;
+        unsigned char *chp = datap + ch * 8;
         if (*s != 32)
         {
             for (i = 0; i < 8; i++, chp++)

@@ -32,9 +32,10 @@
 		.area _DATA
 
 		.area _BSS
-				.ds	1024
+		        .ascii /STACK->/
+				.ds	1024-7-7		
 _stack::
-
+                .ascii /<-STACK/
 
 		.area _HEAP
 _heap::

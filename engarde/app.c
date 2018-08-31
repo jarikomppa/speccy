@@ -2,97 +2,11 @@
 https://github.com/jarikomppa/speccy * released under the unlicense, see 
 http://unlicense.org * (practically public domain) */
 
-unsigned char *data_ptr;
-unsigned char *screen_ptr;
+#include "main.h"
 
-unsigned char port254tonebit;
-#include "yofstab.h"
-#include "propfont.h"
 #define HWIF_IMPLEMENTATION
 #include "hwif.c"
 
-#include "drawstring.c"
-//#include "drawnxn.c"
-
-static const unsigned char artassets[] = {
-#include "artassets.h"
-};
-
-static const unsigned char backtile[] = {
-0b01100100,
-0b00001101,
-0b11001001,
-0b01100000,
-0b00000110,
-0b10010011,
-0b10110000,
-0b00100110
-};
-
-enum CARDTYPES
-{
-    CARD_NOCARD,
-    CARD_ATK1,
-    CARD_ATK2,
-    CARD_ATK3,
-    CARD_DEF1,
-    CARD_DEF2,
-    CARD_DEF3,
-    CARD_FOCUS,
-    CARD_LEAP,
-    CARD_ATK1DEF1,
-    CARD_ATK2DEF1,
-    CARD_ATK1DEF2,
-    CARD_TBD,
-    CARD_IDLE,
-    CARD_FATIGUE,
-    CARD_HURT,
-    CARD_BACK
-};
-
-typedef struct Card_
-{
-	unsigned char mAttack;
-	unsigned char mDefend;
-	unsigned char mFlags;
-	char *mName;
-} Card;
-
-enum CARDFLAGS
-{
-    CARDFLAG_LEAP       = 0b0010000,
-    CARDFLAG_FOCUS      = 0b0001000,
-    CARDFLAG_IDLE       = 0b0000100,
-    CARDFLAG_FATIGUE    = 0b0000010,
-    CARDFLAG_PERMANENT  = 0b0000001
-};
-
-const Card gCardTypes[] =
-{
-	{ 0, 0, 0b00000, "No card"  }, // No card (kludge)
-	{ 1, 0, 0b00000, "Attack +1"}, // Basic attack
-	{ 2, 0, 0b00000, "Attack +2"}, // Strong attack
-	{ 3, 0, 0b00000, "Attack +3"}, // Very strong attack
-	{ 0, 1, 0b00000, "Defend +1"}, // Basic defend
-	{ 0, 2, 0b01000, "Defend +2, Focus"}, // Strong defend
-	{ 0, 3, 0b01000, "Defend +3, Focus"}, // Very strong defend
-	{ 0, 0, 0b01000, "Focus"    }, // Basic focus
-	{ 0, 0, 0b11000, "Leap"     }, // Basic dodge
-	{ 1, 1, 0b00000, "Attack +1, Defend +1" }, // Attack & defend
-	{ 2, 1, 0b00000, "Attack +2, Defend +1" }, // Attack & defend
-	{ 1, 2, 0b00000, "Attack +1, Defend +2" }, // Attack & defend
-	{ 0, 0, 0b00000, "tbd"      }, // tbd
-	{ 0, 0, 0b00100, "Idle"     }, // idle
-	{ 0, 0, 0b00110, "Fatigue"  }, // fatigue
-	{ 0, 0, 0b00101, "Hurt"     }  // Wound (can't be focused away)
-};
-
-static const unsigned char littlesin[16] = { 0,0,0,0,0,0,1,1,2,2,2,2,2,2,1,1 };
-static const unsigned char fatigue_for_cards[6] = { 0, 0, 1, 3, 6, 10 };
-
-extern void playfx(unsigned short fx) __z88dk_fastcall;  
-
-unsigned char y8;
 unsigned char xorshift8(void) 
 {
     y8 ^= (y8 << 7);
@@ -100,31 +14,43 @@ unsigned char xorshift8(void)
     return y8 ^= (y8 << 3);
 }
 
-#define COLOR(BLINK, BRIGHT, PAPER, INK) (((BLINK) << 7) | ((BRIGHT) << 6) | ((PAPER) << 3) | (INK))
-
-#include "primdraw.c"
-
-unsigned char key_isdown;
-unsigned char key_wasdown;
-unsigned char input_mode;
-
-enum SIMPLEKEYS
+void int2str(unsigned char val, char s[4])
 {
-    KEY_LEFT = 1 << 0,
-    KEY_RIGHT = 1 << 1,
-    KEY_UP = 1 << 2,
-    KEY_DOWN = 1 << 3,
-    KEY_FIRE = 1 << 4
-};
-
-enum INPUTMODE
-{
-    INPUT_WASD,
-    INPUT_QAOP,
-    INPUT_CURSOR,
-    INPUT_KEMPSTON,
-    INPUT_SINCLAIR
-};
+    if (val > 99)
+    {
+        s[0] = '0';
+        while (val > 99)
+        {
+            s[0]++;
+            val -= 100; 
+        }
+        s[1] = '0';
+        while (val > 9)
+        {
+            s[1]++;
+            val -= 10; 
+        }
+        s[2] = '0' + val;
+        s[3] = 0;
+    }
+    else
+    if (val > 9)
+    {
+        s[0] = '0';
+        while (val > 9)
+        {
+            s[0]++;
+            val -= 10; 
+        }
+        s[1] = '0' + val;
+        s[2] = 0;
+    }
+    else
+    {
+        s[0] = '0' + val;
+        s[1] = 0;
+    }
+}
 
 void scan_input()
 {
@@ -203,13 +129,13 @@ void update_info(unsigned char selected, unsigned char hand[5], unsigned char po
     char leap = 0;
     char attack = 0;
     char defend = 0;
-    char fatigue = 0;
+    signed char fatigue = 0;
     char count = 0;
     char restcount = 0;
     char first = 0;
     char i;
     selected;
-    drawtextbox(1, 8, 19, 8);
+    cleartextbox(1, 8, 19, 8);
     drawstringz("Select cards to play.", 2, 9);
     temp[0] = 0;
     strcat(temp, "Selected effects: ");
@@ -534,18 +460,42 @@ void newcard(unsigned char newcardid)
         drawicon(littlesin[frame & 15], positionsx[pos], positionsy[pos]);
         do_halt();
         do_halt();
-                
     }
+}
+
+
+void drawmoney(unsigned char x, unsigned char y, unsigned char v)
+{
+    char temp[20];
+    temp[0] = 0;
+    strcat(temp, "You have ");
+    int2str(v, &temp[9]);
+    strcat(temp, " crowns.");
+    drawstringz(temp, x, y);
+ //   while(1) {};
+}
+
+void drawcost(unsigned char x, unsigned char y, unsigned char v)
+{
+    char temp[40];
+    temp[0] = 0;
+    strcat(temp, "It costs ");
+    int2str(v, &temp[9]);
+    strcat(temp, " crowns.");
+    drawstringz(temp, x, y);
 }
 
 void shop()
 {
     unsigned short i;
+    unsigned char pos = 5;
+    unsigned char commit = 0;
+    unsigned char frame = 0;
     static const unsigned char shoporder[10] = 
     {
+        CARD_FOCUS,
         CARD_ATK1,
         CARD_DEF1,
-        CARD_FOCUS,
         CARD_ATK2,
         CARD_DEF2,
         
@@ -555,11 +505,17 @@ void shop()
         CARD_ATK2DEF1,
         CARD_ATK1DEF2
     };
+    static const unsigned char shopcost[10] =
+    {
+        1,2,2,6,6,14,14,18,22,22
+    };
     fillback();
     drawtextbox(6,18,25,5);
     drawmug(3, 1, 17);
-    drawstringz("It's an advanced technique!", 7, 20);
-    drawstringz("It costs x crowns.", 7, 21);    
+    drawstringz("Welcome to the card shop!", 7, 19);
+    drawstringz("Here you can spend crowns to buy", 7, 20);
+    drawstringz("better cards to improve your deck.", 7, 21);    
+                         
     
     for (i = 0; i < 5; i++)
     {
@@ -570,11 +526,65 @@ void shop()
     drawtextbox(22,5,9,4);
     drawstringz("Done", 25, 6);
     drawstringz("shopping", 25, 7);
-
+    
     drawtextbox(7,14,20,3);
-    drawstringz("You have xx crowns", 9, 15);
+    drawmoney(9, 15, player_money);
 
-    while (1) do_halt();
+    while (1) 
+    {
+        static const unsigned char positionsx[11] = { 2, 6, 10, 14, 18, 22, 2, 6, 10, 14, 18 };            
+        static const unsigned char positionsy[11] = { 3, 3, 3, 3, 3, 6, 9, 9, 9, 9, 9};
+        scan_input();
+        {
+            unsigned char triggered = 0;
+            unsigned char oldpos = pos;
+            if (TRIGGER(KEY_RIGHT)) { triggered = 1; pos++; if (pos == 11) pos = 5; }
+            if (TRIGGER(KEY_LEFT)) { triggered = 1; pos--; if (pos == 255) pos = 10; }
+            if (TRIGGER(KEY_DOWN) || TRIGGER(KEY_UP)) { triggered = 1; if (pos < 5) pos += 6; else if (pos > 5) pos -= 6;}
+            if (TRIGGER(KEY_FIRE)) { triggered = 1; commit = 1; }
+            if (triggered) 
+            {
+                if (commit)
+                {
+                    if (pos == 5)
+                        return;
+                    // Todo: replace card 
+                    return;
+                }
+                key_wasdown = 0;
+                if (pos != oldpos)
+                {
+                    if (oldpos < 5)
+                        drawcard(shoporder[oldpos],oldpos * 4 + 1, 1 ,COLOR(0,1,0,7));
+                    if (oldpos == 5)
+                    {
+                        drawtextbox(22,5,9,4);
+                        drawstringz("Done", 25, 6);
+                        drawstringz("shopping", 25, 7);
+                    }
+                    if (oldpos > 5)
+                        drawcard(shoporder[oldpos-1], (oldpos - 6) * 4 + 1, 7, COLOR(0,1,0,7));
+                }
+                cleartextbox(6,18,25,5);
+                switch (pos)
+                {
+                    case 5:
+                        drawstringz("Come back soon!", 7, 20);
+                        break;
+                }
+                
+                if (pos < 5)
+                    drawcost(7,21,shopcost[pos]);
+                if (pos > 5)
+                    drawcost(7,21,shopcost[pos-1]);
+
+            }
+        }
+        frame++;
+        drawicon(littlesin[frame & 15], positionsx[pos], positionsy[pos]);
+        do_halt();
+        do_halt();
+    }
 }
 
 
@@ -584,12 +594,13 @@ void main()
     key_isdown = 0;
     key_wasdown = 0;
     input_mode = INPUT_WASD;
+    player_money = 10;
 
     do_port254(0);
     //ingame();
     //tour();
     //heal();
-    newcard(CARD_FOCUS);
-    //shop();
+    //newcard(CARD_FOCUS);
+    shop();
     while (1);
 }
