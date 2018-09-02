@@ -24,6 +24,7 @@ void shop()
     {
         1,2,2,6,6,14,14,18,22,22
     };
+
     fillback();
     drawtextbox(6,18,25,5);
     drawmug(3, 1, 17);
@@ -81,10 +82,50 @@ void shop()
                         drawcard(shoporder[oldpos-1], (oldpos - 6) * 4 + 1, 7, COLOR(0,1,0,7));
                 }
                 cleartextbox(6,18,25,5);
+
                 switch (pos)
                 {
-                    case 5:
-                        drawstringz("Come back soon!", 7, 20);
+                    case 0: // focus
+                        drawstringz("Focus: remove cards from the game.", 7, 19);
+                        drawstringz("Cards come back in the next match.", 7, 20);
+                        break;
+                    case 1: // attack1                        
+                        drawstringz("The basic attack.", 7, 19);
+                        drawstringz("Better than nothing.", 7, 20);
+                        break;
+                    case 2: // defend1
+                        drawstringz("Basic defense.", 7, 19);
+                        break;
+                    case 3: // attack2
+                        drawstringz("Mid-range attack.", 7, 19);
+                        drawstringz("Formidable.", 7, 20);
+                        break;
+                    case 4: // defend2
+                        drawstringz("Mid-range defense.", 7, 19);
+                        drawstringz("Helps keep you alive.", 7, 20);
+                        break;
+                    case 5: // exit
+                        drawstringz("Come back soon!", 7, 19);
+                        break;                        
+                    case 6: // attack3
+                        drawstringz("Heavy attack.", 7, 19);
+                        drawstringz("Dodge this!", 7, 20);
+                        break;
+                    case 7: // defend3
+                        drawstringz("Heavy defense.", 7, 19);
+                        drawstringz("Almost impenetrable.", 7, 20);
+                        break;
+                    case 8: // atk1def1
+                        drawstringz("Attack while you defend!", 7, 19);
+                        drawstringz("Literally worth two cards.", 7, 20);
+                        break;
+                    case 9: // atk2def1
+                        drawstringz("Heavy attack while you defend!", 7, 19);
+                        drawstringz("It's an advanced technique.", 7, 20);
+                        break;
+                    case 10: // atk1def2
+                        drawstringz("Heavy defense while you attack!", 7, 19);
+                        drawstringz("Great long-term strategy.", 7, 20);
                         break;
                 }
                 

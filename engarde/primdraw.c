@@ -1,5 +1,24 @@
 #include "main.h"
 
+void drawmoney(unsigned char x, unsigned char y, unsigned char v)
+{
+    char temp[20];
+    temp[0] = 0;
+    strcat(temp, "You have ");
+    int2str(v, &temp[9]);
+    strcat(temp, " crowns.");
+    drawstringz(temp, x, y);
+}
+
+void drawcost(unsigned char x, unsigned char y, unsigned char v)
+{
+    char temp[40];
+    temp[0] = 0;
+    strcat(temp, "It costs ");
+    int2str(v, &temp[9]);
+    strcat(temp, " crowns.");
+    drawstringz(temp, x, y);
+}
 void colorbox(unsigned char x, unsigned char y, unsigned char w, unsigned char h, unsigned char c)
 {
     unsigned short o, i, j;

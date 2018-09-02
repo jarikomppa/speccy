@@ -1,4 +1,5 @@
 #include "hwif.c"
+
 enum CARDTYPES
 {
     CARD_NOCARD,

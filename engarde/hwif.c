@@ -183,8 +183,7 @@ void do_port254(const unsigned char color) __z88dk_fastcall
 
 void port254(const unsigned char color) __z88dk_fastcall
 {
-    color;
-    // do_port254(color);
+    do_port254(color);
 }
 
 // practically waits for retrace

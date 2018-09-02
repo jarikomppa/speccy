@@ -30,7 +30,8 @@ src = [
     "heal.c",
     "newcard.c",
     "shop.c",
-    "app.c"
+    "app.c",
+    "tools.c"
 	]
 
 # Add targets here:
