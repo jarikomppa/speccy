@@ -1,3 +1,4 @@
+#include "hwif.c"
 enum CARDTYPES
 {
     CARD_NOCARD,
@@ -37,6 +38,7 @@ enum CARDFLAGS
 };
 
 #define COLOR(BLINK, BRIGHT, PAPER, INK) (((BLINK) << 7) | ((BRIGHT) << 6) | ((PAPER) << 3) | (INK))
+#define TRIGGER(x) ((key_wasdown & (x)) && !(key_isdown & (x)))
 
 extern const unsigned char littlesin[];
 extern const unsigned char fatigue_for_cards[];
@@ -84,3 +86,14 @@ extern void drawicon(unsigned char iconno,  unsigned char x, unsigned char y);
 extern void cleartextbox(unsigned char x, unsigned char y, unsigned char w, unsigned char h);
 extern void drawtextbox(unsigned char x, unsigned char y, unsigned char w, unsigned char h);
 extern void drawstringz(unsigned char *aS, unsigned char aX, unsigned char aY);
+
+extern void drawmoney(unsigned char x, unsigned char y, unsigned char v);
+extern void drawcost(unsigned char x, unsigned char y, unsigned char v);
+extern void int2str(unsigned char val, char s[4]);
+extern void strcat(char *tgt, char *src);
+extern void scan_input();
+extern void ingame();
+extern void cardfx();
+extern void tour();
+extern void shop();
+
