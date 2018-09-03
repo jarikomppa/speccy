@@ -67,12 +67,13 @@ void main()
     key_wasdown = 0;
     input_mode = INPUT_WASD;
     player_money = 10;
+    player_hurt = 12;
 
     port254(0);
     //ingame();
-    //tour();
+    tour();
     //heal();
     //newcard(CARD_FOCUS);
-    shop();
+    //shop();
     while (1);
 }

@@ -58,7 +58,7 @@ extern unsigned char key_isdown;
 extern unsigned char key_wasdown;
 extern unsigned char input_mode;
 extern unsigned char player_money;
-
+extern unsigned char player_hurt;
 
 enum SIMPLEKEYS
 {
@@ -97,4 +97,4 @@ extern void ingame();
 extern void cardfx();
 extern void tour();
 extern void shop();
-
+extern void heal();

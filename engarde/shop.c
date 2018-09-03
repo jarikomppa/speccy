@@ -22,7 +22,7 @@ void shop()
     };
     static const unsigned char shopcost[10] =
     {
-        1,2,2,6,6,14,14,18,22,22
+        2,5,5,15,15,35,35,45,55,55
     };
 
     fillback();
