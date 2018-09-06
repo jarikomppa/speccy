@@ -1,4 +1,4 @@
-# Sol's Stupidly Simple Build System v.1.1
+# Sol's Stupidly Simple Build System v.2.0
 # (c) 2018 Jari Komppa http://iki.fi/sol
 #
 # This software is provided 'as-is', without any express or implied
@@ -8,7 +8,7 @@
 # Permission is granted to anyone to use this software for any purpose,
 # including commercial applications, and to alter it and redistribute it
 # freely, subject to the following restrictions:
-# 
+#
 # 1. The origin of this software must not be misrepresented; you must not
 #    claim that you wrote the original software. If you use this software
 #    in a product, an acknowledgment in the product documentation would be
@@ -18,24 +18,37 @@
 # 3. This notice may not be removed or altered from any source distribution.
 
 import os
+import subprocess
 
-# Add source files here:
+# Add source files here.
+# Special names: 
+# "*" is a sync point, causing all running processes to finish before
+#     continuing, so if you're generating files needed by later sources, 
+#     add sync point before them.
+# "+" is a literal command, like "+del foo.bar" runs "del foo.bar".
 src = [
-    "crt0.s",
-    "primdraw.c",
-    "data.c",
-    "drawstring.c",
-    "ingame.c",
-    "tour.c",
-    "heal.c",
-    "newcard.c",
-    "shop.c",
-    "app.c",
-    "tools.c"
+	"crt0.s",
+	"primdraw.c",
+	"data.c",
+	"drawstring.c",
+	"ingame.c",
+	"tour.c",
+	"heal.c",
+	"newcard.c",
+	"shop.c",
+	"app.c",
+	"tools.c"
 	]
 
-# Add targets here:
-product = ["crt0.ihx", "engarde.tap"]
+# Add targets here. Note that if there's dependencies, 
+# you need the sync ("*") points.
+product = [
+	"crt0.ihx", 
+	"*", 
+	"engarde.tap",
+	"*",
+	"+speccy engarde.tap"
+	]
 
 # Add file suffix based methods here: first param is the resulting
 # suffix, second param is the command to execute. Tags are replaced
@@ -49,13 +62,15 @@ methods = {
 	"tap" : [ "tap", "..\\tools\\mackarel crt0.ihx %DSTFILE Engarde loader.scr -nosprestore -noei"]
 	}
 
-# If you want to add tags, just add keys here, 
+# If you want to add tags, just add keys here,
 # like "SDCC": "../sdcc350/bin/sdcc":
 objectlists = {}
 
 #####################################################################
 #####################################################################
 #####################################################################
+
+procs = []
 
 changed = False
 
@@ -64,7 +79,7 @@ def clear():
 
 # If we want to track includes from .s files, we just need to
 # make a variant of this..
-	
+
 def scandeps_c(srcfile, reftime, recursion = 1):
 	# Avoid infinite loops
 	if recursion < 8:
@@ -85,12 +100,12 @@ def scandeps_c(srcfile, reftime, recursion = 1):
 					reftime = dtime
 	# Return the biggest timestamp found
 	return reftime
-	
+
 def scandeps(srcfile, reftime):
 	if srcfile[srcfile.rfind(".")+1:] in "c h cpp hpp".split():
 		return scandeps_c(srcfile, reftime)
 	return reftime
-	
+
 def agecheck(srcfile, dstfile):
 	if not os.path.isfile(dstfile):
 		return True
@@ -99,7 +114,12 @@ def agecheck(srcfile, dstfile):
 	if (srctime > dsttime):
 		return True
 	return False
-	
+
+class BuildTask:
+	def __init__(self, proc, dstfile):
+		self.proc = proc
+		self.dstfile = dstfile
+
 def build(srcfile, dstfile, method):
 	global changed
 	print "building " + dstfile
@@ -108,45 +128,75 @@ def build(srcfile, dstfile, method):
 	cmd = method.replace("%SRCFILE", srcfile).replace("%DSTFILE", dstfile)
 	for key, value in objectlists.iteritems():
 		cmd = cmd.replace("%"+key.upper(), value)
-	os.system(cmd)
-	if not os.path.isfile(dstfile):
-		print dstfile + " not generated."
-		exit()
+	procs.append(BuildTask(subprocess.Popen(cmd, shell=True, bufsize=8192, stdout=subprocess.PIPE, stderr=subprocess.STDOUT), dstfile))
 	changed = True
-	
+
+def sync():
+	global procs
+	if len(procs) > 0:
+		failboat = False	
+		if len(procs) > 1:
+			print "Waiting for", len(procs), "processes to finish.."
+		for x in procs:
+			x.proc.wait()		
+			if not os.path.isfile(x.dstfile):
+				(a,b) = x.proc.communicate()
+				print a
+				print "Error: " + x.dstfile + " not generated."
+				failboat = True
+		procs = []
+		if failboat:
+			exit()
+
 clear()
 
 # scan all source files, build if changed
 for x in src:
-	if not os.path.isfile(x):
-		print x + " does not exist."
-		exit()
-	fname = x[:x.rfind(".")]
-	suffix = x[x.rfind(".")+1:]
-	if suffix not in methods:
-		print "Don't know how to handle files of type " + suffix + " (in " + x + ")."
-		exit()
-	if methods[suffix][0] not in objectlists:
-		objectlists[methods[suffix][0]] = fname + "." + methods[suffix][0];
+	if x[0] == "*":
+		sync()
 	else:
-		objectlists[methods[suffix][0]] += " " + fname + "." + methods[suffix][0];
-	if agecheck(x, fname + "." + methods[suffix][0]):
-		build(x, fname + "." + methods[suffix][0], methods[suffix][1])
+		if x[0] == "+":
+			os.system(x[1:])
+		else:
+			if not os.path.isfile(x):
+				print x + " does not exist."
+				exit()
+			fname = x[:x.rfind(".")]
+			suffix = x[x.rfind(".")+1:]
+			if suffix not in methods:
+				print "Don't know how to handle files of type " + suffix + " (in " + x + ")."
+				exit()
+			if methods[suffix][0] not in objectlists:
+				objectlists[methods[suffix][0]] = fname + "." + methods[suffix][0];
+			else:
+				objectlists[methods[suffix][0]] += " " + fname + "." + methods[suffix][0];
+			if agecheck(x, fname + "." + methods[suffix][0]):
+				build(x, fname + "." + methods[suffix][0], methods[suffix][1])
+
+sync()
 
 for x in product:
-	if not os.path.isfile(x):
+	if x[0] not in "*+" and not os.path.isfile(x):
 		changed = True
-		
+
 # if source files have changed, link
 if changed:
 	for x in product:
-		fname = x[:x.rfind(".")]
-		suffix = x[x.rfind(".")+1:]
-		if suffix not in methods:
-			print "Don't know how to handle files of type " + suffix + " (in " + x + ")."
-		build(x, fname + "." + methods[suffix][0], methods[suffix][1])
+		if x[0] == "*":
+			sync()
+		else:
+			if x[0] == "+":
+				os.system(x[1:])
+			else:
+				fname = x[:x.rfind(".")]
+				suffix = x[x.rfind(".")+1:]
+				if suffix not in methods:
+					print "Don't know how to handle files of type " + suffix + " (in " + x + ")."
+				build(x, fname + "." + methods[suffix][0], methods[suffix][1])
 else:
 	print "Nothing to do."
 	exit()
+
+sync()
 
 print "All done."
