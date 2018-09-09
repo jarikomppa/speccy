@@ -86,6 +86,8 @@ extern void drawmug(unsigned char mugno,  unsigned char x, unsigned char y);
 extern void drawicon(unsigned char iconno,  unsigned char x, unsigned char y);
 extern void cleartextbox(unsigned char x, unsigned char y, unsigned char w, unsigned char h);
 extern void drawtextbox(unsigned char x, unsigned char y, unsigned char w, unsigned char h);
+extern void cleartextbox_color(unsigned char x, unsigned char y, unsigned char w, unsigned char h, unsigned char c);
+extern void drawtextbox_color(unsigned char x, unsigned char y, unsigned char w, unsigned char h, unsigned char c);
 extern void drawstringz(unsigned char *aS, unsigned char aX, unsigned char aY);
 
 extern void drawmoney(unsigned char x, unsigned char y, unsigned char v);

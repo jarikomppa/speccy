@@ -1,4 +1,4 @@
-# Sol's Stupidly Simple Build System v.2.0
+# Sol's Stupidly Simple Build System v.2.1
 # (c) 2018 Jari Komppa http://iki.fi/sol
 #
 # This software is provided 'as-is', without any express or implied
@@ -21,12 +21,13 @@ import os
 import subprocess
 
 # Add source files here.
-# Special names: 
+# Special names:
 # "*" is a sync point, causing all running processes to finish before
-#     continuing, so if you're generating files needed by later sources, 
+#     continuing, so if you're generating files needed by later sources,
 #     add sync point before them.
-# "+" is a literal command, like "+del foo.bar" runs "del foo.bar".
+# "+" is a literal shell command, like "+del foo.bar" runs "del foo.bar".
 src = [
+    "+cls",
 	"crt0.s",
 	"primdraw.c",
 	"data.c",
@@ -40,11 +41,11 @@ src = [
 	"tools.c"
 	]
 
-# Add targets here. Note that if there's dependencies, 
+# Add targets here. Note that if there's dependencies,
 # you need the sync ("*") points.
 product = [
-	"crt0.ihx", 
-	"*", 
+	"crt0.ihx",
+	"*",
 	"engarde.tap",
 	"*",
 	"+speccy engarde.tap"
@@ -70,19 +71,24 @@ objectlists = {}
 #####################################################################
 #####################################################################
 
+class BuildTask:
+	def __init__(self, proc, dstfile):
+		self.proc = proc
+		self.dstfile = dstfile
+
 procs = []
 
 changed = False
 
-def clear():
-	os.system("cls")
-
 # If we want to track includes from .s files, we just need to
 # make a variant of this..
 
-def scandeps_c(srcfile, reftime, recursion = 1):
+def scandeps_c(srcfile, reftime, ignore = None):
 	# Avoid infinite loops
-	if recursion < 8:
+	if ignore is None:
+		ignore = set()
+	if srcfile not in ignore:
+		ignore.add(srcfile)
 		# It's ok if we don't find the file, we'll just skip it
 		if os.path.isfile(srcfile):
 			dtime = os.path.getmtime(srcfile)
@@ -95,7 +101,7 @@ def scandeps_c(srcfile, reftime, recursion = 1):
 					if len(line.strip()) > 0 and line.strip()[0] == "#" and "include" in line and '"' in line:
 						inc.append(line)
 			for x in inc:
-				dtime = scandeps_c(x[x.find('"')+1:x.rfind('"')], reftime, recursion + 1)
+				dtime = scandeps_c(x[x.find('"')+1:x.rfind('"')], reftime, ignore)
 				if (dtime > reftime):
 					reftime = dtime
 	# Return the biggest timestamp found
@@ -115,11 +121,6 @@ def agecheck(srcfile, dstfile):
 		return True
 	return False
 
-class BuildTask:
-	def __init__(self, proc, dstfile):
-		self.proc = proc
-		self.dstfile = dstfile
-
 def build(srcfile, dstfile, method):
 	global changed
 	print "building " + dstfile
@@ -133,22 +134,29 @@ def build(srcfile, dstfile, method):
 
 def sync():
 	global procs
-	if len(procs) > 0:
-		failboat = False	
-		if len(procs) > 1:
-			print "Waiting for", len(procs), "processes to finish.."
-		for x in procs:
-			x.proc.wait()		
-			if not os.path.isfile(x.dstfile):
-				(a,b) = x.proc.communicate()
-				print a
-				print "Error: " + x.dstfile + " not generated."
-				failboat = True
-		procs = []
-		if failboat:
-			exit()
+	failboat = False
+	livecount = 0
+	for x in procs:
+		if x.proc.poll() is None:
+			livecount += 1
+	# If more than one process is still running, print info.
+	if livecount > 1:
+		print "Waiting for", len(procs), "processes to finish.."
+	for x in procs:
+		(a,b) = x.proc.communicate()
+		# avoid printing empty lines..
+		if a != "":
+			print a
+		if not os.path.isfile(x.dstfile):
+			print "Error: " + x.dstfile + " not generated."
+			failboat = True
+	procs = []
+	if failboat:
+		exit()
 
-clear()
+#####################################################################
+#####################################################################
+#####################################################################
 
 # scan all source files, build if changed
 for x in src:
@@ -173,13 +181,15 @@ for x in src:
 			if agecheck(x, fname + "." + methods[suffix][0]):
 				build(x, fname + "." + methods[suffix][0], methods[suffix][1])
 
+# Sync before moving to product phase
 sync()
 
+# If targets don't exist, build them
 for x in product:
 	if x[0] not in "*+" and not os.path.isfile(x):
 		changed = True
 
-# if source files have changed, link
+# if source files have changed, or targets don't change, link
 if changed:
 	for x in product:
 		if x[0] == "*":
@@ -197,6 +207,7 @@ else:
 	print "Nothing to do."
 	exit()
 
+# Final sync just to be sure
 sync()
 
 print "All done."

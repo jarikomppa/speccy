@@ -19,6 +19,7 @@ void drawcost(unsigned char x, unsigned char y, unsigned char v)
     strcat(temp, " crowns.");
     drawstringz(temp, x, y);
 }
+
 void colorbox(unsigned char x, unsigned char y, unsigned char w, unsigned char h, unsigned char c)
 {
     unsigned short o, i, j;
@@ -130,14 +131,17 @@ void drawicon(unsigned char iconno,  unsigned char x, unsigned char y)
     }
 }
 
-
 void cleartextbox(unsigned char x, unsigned char y, unsigned char w, unsigned char h)
+{
+    cleartextbox_color(x,y,w,h,COLOR(0,1,7,0));
+}
+
+void cleartextbox_color(unsigned char x, unsigned char y, unsigned char w, unsigned char h, unsigned char c)
 {
     unsigned short o, i, j;
     unsigned char oh, oy;
     oh = h;
     oy = y;
-    colorbox(x+1,oy+1,w-2,oh-2,COLOR(0,1,7,7));
 
     h *= 8;
     y *= 8;
@@ -152,16 +156,20 @@ void cleartextbox(unsigned char x, unsigned char y, unsigned char w, unsigned ch
         }
     }
     
-    colorbox(x+1,oy+1,w-2,oh-2,COLOR(0,1,7,0));
+    colorbox(x+1,oy+1,w-2,oh-2,c);
 }
 
 void drawtextbox(unsigned char x, unsigned char y, unsigned char w, unsigned char h)
+{
+    drawtextbox_color(x,y,w,h,COLOR(0,1,7,0));
+}
+
+void drawtextbox_color(unsigned char x, unsigned char y, unsigned char w, unsigned char h, unsigned char c)
 {
     unsigned short o, o2, i, j;
     unsigned char oh, oy;
     oh = h;
     oy = y;
-    colorbox(x,oy,w,oh,COLOR(0,1,7,7));
 
     h *= 8;
     y *= 8;
@@ -192,6 +200,5 @@ void drawtextbox(unsigned char x, unsigned char y, unsigned char w, unsigned cha
         *((unsigned char*)o) = 0x80;
         *((unsigned char*)o + w - 1) = 0x01;
     }    
-    colorbox(x,oy,w,oh,COLOR(0,1,7,0));
-
+    colorbox(x,oy,w,oh,c);
 }
