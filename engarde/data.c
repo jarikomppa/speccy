@@ -52,3 +52,5 @@ unsigned char key_wasdown;
 unsigned char input_mode;
 unsigned char player_money;
 unsigned char player_hurt;
+
+unsigned char stage[10];

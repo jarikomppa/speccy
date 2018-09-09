@@ -1,5 +1,12 @@
 #include "main.h"
 
+const char stagecolors[3] = {
+	COLOR(0,0,7,0), // locked
+	COLOR(1,0,7,0), // fight
+	COLOR(0,0,6,0)  // done
+};
+
+
 void tour()
 {
 	char pos = 0;
@@ -46,51 +53,56 @@ void tour()
     while (1) 
     {
         static const unsigned char positionsx[12] = { 
+/*
 		2,  6, 10, 14, 18, 22, 
 		2,     10, 14, 18,
 		           14,
-                   14	 };            
+                   14	 };      
+*/
+		2, 2, 6, 10, 10, 14, 14, 14, 14, 18, 18, 22
+	};
+				   
         static const unsigned char positionsy[12] = { 
+		/*
 		4,  8,  4,  2,  4,  8, 
 		12,    12,  6, 12, 
 		           10,
 				   14	};
+				   */
+		4, 12, 8, 4, 12, 2, 6, 10, 14, 4, 12, 8
+}		;
 				   /*
 		0   1   2   3   4   5
 		6       7   8   9
 		           10
 				   11
+				   
+				   
+				    5
+		0   2   3   6   9  11
+		1       4   7  10
+		            8
+					
 				   */
 		static const unsigned char r[12] = {
-		1,  2,  8,  4,  5,  0,
-		1,     10,  4,  5,
-                    9,
-                    9					
+	/*  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11 */
+		2,  2,  3,  6,  7,  9,  9, 10, 10, 11, 11,  0
 		};
 		static const unsigned char l[12] = {
-		5,  0,  1,  2,  8,  4,
-		5,      1,  2, 10,
-                    7,
-                    7					
+	/*   0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11 */
+		11, 11,  0,  2,  2,  3,  3,  4,  4,  6,  7,  9
 		};
 		static const unsigned char u[12] = {
-		6,  1,  7, 11,  9,  5,
-		0,      2,  3,  4,
-                    8,
-                   10					
+	/*   0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11 */
+		 1,  0,  2,  4,  3,  8,  5,  6,  7, 10,  9, 11
 		};
 		static const unsigned char d[12] = {
-		6,  1,  7,  8,  9,  5,
-		0,      2, 10,  4,
-                   11,
-                    3					
+	/*   0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11 */
+		 1,  0,  2,  4,  3,  6,  7,  8,  5, 10,  9, 11
 		};
 
 		static const unsigned char posmug[12] = {
-		3,  5,  4,  7,  8,  1,
-		3,      0, 11,  2,
-		            9,
-				   10
+		3, 3, 5, 4, 0, 7, 11, 9, 10, 8, 2, 1
 		};
 		
         scan_input();
@@ -115,7 +127,7 @@ void tour()
                 {
 					char oldico = 3;
 					if (oldpos == 0) oldico = 4;
-					if (oldpos == 6) oldico = 5;
+					if (oldpos == 1) oldico = 5;
 					drawicon(oldico, positionsx[oldpos], positionsy[oldpos]);
 
 					cleartextbox(1,18,30,5);
@@ -124,10 +136,17 @@ void tour()
 					if (pos == 0)
 						drawstringz("Store", 27, 12);
 					else
-					if (pos == 6)
+					if (pos == 1)
 						drawstringz("Heal", 27, 12);
 					else
-						drawstringz("Fight", 27, 12);
+					{
+						if (stage[pos-2] == 0)
+							drawstringz("Lock!", 27, 12);
+						if (stage[pos-2] == 1)
+							drawstringz("Fight", 27, 12);
+						if (stage[pos-2] == 2)
+							drawstringz("Done", 27, 12);
+					}
 
 					drawmug(posmug[pos],26,5);						
 				}

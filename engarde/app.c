@@ -68,6 +68,17 @@ void main()
     input_mode = INPUT_WASD;
     player_money = 10;
     player_hurt = 12;
+	stage[0] = 2;
+	stage[1] = 1;
+	stage[2] = 0;
+	stage[3] = 0;
+	stage[4] = 0;
+	stage[5] = 0;
+	stage[6] = 0;
+	stage[7] = 0;
+	stage[8] = 0;
+	stage[9] = 0;
+
 
     port254(0);
     //ingame();

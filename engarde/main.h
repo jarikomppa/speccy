@@ -60,6 +60,9 @@ extern unsigned char input_mode;
 extern unsigned char player_money;
 extern unsigned char player_hurt;
 
+extern unsigned char stage[];
+
+
 enum SIMPLEKEYS
 {
     KEY_LEFT = 1 << 0,
