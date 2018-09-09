@@ -62,13 +62,13 @@ void tour()
 				   11
 				   */
 		static const unsigned char r[12] = {
-		1,  2,  3,  4,  5,  0,
+		1,  2,  8,  4,  5,  0,
 		1,     10,  4,  5,
                     9,
                     9					
 		};
 		static const unsigned char l[12] = {
-		5,  0,  1,  2,  3,  4,
+		5,  0,  1,  2,  8,  4,
 		5,      1,  2, 10,
                     7,
                     7					
@@ -86,6 +86,13 @@ void tour()
                     3					
 		};
 
+		static const unsigned char posmug[12] = {
+		3,  5,  4,  7,  8,  1,
+		3,      0, 11,  2,
+		            9,
+				   10
+		};
+		
         scan_input();
         {
             unsigned char triggered = 0;
@@ -106,8 +113,24 @@ void tour()
                 key_wasdown = 0;
                 if (pos != oldpos)
                 {
-                }
+					char oldico = 3;
+					if (oldpos == 0) oldico = 4;
+					if (oldpos == 6) oldico = 5;
+					drawicon(oldico, positionsx[oldpos], positionsy[oldpos]);
 
+					cleartextbox(1,18,30,5);
+					cleartextbox(26,11,5,3);
+
+					if (pos == 0)
+						drawstringz("Store", 27, 12);
+					else
+					if (pos == 6)
+						drawstringz("Heal", 27, 12);
+					else
+						drawstringz("Fight", 27, 12);
+
+					drawmug(posmug[pos],26,5);						
+				}
             }
         }
         frame++;
