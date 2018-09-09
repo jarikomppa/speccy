@@ -2,8 +2,8 @@
 
 const char stagecolors[3] = {
 	COLOR(0,0,7,0), // locked
-	COLOR(1,0,7,0), // fight
-	COLOR(0,0,6,0)  // done
+	COLOR(0,1,7,0), // fight
+	COLOR(0,0,0,2)  // done
 };
 
 
@@ -19,29 +19,29 @@ void tour()
     drawicon(4, 2, 4);    
     drawicon(5, 2, 12);    
        
-    drawtextbox(5,1,4,16);
+    drawtextbox_color(5,1,4,16, stagecolors[stage[0]]);
     drawicon(3, 6, 8);
     
-    drawtextbox(9,1,4,8);
-    drawtextbox(9,9,4,8);
+    drawtextbox_color(9,1,4,8, stagecolors[stage[1]]);
+    drawtextbox_color(9,9,4,8, stagecolors[stage[2]]);
     drawicon(3, 10, 4);
     drawicon(3, 10, 12);
     
-    drawtextbox_color(13,1,4,4, COLOR(0,0,7,0));
-    drawtextbox(13,5,4,4);
-    drawtextbox(13,9,4,4);
-    drawtextbox(13,13,4,4);
+    drawtextbox_color(13,1,4,4, stagecolors[stage[3]]);
+    drawtextbox_color(13,5,4,4, stagecolors[stage[4]]);
+    drawtextbox_color(13,9,4,4, stagecolors[stage[5]]);
+    drawtextbox_color(13,13,4,4, stagecolors[stage[6]]);
     drawicon(3, 14, 2);
     drawicon(3, 14, 6);
     drawicon(3, 14, 10);
     drawicon(3, 14, 14);
 
-    drawtextbox(17,1,4,8);
-    drawtextbox(17,9,4,8);
+    drawtextbox_color(17,1,4,8, stagecolors[stage[7]]);
+    drawtextbox_color(17,9,4,8, stagecolors[stage[8]]);
     drawicon(3, 18, 4);
     drawicon(3, 18, 12);
 
-    drawtextbox(21,1,4,16);
+    drawtextbox_color(21,1,4,16, stagecolors[stage[9]]);
     drawicon(3, 22, 8);
    
     drawtextbox(1,18,30,5);
@@ -70,14 +70,8 @@ void tour()
 				   14	};
 				   */
 		4, 12, 8, 4, 12, 2, 6, 10, 14, 4, 12, 8
-}		;
+		};
 				   /*
-		0   1   2   3   4   5
-		6       7   8   9
-		           10
-				   11
-				   
-				   
 				    5
 		0   2   3   6   9  11
 		1       4   7  10
@@ -130,7 +124,6 @@ void tour()
 					if (oldpos == 1) oldico = 5;
 					drawicon(oldico, positionsx[oldpos], positionsy[oldpos]);
 
-					cleartextbox(1,18,30,5);
 					cleartextbox(26,11,5,3);
 
 					if (pos == 0)
@@ -149,6 +142,68 @@ void tour()
 					}
 
 					drawmug(posmug[pos],26,5);						
+
+					cleartextbox(1,18,30,5);
+					switch (pos)
+					{
+						case 0:
+							drawstringz("Here you can spend crowns to improve your deck.", 2, 19);
+							drawmoney(2, 21, player_money);
+							break;
+						case 1:
+							drawstringz("Here you can spend crowns to heal your wounds.", 2, 19);
+							drawmoney(2, 21, player_money);
+							break;
+						case 2:
+							drawstringz("Lorem ipsum1", 2, 19);
+							drawstringz("dolor set amet.1", 2, 20);
+							break;
+						case 3:
+							drawstringz("Lorem ipsum2", 2, 19);
+							drawstringz("dolor set amet.2", 2, 20);
+							break;
+						case 4:
+							drawstringz("Lorem ipsum3", 2, 19);
+							drawstringz("dolor set amet.3", 2, 20);
+							break;
+						case 5:
+							drawstringz("Lorem ipsum4", 2, 19);
+							drawstringz("dolor set amet.4", 2, 20);
+							break;
+						case 6:
+							drawstringz("Lorem ipsum5", 2, 19);
+							drawstringz("dolor set amet.5", 2, 20);
+							break;
+						case 7:
+							drawstringz("Lorem ipsum6", 2, 19);
+							drawstringz("dolor set amet.6", 2, 20);
+							break;
+						case 8:
+							drawstringz("Lorem ipsum7", 2, 19);
+							drawstringz("dolor set amet.7", 2, 20);
+							break;
+						case 9:
+							drawstringz("Lorem ipsum8", 2, 19);
+							drawstringz("dolor set amet.8", 2, 20);
+							break;
+						case 10:
+							drawstringz("Lorem ipsum9", 2, 19);
+							drawstringz("dolor set amet.9", 2, 20);
+							break;
+						case 11:
+							drawstringz("Lord Masdevalja.", 2, 19);
+							drawstringz("Your ultimate goal.", 2, 20);
+							break;
+					}
+					if (pos > 1)
+					{
+						if (stage[pos-2] == 0)
+							drawstringz("Locked - beat earlier stages to open.", 2, 21);
+						if (stage[pos-2] == 1)
+							drawstringz("Open for your challenge.", 2, 21);
+						if (stage[pos-2] == 2)
+							drawstringz("You've beaten this stage already.", 2, 21);
+					}
 				}
             }
         }
