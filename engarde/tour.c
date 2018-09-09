@@ -2,6 +2,9 @@
 
 void tour()
 {
+	char pos = 0;
+	char frame = 0;
+	char commit = 0;
     // 32x24
     fillback();
     drawtextbox(1,2,4,6);
@@ -17,7 +20,7 @@ void tour()
     drawicon(3, 10, 4);
     drawicon(3, 10, 12);
     
-    drawtextbox(13,1,4,4);
+    drawtextbox_color(13,1,4,4, COLOR(0,0,7,0));
     drawtextbox(13,5,4,4);
     drawtextbox(13,9,4,4);
     drawtextbox(13,13,4,4);
@@ -40,5 +43,76 @@ void tour()
     drawmug(3,26,5);
     drawstringz("Store", 27, 12);
     
-    while (1) do_halt();
+    while (1) 
+    {
+        static const unsigned char positionsx[12] = { 
+		2,  6, 10, 14, 18, 22, 
+		2,     10, 14, 18,
+		           14,
+                   14	 };            
+        static const unsigned char positionsy[12] = { 
+		4,  8,  4,  2,  4,  8, 
+		12,    12,  6, 12, 
+		           10,
+				   14	};
+				   /*
+		0   1   2   3   4   5
+		6       7   8   9
+		           10
+				   11
+				   */
+		static const unsigned char r[12] = {
+		1,  2,  3,  4,  5,  0,
+		1,     10,  4,  5,
+                    9,
+                    9					
+		};
+		static const unsigned char l[12] = {
+		5,  0,  1,  2,  3,  4,
+		5,      1,  2, 10,
+                    7,
+                    7					
+		};
+		static const unsigned char u[12] = {
+		6,  1,  7, 11,  9,  5,
+		0,      2,  3,  4,
+                    8,
+                   10					
+		};
+		static const unsigned char d[12] = {
+		6,  1,  7,  8,  9,  5,
+		0,      2, 10,  4,
+                   11,
+                    3					
+		};
+
+        scan_input();
+        {
+            unsigned char triggered = 0;
+            unsigned char oldpos = pos;
+            if (TRIGGER(KEY_RIGHT)) { triggered = 1; pos = r[pos]; }
+            if (TRIGGER(KEY_LEFT)) { triggered = 1; pos = l[pos]; }
+            if (TRIGGER(KEY_UP)) { triggered = 1; pos = u[pos]; }
+            if (TRIGGER(KEY_DOWN)) { triggered = 1; pos = d[pos]; }
+            if (TRIGGER(KEY_FIRE)) { triggered = 1; commit = 1; }
+            if (triggered) 
+            {
+                if (commit)
+                {
+                    if (pos == 5)
+                        return;
+                    return;
+                }
+                key_wasdown = 0;
+                if (pos != oldpos)
+                {
+                }
+
+            }
+        }
+        frame++;
+        drawicon(littlesin[frame & 15], positionsx[pos], positionsy[pos]);
+        do_halt();
+        do_halt();
+    }
 }
