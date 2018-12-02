@@ -43,12 +43,12 @@ void newcard(unsigned char newcardid)
             if (TRIGGER(KEY_FIRE)) { triggered = 1; commit = 1; }
             if (triggered) 
             {
+                key_wasdown = 0;
                 if (commit)
                 {
                     // Todo: replace card 
                     return;
                 }
-                key_wasdown = 0;
                 if (oldpos < 5)
                     drawcard(oldpos+1,oldpos * 4 + 1, 0 ,COLOR(0,1,0,7));
                 if (oldpos == 5)

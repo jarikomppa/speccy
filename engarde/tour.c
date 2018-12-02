@@ -7,6 +7,92 @@ const char stagecolors[3] = {
 };
 
 
+void update_tour(unsigned char pos)
+{
+	static const unsigned char posmug[12] = {
+	3, 3, 5, 4, 0, 7, 11, 9, 10, 8, 2, 1
+	};	
+
+	if (pos == 0)
+		drawstringz("Store", 27, 12);
+	else
+	if (pos == 1)
+		drawstringz("Heal", 27, 12);
+	else
+	{
+		if (stage[pos-2] == 0)
+			drawstringz("Lock!", 27, 12);
+		if (stage[pos-2] == 1)
+			drawstringz("Fight", 27, 12);
+		if (stage[pos-2] == 2)
+			drawstringz("Done", 27, 12);
+	}
+
+	drawmug(posmug[pos],26,5);						
+
+	cleartextbox(1,18,30,5);
+	switch (pos)
+	{
+		case 0:
+			drawstringz("Here you can spend crowns to improve your deck.", 2, 19);
+			drawmoney(2, 21, player_money);
+			break;
+		case 1:
+			drawstringz("Here you can spend crowns to heal your wounds.", 2, 19);
+			drawmoney(2, 21, player_money);
+			break;
+		case 2:
+			drawstringz("Lorem ipsum1", 2, 19);
+			drawstringz("dolor set amet.1", 2, 20);
+			break;
+		case 3:
+			drawstringz("Lorem ipsum2", 2, 19);
+			drawstringz("dolor set amet.2", 2, 20);
+			break;
+		case 4:
+			drawstringz("Lorem ipsum3", 2, 19);
+			drawstringz("dolor set amet.3", 2, 20);
+			break;
+		case 5:
+			drawstringz("Lorem ipsum4", 2, 19);
+			drawstringz("dolor set amet.4", 2, 20);
+			break;
+		case 6:
+			drawstringz("Lorem ipsum5", 2, 19);
+			drawstringz("dolor set amet.5", 2, 20);
+			break;
+		case 7:
+			drawstringz("Lorem ipsum6", 2, 19);
+			drawstringz("dolor set amet.6", 2, 20);
+			break;
+		case 8:
+			drawstringz("Lorem ipsum7", 2, 19);
+			drawstringz("dolor set amet.7", 2, 20);
+			break;
+		case 9:
+			drawstringz("Lorem ipsum8", 2, 19);
+			drawstringz("dolor set amet.8", 2, 20);
+			break;
+		case 10:
+			drawstringz("Lorem ipsum9", 2, 19);
+			drawstringz("dolor set amet.9", 2, 20);
+			break;
+		case 11:
+			drawstringz("Lord Masdevalja.", 2, 19);
+			drawstringz("Your ultimate goal.", 2, 20);
+			break;
+	}
+	if (pos > 1)
+	{
+		if (stage[pos-2] == 0)
+			drawstringz("Locked - beat earlier stages to open.", 2, 21);
+		if (stage[pos-2] == 1)
+			drawstringz("Open for your challenge.", 2, 21);
+		if (stage[pos-2] == 2)
+			drawstringz("You've beaten this stage already.", 2, 21);
+	}
+}
+
 void tour()
 {
 	char pos = 0;
@@ -50,6 +136,8 @@ void tour()
     drawmug(3,26,5);
     drawstringz("Store", 27, 12);
     
+	update_tour(0);
+	
     while (1) 
     {
         static const unsigned char positionsx[12] = { 
@@ -60,7 +148,7 @@ void tour()
                    14	 };      
 */
 		2, 2, 6, 10, 10, 14, 14, 14, 14, 18, 18, 22
-	};
+		};
 				   
         static const unsigned char positionsy[12] = { 
 		/*
@@ -94,11 +182,7 @@ void tour()
 	/*   0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11 */
 		 1,  0,  2,  4,  3,  6,  7,  8,  5, 10,  9, 11
 		};
-
-		static const unsigned char posmug[12] = {
-		3, 3, 5, 4, 0, 7, 11, 9, 10, 8, 2, 1
-		};
-		
+	
         scan_input();
         {
             unsigned char triggered = 0;
@@ -110,13 +194,26 @@ void tour()
             if (TRIGGER(KEY_FIRE)) { triggered = 1; commit = 1; }
             if (triggered) 
             {
+                key_wasdown = 0;
                 if (commit)
                 {
-                    if (pos == 5)
+                    if (pos == 0)
+					{
+						game_state = 2; // shop
                         return;
-                    return;
+					}
+                    if (pos == 1)
+					{
+						game_state = 1; // heal
+                        return;
+					}
+					if (stage[pos-2] == 1)
+					{
+						game_stage = pos-2;
+						game_state = 3; // ingame
+						return;
+					}
                 }
-                key_wasdown = 0;
                 if (pos != oldpos)
                 {
 					char oldico = 3;
@@ -125,85 +222,7 @@ void tour()
 					drawicon(oldico, positionsx[oldpos], positionsy[oldpos]);
 
 					cleartextbox(26,11,5,3);
-
-					if (pos == 0)
-						drawstringz("Store", 27, 12);
-					else
-					if (pos == 1)
-						drawstringz("Heal", 27, 12);
-					else
-					{
-						if (stage[pos-2] == 0)
-							drawstringz("Lock!", 27, 12);
-						if (stage[pos-2] == 1)
-							drawstringz("Fight", 27, 12);
-						if (stage[pos-2] == 2)
-							drawstringz("Done", 27, 12);
-					}
-
-					drawmug(posmug[pos],26,5);						
-
-					cleartextbox(1,18,30,5);
-					switch (pos)
-					{
-						case 0:
-							drawstringz("Here you can spend crowns to improve your deck.", 2, 19);
-							drawmoney(2, 21, player_money);
-							break;
-						case 1:
-							drawstringz("Here you can spend crowns to heal your wounds.", 2, 19);
-							drawmoney(2, 21, player_money);
-							break;
-						case 2:
-							drawstringz("Lorem ipsum1", 2, 19);
-							drawstringz("dolor set amet.1", 2, 20);
-							break;
-						case 3:
-							drawstringz("Lorem ipsum2", 2, 19);
-							drawstringz("dolor set amet.2", 2, 20);
-							break;
-						case 4:
-							drawstringz("Lorem ipsum3", 2, 19);
-							drawstringz("dolor set amet.3", 2, 20);
-							break;
-						case 5:
-							drawstringz("Lorem ipsum4", 2, 19);
-							drawstringz("dolor set amet.4", 2, 20);
-							break;
-						case 6:
-							drawstringz("Lorem ipsum5", 2, 19);
-							drawstringz("dolor set amet.5", 2, 20);
-							break;
-						case 7:
-							drawstringz("Lorem ipsum6", 2, 19);
-							drawstringz("dolor set amet.6", 2, 20);
-							break;
-						case 8:
-							drawstringz("Lorem ipsum7", 2, 19);
-							drawstringz("dolor set amet.7", 2, 20);
-							break;
-						case 9:
-							drawstringz("Lorem ipsum8", 2, 19);
-							drawstringz("dolor set amet.8", 2, 20);
-							break;
-						case 10:
-							drawstringz("Lorem ipsum9", 2, 19);
-							drawstringz("dolor set amet.9", 2, 20);
-							break;
-						case 11:
-							drawstringz("Lord Masdevalja.", 2, 19);
-							drawstringz("Your ultimate goal.", 2, 20);
-							break;
-					}
-					if (pos > 1)
-					{
-						if (stage[pos-2] == 0)
-							drawstringz("Locked - beat earlier stages to open.", 2, 21);
-						if (stage[pos-2] == 1)
-							drawstringz("Open for your challenge.", 2, 21);
-						if (stage[pos-2] == 2)
-							drawstringz("You've beaten this stage already.", 2, 21);
-					}
+					update_tour(pos);
 				}
             }
         }

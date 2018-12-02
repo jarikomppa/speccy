@@ -68,8 +68,8 @@ void main()
     input_mode = INPUT_WASD;
     player_money = 10;
     player_hurt = 12;
-	stage[0] = 2;
-	stage[1] = 1;
+	stage[0] = 1;
+	stage[1] = 0;
 	stage[2] = 0;
 	stage[3] = 0;
 	stage[4] = 0;
@@ -79,12 +79,26 @@ void main()
 	stage[8] = 0;
 	stage[9] = 0;
 
+	game_state = 0;
+	game_stage = 0;
 
     port254(0);
-    //ingame();
-    tour();
-    //heal();
+	while(1)
+	switch (game_state)
+	{
+//		case 0:
+		default:
+			tour();
+			break;
+		case 1:
+			heal();
+			break;
+		case 2:
+			shop();
+			break;
+		case 3:
+			ingame();
+			break;
     //newcard(CARD_FOCUS);
-    //shop();
-    while (1);
+	}
 }

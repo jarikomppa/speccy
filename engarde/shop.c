@@ -4,15 +4,16 @@ void shop()
 {
     unsigned short i;
     unsigned char pos = 5;
-    unsigned char commit = 0;
     unsigned char frame = 0;
-    static const unsigned char shoporder[10] = 
+    static const unsigned char shoporder[11] = 
     {
         CARD_FOCUS,
         CARD_ATK1,
         CARD_DEF1,
         CARD_ATK2,
         CARD_DEF2,
+		
+		0,
         
         CARD_ATK3,
         CARD_DEF3,
@@ -20,9 +21,11 @@ void shop()
         CARD_ATK2DEF1,
         CARD_ATK1DEF2
     };
-    static const unsigned char shopcost[10] =
+    static const unsigned char shopcost[11] =
     {
-        2,5,5,15,15,35,35,45,55,55
+        2,5,5,15,15,
+		0,
+		35,35,45,55,55
     };
 
     fillback();
@@ -36,7 +39,7 @@ void shop()
     for (i = 0; i < 5; i++)
     {
         drawcard(shoporder[i], 1 + i * 4, 1, COLOR(0,1,0,7));
-        drawcard(shoporder[i+5], 1 + i * 4, 7, COLOR(0,1,0,7));
+        drawcard(shoporder[i+6], 1 + i * 4, 7, COLOR(0,1,0,7));
     }
     
     drawtextbox(22,5,9,4);
@@ -54,20 +57,28 @@ void shop()
         {
             unsigned char triggered = 0;
             unsigned char oldpos = pos;
+			unsigned char commit = 0;
             if (TRIGGER(KEY_RIGHT)) { triggered = 1; pos++; if (pos == 11) pos = 5; }
             if (TRIGGER(KEY_LEFT)) { triggered = 1; pos--; if (pos == 255) pos = 10; }
             if (TRIGGER(KEY_DOWN) || TRIGGER(KEY_UP)) { triggered = 1; if (pos < 5) pos += 6; else if (pos > 5) pos -= 6;}
             if (TRIGGER(KEY_FIRE)) { triggered = 1; commit = 1; }
             if (triggered) 
             {
+                key_wasdown = 0;
                 if (commit)
                 {
                     if (pos == 5)
+					{
+						game_state = 0;
                         return;
-                    // Todo: replace card 
-                    return;
+					}
+					if (player_money >= shopcost[pos])
+					{
+						player_money -= shopcost[pos];
+						newcard(shoporder[pos]);
+						return;
+					}
                 }
-                key_wasdown = 0;
                 if (pos != oldpos)
                 {
                     if (oldpos < 5)
@@ -129,11 +140,8 @@ void shop()
                         break;
                 }
                 
-                if (pos < 5)
+                if (pos != 5)
                     drawcost(7,21,shopcost[pos]);
-                if (pos > 5)
-                    drawcost(7,21,shopcost[pos-1]);
-
             }
         }
         frame++;

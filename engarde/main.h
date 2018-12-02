@@ -59,6 +59,9 @@ extern unsigned char key_wasdown;
 extern unsigned char input_mode;
 extern unsigned char player_money;
 extern unsigned char player_hurt;
+extern unsigned char game_state;
+extern unsigned char game_stage;
+
 
 extern unsigned char stage[];
 
@@ -103,3 +106,5 @@ extern void cardfx();
 extern void tour();
 extern void shop();
 extern void heal();
+extern void newcard(unsigned char newcardid);
+

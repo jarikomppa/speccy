@@ -111,6 +111,10 @@ void update_info(unsigned char selected, unsigned char hand[5], unsigned char po
 
 void ingame()
 {
+	static const unsigned char stagemug[10] = {
+	5, 4, 0, 7, 11, 9, 10, 8, 2, 1
+	};	
+
     unsigned char frame;
     unsigned char pos;
     unsigned char selected = 0;
@@ -128,8 +132,8 @@ void ingame()
     while (1)
     {
         fillback();
-        drawmug(0,26,1);
-        drawmug(5,26,17);
+        drawmug(stagemug[game_stage],26,1);
+        drawmug(6,26,17);
         drawtextbox(1, 8, 19, 8);
         drawtextbox(21, 8, 10, 8);
         drawstringz("Enemy HP 7", 22, 9);
@@ -185,7 +189,7 @@ void ingame()
                         case 2: if (selected &  4) c = COLOR(0,1,0,7); drawcard(hand[2],11,17,c); break;
                         case 3: if (selected &  8) c = COLOR(0,1,0,7); drawcard(hand[3],16,17,c); break;
                         case 4: if (selected & 16) c = COLOR(0,1,0,7); drawcard(hand[4],21,17,c); break;
-                        case 5: drawmug(5,26,17); break;
+                        case 5: drawmug(6,26,17); break;
                     }
                     if (!commit)
                     {

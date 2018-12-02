@@ -9,10 +9,12 @@ void heal()
     fillback();
     drawtextbox(6,18,25,5);
     drawmug(3, 1, 17);
+	
+	if (player_hurt>0) pos = 0;
     
     if (player_hurt == 0)
     {
-        drawstringz("This is a place of healing. You're not hurt.", 7, 20);
+        drawstringz("This is a place of healing. You're fine.", 7, 20);
     }
     else
     if (player_hurt < 5)
@@ -63,14 +65,22 @@ void heal()
             if (TRIGGER(KEY_FIRE)) { triggered = 1; commit = 1; }
             if (triggered) 
             {
+                key_wasdown = 0;
                 if (commit)
                 {
                     if (pos == 1)
+					{
+						game_state = 0;
                         return;
-                    // Todo: heal
-                    return;
+					}
+					if (player_money > 0 && player_hurt > 0)
+					{
+						player_hurt--;
+						if (player_hurt>0) player_hurt--;
+						player_money--;
+						return;
+                    }
                 }
-                key_wasdown = 0;
                 if (pos != oldpos)
                 {
                     if (oldpos == 1)
