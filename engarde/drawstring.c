@@ -1,45 +1,39 @@
 #include "main.h"
 
-// 282 bytes as of c7f5295
 void drawstringz(unsigned char *aS, unsigned char aX, unsigned char aY)
 {
-    unsigned char i, *s, *d, sx, c, len;
+    unsigned char i, *s, *d, sx;
     const unsigned char *datap = (unsigned char*)propfont_data - 32 * 8; // font starts from space (32)
     const unsigned char *widthp = (unsigned char*)propfont_width - 32;
     aY *= 8;
-    len = 0;
-    while (aS[len]) len++;
     for (i = 0; i < 8; i++)
     {
-        c = len;
+		unsigned char ch = *aS;
         s = aS;
         sx = 0;
         d = (unsigned char*)yofs[aY] + aX;
-        while (c)
+        while (ch)
         {
-            unsigned char ch = *s;
-            if (ch != 128)
-            {
-                unsigned char data = datap[ch * 8];
-                unsigned char width = widthp[ch];
-                if (data)
-                {
-                    *d |= data >> sx;
-                }
-                
-                sx += width;
-                if (sx > 8)
-                {
-                    d++;
-                    sx -= 8;
-                    if (data)
-                    {
-                        *d = data << (width - sx);
-                    }
-                }
-            }
+			unsigned char data = datap[ch * 8];
+			unsigned char width = widthp[ch];
+			if (data)
+			{
+				*d |= data >> sx;
+			}
+			
+			sx += width;
+			if (sx > 8)
+			{
+				d++;
+				sx -= 8;
+				if (data)
+				{
+					*d = data << (width - sx);
+				}
+			}
+
             s++;
-            c--;
+			ch = *s;
         }
         aY++;
         datap++;
