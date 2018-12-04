@@ -1,19 +1,17 @@
 	.module drawstring
-	.optsdcc -mz80
 	
 	.globl _drawstringz
-	.area _DATA
-	.area _INITIALIZED
-	.area _DABS (ABS)
-	.area _HOME
-	.area _GSINIT
-	.area _GSFINAL
-	.area _GSINIT
-	.area _HOME
-	.area _HOME
 	.area _CODE
 
-;drawstring.c:3: void drawstringz(unsigned char *aS, unsigned char aX, unsigned char aY)
+;   9(ix) = aY
+;   8(ix) = aX
+;  -7(ix) = i (row)
+;   6(ix) &   7(ix) = aS
+;  -3(ix) &  -4(ix) = datap
+;  -1(ix) &  -2(ix) = dest pointer
+;  -5(ix) &  -6(ix) = dest base
+
+; void drawstringz(unsigned char *aS, unsigned char aX, unsigned char aY)
 _drawstringz::
 	push	ix
 	push iy
@@ -22,39 +20,22 @@ _drawstringz::
 	ld	hl,#-15
 	add	hl,sp
 	ld	sp,hl
-;drawstring.c:6: const unsigned char *datap = (unsigned char*)propfont_data - 32 * 8; // font starts from space (32)
-	ld	-9 (ix),#<((_propfont_data - 0x0100))
-	ld	-8 (ix),#>((_propfont_data - 0x0100))
-;drawstring.c:7: const unsigned char *widthp = (unsigned char*)propfont_width - 32;
-;drawstring.c:8: aY *= 8;
+; font data pointer (-32*8 because data starts from space)
+	ld	-4 (ix),#<((_propfont_data - 0x0100))
+	ld	-3 (ix),#>((_propfont_data - 0x0100))
+; Multiply input y by 8
 	ld	a,9 (ix)
 	rlca
 	rlca
 	rlca
 	and	a,#0xf8
 	ld	9 (ix),a
-;drawstring.c:9: for (i = 0; i < 8; i++)
-	ld	a,6 (ix)
-	ld	-11 (ix),a
-	ld	a,7 (ix)
-	ld	-10 (ix),a
-	ld	a,9 (ix)
-	ld	-1 (ix),a
-	ld	-12 (ix),#0x08
-rowloop:
-;drawstring.c:11: unsigned char ch = *aS;
-	ld	c,-11 (ix)
-	ld	b,-10 (ix)
-	ld iy, #0x00
-	add iy, bc
 	
-;drawstring.c:13: s = aS;
-;drawstring.c:14: sx = 0;
-	ld	c,#0x08
-;drawstring.c:15: pd = 0;
-;	ld	b,#0x00 ; not actually needed 
-;drawstring.c:16: d = (unsigned char*)yofs[aY] + aX;
-	ld	l,-1 (ix)
+; row loop counter 
+	ld	-7 (ix),#0x08
+
+; calculate destination offset (from lookup table)
+	ld	l,9 (ix)
 	ld	h,#0x00
 	add	hl, hl
 	ld	de,#_yofs
@@ -68,82 +49,99 @@ rowloop:
 	ld	a,#0x00
 	adc	a, b
 	ld	-5 (ix),a
-;drawstring.c:17: while (ch)
+
+; Row loop - do this 8 times (for 8 pixel high chars)
+rowloop:
+; set iy to point at input string
+	ld	c, 6 (ix)
+	ld	b, 7 (ix)
+	ld iy, #0x00
+	add iy, bc
+
+; destination byte can fir 8 bits
+	ld	c,#0x08
+; destination byte
+;	ld	b,#0x00 ; not actually needed 
+
+; set up destination pointer (base ptr increments per row, copy runs with string)
+    ld a, -5 (ix)
+    ld -1 (ix), a
+    ld a, -6 (ix)
+    ld -2 (ix), a	
+	
+; Loop while input char is not zero
 nextchar:
-;drawstring.c:19: unsigned char data = datap[ch * 8];
-	ld	l,(iy)
-	ld	h,#0x00
+; Grab char and take data slice.
+; This could be optimized by reorganizing data to be linear slice-wise,
+; instead of all 8 bytes of a glyph at once.
+	ld	l, (iy)
+	ld	h, #0x00
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
-	ld	e,-9 (ix)
-	ld	d,-8 (ix)
+	ld	e,-4 (ix)
+	ld	d,-3 (ix)
 	add	hl,de
-	ld	a,(hl)
-	ld d, a
-;drawstring.c:20: unsigned char width = widthp[ch];
-	ld	a,#<((_propfont_width - 0x0020))
+	ld	a, (hl)
+	ld  d, a
+	
+; Find glyph's width
+	ld	a, #<((_propfont_width - 0x0020))
 	add	a, (iy)
-	ld	l,a
-	ld	a,#>((_propfont_width - 0x0020))
+	ld	l, a
+	ld	a, #>((_propfont_width - 0x0020))
 	adc	a, #0x00
-	ld	h,a
-	ld	a,(hl)
-	ld	e,a
+	ld	h, a
+	ld	a, (hl)
+	ld	e, a
 	
 ;drawstring.c:22: while (width)
-	ld	l,-6 (ix)
-	ld	h,-5 (ix)
-	
+	ld	l,-2 (ix)
+	ld	h,-1 (ix)
+
+; Loop for glyph's width	
 widthloop:
 	
-;;drawstring.c:24: pd <<= 1;
-;;drawstring.c:25: pd |= (data & 0x80) != 0;				
-;;drawstring.c:26: data <<= 1;
+	; Rotate pixel through carry to output byte
 	rl d
 	rl b
 	
-;drawstring.c:28: sx++;
+; Decrement pixels that fit in target
 	dec	c
-;drawstring.c:29: if (sx == 8)
-;drawstring.c:31: sx = 0;
 	jr	NZ,bytefull
-	ld	c,#0x08
-;drawstring.c:32: *d = pd;
-	ld	(hl),b
-;drawstring.c:33: d++;
+; we're full, flush byte to screen
+	ld	c, #0x08
+	ld	(hl), b
 	inc	hl
 bytefull:
-;drawstring.c:37: width--;
+; Decrement width, loop if not done with glyph
 	dec e
 	jr NZ, widthloop
-nowidth:
-	ld	-6 (ix),l
-	ld	-5 (ix),h
-;drawstring.c:40: s++;
 
-;drawstring.c:41: ch = *s;
+; store hl (dest ptr)
+	ld	-2 (ix),l
+	ld	-1 (ix),h
+
+; next char, check if we're at end of string
 	inc iy
 	ld a, (iy)
 	or	a, a
 	jr	NZ,nextchar
 lastchar:
 
-
-;drawstring.c:44: if (sx)
-	ld	a,c
+; do we have leftover data?
+	ld	a, c
 	sub	a, #0x08
-	jr	Z,evenbits
-;drawstring.c:46: if (sx < 4)
+	jr	Z, evenbits
+; Do we have at least 5 pixels to go?
 	ld	a,c
 	sub	a, #0x05
-	jr	C,lessthan4
-;drawstring.c:48: sx += 4;
+	jr	C, lastshifts
+; Do 4 pixels on one go
 	dec	c
 	dec	c
 	dec	c
 	dec	c
-;drawstring.c:49: pd <<= 4;
 	ld	a,b
 	rlca
 	rlca
@@ -151,33 +149,25 @@ lastchar:
 	rlca
 	and	a,#0xf0
 	ld	b,a
-;drawstring.c:51: while (sx != 7)
-lessthan4:
+; Do the last pixels one at a time
 lastshifts:
-;drawstring.c:53: pd <<= 1;
 	sla	b
-;drawstring.c:54: sx++;
 	dec	c
 	jr	NZ,lastshifts
-shiftdone:
-
-
-;drawstring.c:56: *d = pd;
-	ld	l,-6 (ix)
-	ld	h,-5 (ix)
+; Put last byte on screen
 	ld	(hl),b
 evenbits:
 
 
-;drawstring.c:59: aY++;
-	inc	-1 (ix)
-;drawstring.c:60: datap++;
-	inc	-9 (ix)
+; Move destination base pointer down one line
+	inc	-5 (ix)
+; 16 bit inc of the data pointer to access the next layer
+	inc	-4 (ix)
 	jr	NZ,dataadd16
-	inc	-8 (ix)
+	inc	-3 (ix)
 dataadd16:
-;drawstring.c:9: for (i = 0; i < 8; i++)
-	dec	-12 (ix)
+; Check if we've done all 8 lines
+	dec	-7 (ix)
 	jr	Z, done
 	jp  rowloop
 done:
@@ -185,6 +175,3 @@ done:
 	pop iy
 	pop	ix
 	ret
-	.area _CODE
-	.area _INITIALIZER
-	.area _CABS (ABS)
