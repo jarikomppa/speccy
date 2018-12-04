@@ -54,6 +54,7 @@ void update_info(unsigned char selected, unsigned char hand[5], unsigned char po
     {
         fatigue = fatigue_for_cards[count];
     }
+	if (*temp)
     drawstringz(temp, 2, 11);
     first = 0;
     temp[0] = 0;
@@ -95,6 +96,7 @@ void update_info(unsigned char selected, unsigned char hand[5], unsigned char po
         strcat(temp, numtemp);
         first = 1;
     }
+	if (*temp)
     drawstringz(temp, 2, 12);
     if (pos == 5)
     {

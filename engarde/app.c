@@ -83,6 +83,17 @@ void main()
 	game_stage = 0;
 
     port254(0);
+	/*
+	cleartextbox_color(0, 0, 20, 5, 0x17);
+	while(1)
+	{
+		do_halt();
+		port254(1);
+		drawstringz("brown fox",3,2);
+		port254(0);
+	}
+	*/
+	#if 1
 	while(1)
 	switch (game_state)
 	{
@@ -101,4 +112,5 @@ void main()
 			break;
     //newcard(CARD_FOCUS);
 	}
+	#endif
 }
