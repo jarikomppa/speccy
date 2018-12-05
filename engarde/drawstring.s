@@ -58,7 +58,7 @@ rowloop:
 	ld iy, #0x00
 	add iy, bc
 
-; destination byte can fir 8 bits
+; destination byte can fit 8 bits
 	ld	c,#0x08
 ; destination byte
 ;	ld	b,#0x00 ; not actually needed 
@@ -68,7 +68,7 @@ rowloop:
     ld -1 (ix), a
     ld a, -6 (ix)
     ld -2 (ix), a	
-	
+	  		  		
 ; Loop while input char is not zero
 nextchar:
 ; Grab char and take data slice.
@@ -99,11 +99,31 @@ nextchar:
 	ld	l,-2 (ix)
 	ld	h,-1 (ix)
 
+; does this glyph fit completely in byte?
+    sub a, c
+    jr NC, prewidthloop   
+; pre-decrement target space
+    ld a, c
+    sub a, e
+    ld c, a   
+    ld a, d
+; Loop for glyph's width
+fastwidthloop:	
+	; Rotate pixel through carry to output byte
+	rla
+	rl b
+	
+	dec e
+	jr NZ, fastwidthloop	
+    jr chardone    
+
+prewidthloop:
+    ld a, d
 ; Loop for glyph's width	
 widthloop:
 	
 	; Rotate pixel through carry to output byte
-	rl d
+	rla
 	rl b
 	
 ; Decrement pixels that fit in target
@@ -118,6 +138,7 @@ bytefull:
 	dec e
 	jr NZ, widthloop
 
+chardone:
 ; store hl (dest ptr)
 	ld	-2 (ix),l
 	ld	-1 (ix),h
@@ -142,12 +163,11 @@ lastchar:
 	dec	c
 	dec	c
 	dec	c
-	ld	a,b
-	rlca
-	rlca
-	rlca
-	rlca
-	and	a,#0xf0
+	ld a,b
+	add a,a
+	add a,a
+	add a,a
+	add a,a
 	ld	b,a
 ; Do the last pixels one at a time
 lastshifts:
@@ -161,16 +181,14 @@ evenbits:
 
 ; Move destination base pointer down one line
 	inc	-5 (ix)
-; 16 bit inc of the data pointer to access the next layer
-	inc	-4 (ix)
+; 16 bit inc of the data pointer to access the next layer    
+	inc	-4 (ix)	
 	jr	NZ,dataadd16
 	inc	-3 (ix)
 dataadd16:
 ; Check if we've done all 8 lines
 	dec	-7 (ix)
-	jr	Z, done
-	jp  rowloop
-done:
+	jp NZ, rowloop
 	ld	sp, ix
 	pop iy
 	pop	ix

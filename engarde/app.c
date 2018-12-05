@@ -83,34 +83,34 @@ void main()
 	game_stage = 0;
 
     port254(0);
-	/*
-	cleartextbox_color(0, 0, 20, 5, 0x17);
 	while(1)
 	{
-		do_halt();
-		port254(1);
-		drawstringz("brown fox",3,2);
-		port254(0);
-	}
-	*/
-	#if 1
-	while(1)
-	switch (game_state)
-	{
-//		case 0:
-		default:
-			tour();
-			break;
-		case 1:
-			heal();
-			break;
-		case 2:
-			shop();
-			break;
-		case 3:
-			ingame();
-			break;
-    //newcard(CARD_FOCUS);
-	}
-	#endif
+    	switch (game_state)
+    	{
+    //		case 0:
+    		default:
+    			tour();
+    			break;
+    		case 1:
+    			heal();
+    			break;
+    		case 2:
+    			shop();
+    			break;
+    		case 3:
+    			ingame();
+    			break;
+        //newcard(CARD_FOCUS);
+    	}
+#if 0
+    	cleartextbox_color(0, 0, 20, 5, 0x17);
+    	while(1)
+    	{
+    		do_halt();
+    		port254(1);
+    		drawstringz("brown fox",3,2);
+    		port254(0);
+    	}
+#endif
+    }
 }
