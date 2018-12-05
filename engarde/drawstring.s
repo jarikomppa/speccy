@@ -64,11 +64,11 @@ rowloop:
 ;	ld	b,#0x00 ; not actually needed 
 
 ; set up destination pointer (base ptr increments per row, copy runs with string)
-    ld a, -5 (ix)
-    ld -1 (ix), a
-    ld a, -6 (ix)
-    ld -2 (ix), a	
-	  		  		
+	ld a, -5 (ix)
+	ld -1 (ix), a
+	ld a, -6 (ix)
+	ld -2 (ix), a	
+					
 ; Loop while input char is not zero
 nextchar:
 ; Grab char and take data slice.
@@ -100,13 +100,13 @@ nextchar:
 	ld	h,-1 (ix)
 
 ; does this glyph fit completely in byte?
-    sub a, c
-    jr NC, prewidthloop   
+	sub a, c
+	jr NC, prewidthloop   
 ; pre-decrement target space
-    ld a, c
-    sub a, e
-    ld c, a   
-    ld a, d
+	ld a, c
+	sub a, e
+	ld c, a   
+	ld a, d
 ; Loop for glyph's width
 fastwidthloop:	
 	; Rotate pixel through carry to output byte
@@ -115,10 +115,10 @@ fastwidthloop:
 	
 	dec e
 	jr NZ, fastwidthloop	
-    jr chardone    
+	jr chardone    
 
 prewidthloop:
-    ld a, d
+	ld a, d
 ; Loop for glyph's width	
 widthloop:
 	
