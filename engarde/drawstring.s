@@ -3,17 +3,17 @@
 	.area _CODE
 
 	
-	;           7(ix) = aY
-	;           6(ix) = aX
+	;           7(ix) = aY            -> only in preamble
+	;           6(ix) = aX            -> only in preamble
 	;   4(ix)   5(ix) = aS
 	;  -1(ix)  -2(ix) = bd			5 -> stack
 	;  -3(ix)  -4(ix) = datap		5 -> de´
 	;  -5(ix)  -6(ix) = s			3 -> bc´
 	;          -7(ix) = g			4 -> b
-	;          -8(ix) = i			2
+	;          -8(ix) = i			2 -> local memory variable
 	;          -9(ix) = pixofs		11 -> c
-	; -10(ix) -11(ix) = d			7 -> iy
-	;         -12(ix) = w			2
+	; -10(ix) -11(ix) = d			7  -> iy
+	;         -12(ix) = w			2  -> juggled through h´
 	
 	
 ; void drawstringz(unsigned char *aS, unsigned char aX, unsigned char aY)
@@ -55,7 +55,10 @@ _drawstringz::
 	ld h, a
 	push hl
                         ;drawstring.c:10: for (i = 0; i < 8; i++)
-	ld	-8 (ix),#0x08
+
+	ld a, #0x08
+	ld (drawstringz_local_i), a
+;	ld	-8 (ix),#0x08
 
 rowloop:
                         ;drawstring.c:12: unsigned char *d = bd;
@@ -76,7 +79,9 @@ rowloop:
 	ld	b,#0x00
 	add	hl, bc
 	ld	a,(hl)
-	ld	-12 (ix),a
+	exx
+	ld h, a
+	exx
                         ;drawstring.c:21: unsigned char g = datap[ch];
 	exx
 	push de
@@ -107,7 +112,9 @@ rowloop:
 	ld	(hl),a
                         ;drawstring.c:26: pixofs += w;
 fast_emptydata:
-	ld	a,-12 (ix)
+	exx
+	ld a, h
+	exx
 	ld	c,a
                         ;drawstring.c:32: s++;                    
                         ;drawstring.c:35: while (*s)
@@ -159,11 +166,11 @@ charloop:
 	ex	de,hl
                         ;drawstring.c:43: *d |= shiftp[si];
 	ld	a,(iy)
-	ld	-6 (ix),a
+	ld	c, a
 	ld	hl,#(_propfont + 0x034e)
 	add	hl,de
 	ld	a,(hl)
-	or	a, -6 (ix)
+	or	a, c
 	ld	(iy),a
                         ;drawstring.c:44: pixofs += w;
 	ld	c,b
@@ -174,15 +181,15 @@ charloop:
 	inc iy	
 						;drawstring.c:48: *d |= shiftp[si+1];
 	ld	a,(iy)
-	ld	-6 (ix),a
+	ld	c ,a
 	inc	de
 	ld	hl,#(_propfont + 0x034e)
 	add	hl,de
 	ld	a,(hl)
-	or	a, -6 (ix)
+	or	a, c
 	ld	(iy),a
                         ;drawstring.c:49: pixofs &= 7;
-	ld	a,c
+	ld	a,b
 	and	a, #0x07
 	ld	c,a
 	jr	withinbyte
@@ -216,7 +223,9 @@ endofstring:
 	inc d
 	push de
                         ;drawstring.c:10: for (i = 0; i < 8; i++)
-	dec	-8 (ix)
+	ld a, (drawstringz_local_i)
+	dec	a
+	ld (drawstringz_local_i),a
 	jp	NZ,rowloop
 	exx
 	pop hl
@@ -225,3 +234,5 @@ endofstring:
 	ld	sp, ix
 	pop	ix
 	ret
+drawstringz_local_i:
+	.db 0
