@@ -5,7 +5,10 @@ unsigned char *screen_ptr;
 
 unsigned char port254tonebit;
 #include "yofstab.h"
-#include "propfont.h"
+const unsigned char propfont[] = {
+#include "font_elegante_pixel.h"
+//#include "font_consolas.h"
+};
 const unsigned char artassets[] = {
 #include "artassets.h"
 };

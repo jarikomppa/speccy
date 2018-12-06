@@ -2,6 +2,42 @@
 
 void drawstringz(unsigned char *aS, unsigned char aX, unsigned char aY)
 {
+    const unsigned char *datap = (unsigned char*)propfont + 94 - 32; // font starts from space (32)
+    const unsigned char *widthp = (unsigned char*)propfont - 32;
+    const unsigned char *shiftp = (unsigned char*)(propfont + 846);
+    unsigned char *bd = (unsigned char*)yofs[aY*8] + aX;
+    unsigned char i;
+    for (i = 0; i < 8; i++)
+    {
+        unsigned char *d = bd;
+        char *s = aS;        
+        char pixofs = 0;
+        while (*s)
+        {
+            char ch = *s;
+            char w = widthp[ch];
+            char g = datap[ch];
+            char si = g * 16 + pixofs * 2;
+            *d |= shiftp[si];
+            pixofs += w;
+            if (pixofs >= 8)
+            {
+                d++;
+            }
+            if (pixofs > 8)
+            {
+                *d |= shiftp[si+1];
+            }
+            pixofs &= 7;
+            s++;                    
+        }
+        datap += 94;
+        bd += 0x0100;
+    }
+}
+/*
+void drawstringz(unsigned char *aS, unsigned char aX, unsigned char aY)
+{
     unsigned char i, *s, *d;
     const unsigned char *datap = (unsigned char*)propfont_data - 32 * 8; // font starts from space (32)
     const unsigned char *widthp = (unsigned char*)propfont_width - 32;
@@ -62,7 +98,7 @@ void drawstringz(unsigned char *aS, unsigned char aX, unsigned char aY)
 }
 
 
-/*
+
 // 282 bytes as of c7f5295
 void drawstring(unsigned char *aS, unsigned char aX, unsigned char aY)
 {
