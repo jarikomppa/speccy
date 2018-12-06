@@ -12,7 +12,7 @@
 	;          -7(ix) = g			4 -> b
 	;          -8(ix) = i			2
 	;          -9(ix) = pixofs		11 -> c
-	; -10(ix) -11(ix) = d			7
+	; -10(ix) -11(ix) = d			7 -> iy
 	;         -12(ix) = w			2
 	
 	
@@ -53,10 +53,11 @@ _drawstringz::
 
 rowloop:
                         ;drawstring.c:12: unsigned char *d = bd;
-	ld	a,-2 (ix)
-	ld	-11 (ix),a
-	ld	a,-1 (ix)
-	ld	-10 (ix),a
+	ld	e,-2 (ix)
+	ld	d,-1 (ix)
+	ld iy, #0
+	add iy, de
+
                         ;drawstring.c:13: unsigned char *s = aS;        
 	ld	a,4 (ix)
 	ld	-6 (ix),a
@@ -148,17 +149,13 @@ charloop:
 	add	hl,de
 	ex	de,hl
                         ;drawstring.c:43: *d |= shiftp[si];
-	ld	l,-11 (ix)
-	ld	h,-10 (ix)
-	ld	a,(hl)
+	ld	a,(iy)
 	ld	-6 (ix),a
 	ld	hl,#(_propfont + 0x034e)
 	add	hl,de
 	ld	a,(hl)
 	or	a, -6 (ix)
-	ld	l,-11 (ix)
-	ld	h,-10 (ix)
-	ld	(hl),a
+	ld	(iy),a
                         ;drawstring.c:44: pixofs += w;
 	ld	c,b
                         ;drawstring.c:45: if (pixofs > 7)
@@ -166,23 +163,16 @@ charloop:
 	sub	a, c
 	jr	NC,withinbyte
                         ;drawstring.c:47: d++; 
-	inc	-11 (ix)
-	jr	NZ,add16bit
-	inc	-10 (ix)
-add16bit:
-                        ;drawstring.c:48: *d |= shiftp[si+1];
-	ld	l,-11 (ix)
-	ld	h,-10 (ix)
-	ld	a,(hl)
+	inc iy	
+						;drawstring.c:48: *d |= shiftp[si+1];
+	ld	a,(iy)
 	ld	-6 (ix),a
 	inc	de
 	ld	hl,#(_propfont + 0x034e)
 	add	hl,de
 	ld	a,(hl)
 	or	a, -6 (ix)
-	ld	l,-11 (ix)
-	ld	h,-10 (ix)
-	ld	(hl),a
+	ld	(iy),a
                         ;drawstring.c:49: pixofs &= 7;
 	ld	a,c
 	and	a, #0x07
@@ -200,10 +190,7 @@ emptydata:
 	and	a, #0x07
 	ld	c,a
                         ;drawstring.c:58: d++;
-	inc	-11 (ix)
-	jr	NZ,add16bit2
-	inc	-10 (ix)
-add16bit2:
+	inc	iy
 withinbyte:
                         ;drawstring.c:61: s++;                    
 	jp	charloop
