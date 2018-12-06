@@ -5,9 +5,9 @@
 	
 	;           7(ix) = aY            -> only in preamble
 	;           6(ix) = aX            -> only in preamble
-	;   4(ix)   5(ix) = aS
+	;   4(ix)   5(ix) = aS            -> copy to local variable
 	;  -1(ix)  -2(ix) = bd			5 -> stack
-	;  -3(ix)  -4(ix) = datap		5 -> de´
+	;  -3(ix)  -4(ix) = datap		5 -> de´   (hl´ needed for math)
 	;  -5(ix)  -6(ix) = s			3 -> bc´
 	;          -7(ix) = g			4 -> b
 	;          -8(ix) = i			2 -> local memory variable
@@ -54,11 +54,15 @@ _drawstringz::
 	adc	a, #0x00
 	ld h, a
 	push hl
+	
+	ld	l,4 (ix)
+	ld	h,5 (ix)
+	ld (drawstrings_local_as), hl
+	
                         ;drawstring.c:10: for (i = 0; i < 8; i++)
 
 	ld a, #0x08
 	ld (drawstringz_local_i), a
-;	ld	-8 (ix),#0x08
 
 rowloop:
                         ;drawstring.c:12: unsigned char *d = bd;
@@ -67,8 +71,7 @@ rowloop:
 
                         ;drawstring.c:13: unsigned char *s = aS;        
 	exx
-	ld	c,4 (ix)
-	ld	b,5 (ix)
+	ld bc, (drawstrings_local_as)
 	push bc
 	exx
                         ;drawstring.c:19: unsigned char ch = *s;
@@ -236,3 +239,6 @@ endofstring:
 	ret
 drawstringz_local_i:
 	.db 0
+drawstrings_local_as:
+	.db 0, 0
+	
