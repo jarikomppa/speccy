@@ -6,7 +6,7 @@
 	;           7(ix) = aY            -> only in preamble
 	;           6(ix) = aX            -> only in preamble
 	;   4(ix)   5(ix) = aS            -> copy to local variable
-	;  -1(ix)  -2(ix) = bd			5 -> stack
+	;  -1(ix)  -2(ix) = bd			5 -> local memory variable
 	;  -3(ix)  -4(ix) = datap		5 -> de´   (hl´ needed for math)
 	;  -5(ix)  -6(ix) = s			3 -> ix
 	;          -7(ix) = g			4 -> b
@@ -50,7 +50,7 @@ _drawstringz::
 	ld	a,b
 	adc	a, #0x00
 	ld h, a
-	push hl
+	ld (drawstrings_local_bd), hl
 	
 	ld	l,4 (ix)
 	ld	h,5 (ix)
@@ -63,8 +63,8 @@ _drawstringz::
 
 rowloop:
                         ;drawstring.c:12: unsigned char *d = bd;
-	pop iy
-	push iy
+	
+	ld iy, (drawstrings_local_bd)
 
                         ;drawstring.c:13: unsigned char *s = aS;        
 	
@@ -98,15 +98,13 @@ rowloop:
 	add	hl, hl
 	ex	de,hl
                         ;drawstring.c:25: *d |= shiftp[si];
-	pop hl
-	push hl
+	ld hl, (drawstrings_local_bd)
 	ld	c,(hl)
 	ld	hl,#(_propfont + 0x034e)
 	add	hl,de
 	ld	a,(hl)
 	or	a, c
-	pop hl
-	push hl	
+    ld hl, (drawstrings_local_bd)
 	ld	(hl),a
                         ;drawstring.c:26: pixofs += w;
 fast_emptydata:
@@ -211,16 +209,15 @@ endofstring:
 	ex de, hl
 	exx
                         ;drawstring.c:64: bd += 0x0100;
-	pop de
+	ld de, (drawstrings_local_bd)
 	inc d
-	push de
+	ld (drawstrings_local_bd), de
                         ;drawstring.c:10: for (i = 0; i < 8; i++)
 	ld a, (drawstringz_local_i)
 	dec	a
 	ld (drawstringz_local_i),a
 	jp	NZ,rowloop
 	
-	pop de
 	exx
 	pop hl
 	exx
@@ -231,4 +228,5 @@ drawstringz_local_i:
 	.db 0
 drawstrings_local_as:
 	.db 0, 0
-	
+drawstrings_local_bd:
+    .db 0, 0
