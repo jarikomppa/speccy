@@ -26,9 +26,6 @@ _drawstringz::
 	ld	e,#<((_propfont + 0x003e))
 	ld	d,#>((_propfont + 0x003e))
 	exx
-                        ;drawstring.c:6: const unsigned char *widthp = (unsigned char*)(propfont - 32);
-                        ;drawstring.c:7: const unsigned char *shiftp = (unsigned char*)(propfont + 846);
-                        ;drawstring.c:8: unsigned char *bd = (unsigned char*)yofs[aY * 8] + aX;
 	
 	; calculate pointer to screen, yofs from table
 	ld	bc,#_yofs+0
@@ -107,22 +104,21 @@ fast_emptydata:
 	add	hl, bc
 	ld	c,(hl)
 
-                        ;drawstring.c:32: s++;                    
-                        ;drawstring.c:35: while (*s)
-
 charloop:
-	inc	ix
+	inc	ix              ; next char
 	ld	a,(ix)
 	ld	e,a
+	; if zero, we're at end of string
 	or	a, a
 	jp	Z,endofstring
-                        ;drawstring.c:37: unsigned char ch = *s;
-                        ;drawstring.c:38: unsigned char w = widthp[ch];
+
+    ; get glyph width
 	ld	hl,#(_propfont - 0x0020)
 	ld	d,#0x00
 	add	hl, de
 	ld	a,(hl)
-                        ;drawstring.c:39: unsigned char g = datap[ch];
+                        
+	; get the glyph pattern number
 	push de
 	exx
 	pop hl
@@ -130,94 +126,98 @@ charloop:
 	push hl
 	exx
 	pop hl
-	ld d,a
-	ld	e,(hl)
-	ld	l,e
-                        ;drawstring.c:44: pixofs += w;
-	ld	a,c
+	ld  d,a      ; d = width
+	ld	l,(hl)   ; l = index
+	
+	; increment pixel offset 
+	ld	a, c
 	add	a, d
-	ld	b,a
-                        ;drawstring.c:40: if (g)
-	ld	a,e
+	ld	b, a ; store pixel offset in b temporarily
+
+    ; if glyph pattern is 0, skip drawing                        
+	ld	a, l
 	or	a, a
 	jr	Z,emptydata
-                        ;drawstring.c:42: unsigned short si = (unsigned short)g * 2 + pixofs * 2;
+
+    ; get the actual pixel data for the pattern, pre-shifted                        
 	ld	h,#0x00
 	add	hl, hl
 	ex	de,hl
-	ld	l,c
+	ld	l,c ; old pixel offset
 	ld	h,#0x00
 	add	hl, hl
-	add	hl,de
-	ex	de,hl
-                        ;drawstring.c:43: *d |= shiftp[si];
+	add	hl, de
+	ex	de, hl
 	exx
 	ld	a,(bc)
 	exx
 	ld	c, a
 	ld	hl,#(_propfont + 0x034e)
 	add	hl,de
+
+    ; "or" the pixels to screen                        
 	ld	a,(hl)
 	or	a, c
 	exx
 	ld	(bc),a
 	exx
-                        ;drawstring.c:44: pixofs += w;
-	ld	c,b
-                        ;drawstring.c:45: if (pixofs > 7)
+
+	ld	c,b ; set the new pixel offset
+    ; if pixel offset goes over byte boundary, plot the second pixel too
 	bit 3, b
 	jr Z, withinbyte
-                        ;drawstring.c:47: d++; 
+                            
 	exx
-	inc bc	
-						;drawstring.c:48: *d |= shiftp[si+1];
-	ld	a,(bc)
+	inc bc	; move forward in screen 						
+	ld	a,(bc) ; get current pixels
 	exx
-	ld	c ,a
+	ld	c, a
 	inc	de
-	ld	hl,#(_propfont + 0x034e)
-	add	hl,de
-	ld	a,(hl)
+	ld	hl, #(_propfont + 0x034e)
+	add	hl, de
+	ld	a, (hl)
 	or	a, c
 	exx
-	ld	(bc),a
+	ld	(bc),a ; plot
 	exx
-                        ;drawstring.c:49: pixofs &= 7;
+    ; keep pixel offset within a byte                        
 	ld	a,b
 	and	a, #0x07
 	ld	c,a
 	jr	withinbyte
 emptydata:
-                        ;drawstring.c:54: pixofs += w;
-	ld	c,b
-                        ;drawstring.c:55: if (pixofs > 7)
-	bit 3, b
-	jr Z, withinbyte
-                        ;drawstring.c:57: pixofs &= 7;
-	ld	a,c
+    
+	ld	c,b ; new pixel offset                            
+	bit 3, b  ; check if we moved to next byte
+	jr Z, withinbyte                        
+	ld	a,c     ; new byte, keep pixel offset within it
 	and	a, #0x07
-	ld	c,a
-                        ;drawstring.c:58: d++;
+	ld	c,a                       
 	exx
-	inc	bc
+	inc	bc ; move to next byte
 	exx
 withinbyte:
-                        ;drawstring.c:61: s++;                    
+
 	jp	charloop
+
 endofstring:
-                        ;drawstring.c:63: datap += 94;
+
+    ; end of string, move to the next scanline
 
 	exx
 	ex de, hl
-	ld de, #0x5e
+	ld de, #0x5e  ; next line of glyph data
 	add hl, de
 	ex de, hl
 	exx
-                        ;drawstring.c:64: bd += 0x0100;
+
+    ; move destination base pointer one scanline down
+    ; (we're within 8 pixels so simple +256 is enough)
 	ld de, (drawstrings_local_bd)
 	inc d
 	ld (drawstrings_local_bd), de
-                        ;drawstring.c:10: for (i = 0; i < 8; i++)
+    
+    ; was this the last scanline?
 	ld a, (drawstringz_local_i)
 	dec	a
 	ld (drawstringz_local_i),a
