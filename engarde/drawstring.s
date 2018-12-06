@@ -21,13 +21,10 @@ _drawstringz::
 	push ix
 	ld	ix,#0
 	add	ix,sp
-	ld	hl,#-13
 	push iy
 	exx
 	push hl
 	exx
-	add	hl,sp
-	ld	sp,hl
                         ;drawstring.c:5: const unsigned char *datap = (unsigned char*)(propfont + 94 - 32); // font starts from space (32)
 	exx
 	ld	e,#<((_propfont + 0x003e))
@@ -230,11 +227,12 @@ endofstring:
 	dec	a
 	ld (drawstringz_local_i),a
 	jp	NZ,rowloop
+	
+	pop de
 	exx
 	pop hl
 	exx
 	pop iy
-	ld	sp, ix
 	pop	ix
 	ret
 drawstringz_local_i:
