@@ -8,7 +8,7 @@
 	;   4(ix)   5(ix) = aS            -> copy to local variable
 	;  -1(ix)  -2(ix) = bd			5 -> stack
 	;  -3(ix)  -4(ix) = datap		5 -> de´   (hl´ needed for math)
-	;  -5(ix)  -6(ix) = s			3 -> bc´
+	;  -5(ix)  -6(ix) = s			3 -> ix
 	;          -7(ix) = g			4 -> b
 	;          -8(ix) = i			2 -> local memory variable
 	;          -9(ix) = pixofs		11 -> c
@@ -67,13 +67,11 @@ rowloop:
 	push iy
 
                         ;drawstring.c:13: unsigned char *s = aS;        
-	exx
-	ld bc, (drawstrings_local_as)
-	push bc
-	exx
+	
+	ld ix, (drawstrings_local_as)
+
                         ;drawstring.c:19: unsigned char ch = *s;
-	pop hl
-	ld	c,(hl)
+	ld	c,(ix)
                         ;drawstring.c:20: unsigned char w = widthp[ch];
 	ld	hl,#(_propfont - 0x0020)
 	ld	b,#0x00
@@ -119,14 +117,9 @@ fast_emptydata:
                         ;drawstring.c:32: s++;                    
                         ;drawstring.c:35: while (*s)
 
-	exx
-	push bc
-	exx
 charloop:
-	pop hl
-	inc	hl
-	push hl
-	ld	a,(hl)
+	inc	ix
+	ld	a,(ix)
 	ld	e,a
 	or	a, a
 	jp	Z,endofstring
@@ -209,7 +202,6 @@ withinbyte:
                         ;drawstring.c:61: s++;                    
 	jp	charloop
 endofstring:
-	pop hl
                         ;drawstring.c:63: datap += 94;
 
 	exx
