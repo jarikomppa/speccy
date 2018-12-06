@@ -12,8 +12,9 @@
 	;          -7(ix) = g			4 -> b
 	;          -8(ix) = i			2 -> local memory variable
 	;          -9(ix) = pixofs		11 -> c
-	; -10(ix) -11(ix) = d			7  -> iy
+	; -10(ix) -11(ix) = d			7  -> bc`
 	;         -12(ix) = w			2  -> juggled through h´
+	; unused: iy
 	
 	
 ; void drawstringz(unsigned char *aS, unsigned char aX, unsigned char aY)
@@ -21,10 +22,6 @@ _drawstringz::
 	push ix
 	ld	ix,#0
 	add	ix,sp
-	push iy
-	exx
-	push hl
-	exx
                         ;drawstring.c:5: const unsigned char *datap = (unsigned char*)(propfont + 94 - 32); // font starts from space (32)
 	exx
 	ld	e,#<((_propfont + 0x003e))
@@ -63,9 +60,9 @@ _drawstringz::
 
 rowloop:
                         ;drawstring.c:12: unsigned char *d = bd;
-	
-	ld iy, (drawstrings_local_bd)
-
+	exx 
+	ld bc, (drawstrings_local_bd)
+    exx
                         ;drawstring.c:13: unsigned char *s = aS;        
 	
 	ld ix, (drawstrings_local_as)
@@ -156,29 +153,37 @@ charloop:
 	add	hl,de
 	ex	de,hl
                         ;drawstring.c:43: *d |= shiftp[si];
-	ld	a,(iy)
+	exx
+	ld	a,(bc)
+	exx
 	ld	c, a
 	ld	hl,#(_propfont + 0x034e)
 	add	hl,de
 	ld	a,(hl)
 	or	a, c
-	ld	(iy),a
+	exx
+	ld	(bc),a
+	exx
                         ;drawstring.c:44: pixofs += w;
 	ld	c,b
                         ;drawstring.c:45: if (pixofs > 7)
 	bit 3, b
 	jr Z, withinbyte
                         ;drawstring.c:47: d++; 
-	inc iy	
+	exx
+	inc bc	
 						;drawstring.c:48: *d |= shiftp[si+1];
-	ld	a,(iy)
+	ld	a,(bc)
+	exx
 	ld	c ,a
 	inc	de
 	ld	hl,#(_propfont + 0x034e)
 	add	hl,de
 	ld	a,(hl)
 	or	a, c
-	ld	(iy),a
+	exx
+	ld	(bc),a
+	exx
                         ;drawstring.c:49: pixofs &= 7;
 	ld	a,b
 	and	a, #0x07
@@ -195,7 +200,9 @@ emptydata:
 	and	a, #0x07
 	ld	c,a
                         ;drawstring.c:58: d++;
-	inc	iy
+	exx
+	inc	bc
+	exx
 withinbyte:
                         ;drawstring.c:61: s++;                    
 	jp	charloop
@@ -218,10 +225,6 @@ endofstring:
 	ld (drawstringz_local_i),a
 	jp	NZ,rowloop
 	
-	exx
-	pop hl
-	exx
-	pop iy
 	pop	ix
 	ret
 drawstringz_local_i:
