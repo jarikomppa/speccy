@@ -2,22 +2,22 @@
 
 void drawstringz(unsigned char *aS, unsigned char aX, unsigned char aY)
 {
-    const unsigned char *datap = (unsigned char*)propfont + 94 - 32; // font starts from space (32)
-    const unsigned char *widthp = (unsigned char*)propfont - 32;
+    const unsigned char *datap = (unsigned char*)(propfont + 94 - 32); // font starts from space (32)
+    const unsigned char *widthp = (unsigned char*)(propfont - 32);
     const unsigned char *shiftp = (unsigned char*)(propfont + 846);
-    unsigned char *bd = (unsigned char*)yofs[aY*8] + aX;
+    unsigned char *bd = (unsigned char*)yofs[aY * 8] + aX;
     unsigned char i;
     for (i = 0; i < 8; i++)
     {
         unsigned char *d = bd;
-        char *s = aS;        
-        char pixofs = 0;
+        unsigned char *s = aS;        
+        unsigned char pixofs = 0;
         while (*s)
         {
-            char ch = *s;
-            char w = widthp[ch];
-            char g = datap[ch];
-            char si = g * 16 + pixofs * 2;
+            unsigned char ch = *s;
+            unsigned char w = widthp[ch];
+            unsigned char g = datap[ch];
+            unsigned short si = (unsigned short)g * 2 + pixofs * 2;
             *d |= shiftp[si];
             pixofs += w;
             if (pixofs >= 8)

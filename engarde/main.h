@@ -47,8 +47,7 @@ extern const Card gCardTypes[];
 extern const unsigned char backtile[];
 extern const unsigned char artassets[];
 extern const unsigned short yofs[];
-extern const unsigned char propfont_data[];
-extern const unsigned char propfont_width[];
+extern const unsigned char propfont[];
 
 extern unsigned char *data_ptr;
 extern unsigned char *screen_ptr;

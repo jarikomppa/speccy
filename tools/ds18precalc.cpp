@@ -55,6 +55,7 @@ FILE * sfile;
 int offset = 0;
 int cycle = 0;
 int first = 1;
+unsigned char outdata[4096];
 
 void output_annotation(char *aStr)
 {
@@ -67,6 +68,7 @@ void output_annotation(char *aStr)
 
 void output(unsigned char data)
 {
+	outdata[offset] = data;
     fwrite(&data, 1,1,binfile);
     
     fprintf(hfile, "%s%s0x%02x", first?"":", ", ((cycle%16) == 0)?"\n":"", data);
@@ -99,6 +101,9 @@ void close_output()
     fclose(sfile);
 }
 
+int pattern[256];
+int patterns;
+
 void scan_font(char *aFilename)
 {   
     int i, j;
@@ -125,7 +130,6 @@ void scan_font(char *aFilename)
     
     shift();
 
-    char pattern[256];
     for (i = 0; i < 256; i++)
     {
         pattern[i] = -1;
@@ -139,15 +143,21 @@ void scan_font(char *aFilename)
         }
     }
 
-    int patterns = 0;
+    patterns = 0;
     for (i = 0; i < 256; i++)
     {
         if (pattern[i] != -1) 
         {
-            pattern[i] = patterns;
+            pattern[i] = patterns * 8;
             patterns++;
         }
     }
+	
+	if (patterns > 32)
+	{
+		printf("Too many patterns (max 32, found %d)\n", patterns);
+		exit(-1);
+	}
 
     output_annotation("Glyph widths (94 bytes)");
     // width
@@ -187,15 +197,67 @@ void scan_font(char *aFilename)
     close_output();
 }
 
+void verify()
+{
+	int i, j, glyph;
+	for (glyph = 0; glyph < 94; glyph++)
+	{
+		int errored = 0;
+		for (i = 0; i < 8; i++)
+		{
+			unsigned char rowdata1 = gGlyphData[glyph].mPixelData[i];
+			unsigned char rowdata2 = outdata[846+pattern[gGlyphData[glyph].mPixelData[i]]*2];
+			if (rowdata1 != rowdata2)
+				errored = 1;
+		}
+		if (errored)
+		{
+			printf("Glyph %d ('%c')\n", glyph, glyph+32);
+			for (i = 0; i < 8; i++)
+			{
+				unsigned char rowdata1 = gGlyphData[glyph].mPixelData[i];
+				unsigned char rowdata2 = outdata[846+pattern[gGlyphData[glyph].mPixelData[i]]*2];
+				for (j = 0; j < 8; j++)
+				{
+					printf("%s", (rowdata1 & (1 << (7-j))) ? "*":".");
+				}
+				printf(" pattern 0x%02x idx %2d:0x%02x", 
+					gGlyphData[glyph].mPixelData[i], 
+					pattern[gGlyphData[glyph].mPixelData[i]],
+					outdata[846+pattern[gGlyphData[glyph].mPixelData[i]]*2]);
+				for (j = 0; j < 8; j++)
+				{
+					printf("%s", (rowdata2 & (1 << (7-j))) ? "*":".");
+				}
+				printf("\n");
+			}
+		}
+	}
+	
+	for (i = 0; i < patterns; i++)
+	{
+		for (j = 0; j < 8; j++)
+		{
+			int ref = outdata[846 + i*16];
+			int a = outdata[846 + i*16 + j*2];
+			int b = outdata[846 + i*16 + j*2 + 1];
+			int sha = a << j;
+			int shb = b >> (8-j);
+			if (ref != (sha|shb))
+				printf("%d >> %d: ref:0x%02x a:0x%02x b:0x%02x sha:0x%02x shb:0x%02x\n", i, j, ref, a, b, sha, shb);
+		}
+	}
+}
 
 int main(int parc, char **pars)
 {
-//    printf("DrawString'18 data precalculator (c)2018 Jari Komppa\n");    
+    printf("DrawString'18 data precalculator (c)2018 Jari Komppa\n");    
     if (parc < 2)
     {
         printf("Usage: %s fontfilename\n", pars[0]);
         return 0;
     }
     scan_font(pars[1]);
+	verify();
     return 0;
 }
