@@ -1,28 +1,27 @@
 	.module drawstring
 	.globl _drawstringz
 	.area _CODE
-
-	
-	;           7(ix) = aY            -> only in preamble
-	;           6(ix) = aX            -> only in preamble
-	;   4(ix)   5(ix) = aS            -> copy to local variable
-	;  -1(ix)  -2(ix) = bd			5 -> local memory variable
-	;  -3(ix)  -4(ix) = datap		5 -> de´   (hl´ needed for math)
-	;  -5(ix)  -6(ix) = s			3 -> ix
-	;          -7(ix) = g			4 -> b
-	;          -8(ix) = i			2 -> local memory variable
-	;          -9(ix) = pixofs		11 -> c
-	; -10(ix) -11(ix) = d			7  -> bc`
-	;         -12(ix) = w			2  -> juggled through h´
+	;  original temp    var name   uses   change/note
+	;           7(ix) = aY                -> only in preamble
+	;           6(ix) = aX                -> only in preamble
+	;   4(ix)   5(ix) = aS                -> copy to local variable
+	;  -1(ix)  -2(ix) = bd			5     -> local memory variable
+	;  -3(ix)  -4(ix) = datap		5     -> de´   (hl´ needed for math)
+	;  -5(ix)  -6(ix) = s			3     -> ix
+	;          -7(ix) = g			4     -> b
+	;          -8(ix) = i			2     -> local memory variable
+	;          -9(ix) = pixofs		11    -> c
+	; -10(ix) -11(ix) = d			7     -> bc´
+	;         -12(ix) = w			2     -> juggled through h´
 	; unused: iy
-	
-	
+		
 ; void drawstringz(unsigned char *aS, unsigned char aX, unsigned char aY)
 _drawstringz::
 	push ix
 	ld	ix,#0
 	add	ix,sp
-                        ;drawstring.c:5: const unsigned char *datap = (unsigned char*)(propfont + 94 - 32); // font starts from space (32)
+
+	; move datap to de´ (glyph data indices)
 	exx
 	ld	e,#<((_propfont + 0x003e))
 	ld	d,#>((_propfont + 0x003e))
@@ -30,10 +29,12 @@ _drawstringz::
                         ;drawstring.c:6: const unsigned char *widthp = (unsigned char*)(propfont - 32);
                         ;drawstring.c:7: const unsigned char *shiftp = (unsigned char*)(propfont + 846);
                         ;drawstring.c:8: unsigned char *bd = (unsigned char*)yofs[aY * 8] + aX;
+	
+	; calculate pointer to screen, yofs from table
 	ld	bc,#_yofs+0
 	ld	l,7 (ix)
-	ld	h,#0x00
-	add	hl, hl
+	ld	h,#0x00	
+	add	hl, hl      ; aY * 8
 	add	hl, hl
 	add	hl, hl
 	add	hl, hl
@@ -41,74 +42,71 @@ _drawstringz::
 	ld	c,(hl)
 	inc	hl
 	ld	b,(hl)
+	
 	ld	a,c
-	add	a, 6 (ix)
+	add	a, 6 (ix)   ; + aX
 	ld l, a
 	ld	a,b
 	adc	a, #0x00
 	ld h, a
+	
+	; base target pointer calculated, store:
 	ld (drawstrings_local_bd), hl
 	
 	ld	l,4 (ix)
 	ld	h,5 (ix)
+	; copy of the string start pointer:
 	ld (drawstrings_local_as), hl
-	
-                        ;drawstring.c:10: for (i = 0; i < 8; i++)
 
+    ; loop for 8 scanlines
 	ld a, #0x08
 	ld (drawstringz_local_i), a
 
 rowloop:
-                        ;drawstring.c:12: unsigned char *d = bd;
+                           
 	exx 
-	ld bc, (drawstrings_local_bd)
+	ld bc, (drawstrings_local_bd) ; start bc´ from destination base pointer
     exx
-                        ;drawstring.c:13: unsigned char *s = aS;        
 	
-	ld ix, (drawstrings_local_as)
-
-                        ;drawstring.c:19: unsigned char ch = *s;
-	ld	c,(ix)
-                        ;drawstring.c:20: unsigned char w = widthp[ch];
-	ld	hl,#(_propfont - 0x0020)
-	ld	b,#0x00
-	add	hl, bc
-	ld	a,(hl)
-	exx
-	ld h, a
-	exx
-                        ;drawstring.c:21: unsigned char g = datap[ch];
+	ld ix, (drawstrings_local_as) ; start ix from string start
+                                                
+    ; get glyph data pattern number
 	exx
 	push de
 	exx
 	pop hl
+	ld	c,(ix) ; c is our glyph
 	ld	b,#0x00
 	add	hl, bc
 	ld	a,(hl)
 	ld	b,a
-                        ;drawstring.c:22: if (g)
+
+    ; if it's the first pattern, we can skip actually drawing it because it's empty
 	or	a, a
 	jr	Z,fast_emptydata
-                        ;drawstring.c:24: unsigned short si = (unsigned short)g * 2 + pixofs * 2;
-	ld l,a
+
+    ; get the pre-shifted ghyph data from pattern index                       
+	ld  l,a
 	ld	h,#0x00
 	add	hl, hl
-	ex	de,hl
-                        ;drawstring.c:25: *d |= shiftp[si];
-	ld hl, (drawstrings_local_bd)
-	ld	c,(hl)
+	ex	de,hl        
 	ld	hl,#(_propfont + 0x034e)
 	add	hl,de
 	ld	a,(hl)
-	or	a, c
-    ld hl, (drawstrings_local_bd)
+	
+	; this is the first thing to be plotted, no or:ing needed
+    ld  hl, (drawstrings_local_bd)
 	ld	(hl),a
-                        ;drawstring.c:26: pixofs += w;
+
 fast_emptydata:
-	exx
-	ld a, h
-	exx
-	ld	c,a
+
+    ; get glyph width
+	ld	hl,#(_propfont - 0x0020)
+	ld	c,(ix) ; c is our glyph
+	ld	b,#0x00
+	add	hl, bc
+	ld	c,(hl)
+
                         ;drawstring.c:32: s++;                    
                         ;drawstring.c:35: while (*s)
 
