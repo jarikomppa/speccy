@@ -7,8 +7,8 @@
 	;           6(ix) = aX
 	;   4(ix)   5(ix) = aS
 	;  -1(ix)  -2(ix) = bd			5 -> stack
-	;  -3(ix)  -4(ix) = datap		5
-	;  -5(ix)  -6(ix) = s			3
+	;  -3(ix)  -4(ix) = datap		5 -> de´
+	;  -5(ix)  -6(ix) = s			3 -> bc´
 	;          -7(ix) = g			4 -> b
 	;          -8(ix) = i			2
 	;          -9(ix) = pixofs		11 -> c
@@ -23,11 +23,16 @@ _drawstringz::
 	add	ix,sp
 	ld	hl,#-13
 	push iy
+	exx
+	push hl
+	exx
 	add	hl,sp
 	ld	sp,hl
                         ;drawstring.c:5: const unsigned char *datap = (unsigned char*)(propfont + 94 - 32); // font starts from space (32)
-	ld	-4 (ix),#<((_propfont + 0x003e))
-	ld	-3 (ix),#>((_propfont + 0x003e))
+	exx
+	ld	e,#<((_propfont + 0x003e))
+	ld	d,#>((_propfont + 0x003e))
+	exx
                         ;drawstring.c:6: const unsigned char *widthp = (unsigned char*)(propfont - 32);
                         ;drawstring.c:7: const unsigned char *shiftp = (unsigned char*)(propfont + 846);
                         ;drawstring.c:8: unsigned char *bd = (unsigned char*)yofs[aY * 8] + aX;
@@ -58,13 +63,13 @@ rowloop:
 	push iy
 
                         ;drawstring.c:13: unsigned char *s = aS;        
-	ld	a,4 (ix)
-	ld	-6 (ix),a
-	ld	a,5 (ix)
-	ld	-5 (ix),a
+	exx
+	ld	c,4 (ix)
+	ld	b,5 (ix)
+	push bc
+	exx
                         ;drawstring.c:19: unsigned char ch = *s;
-	ld	l,-6 (ix)
-	ld	h,-5 (ix)
+	pop hl
 	ld	c,(hl)
                         ;drawstring.c:20: unsigned char w = widthp[ch];
 	ld	hl,#(_propfont - 0x0020)
@@ -73,8 +78,10 @@ rowloop:
 	ld	a,(hl)
 	ld	-12 (ix),a
                         ;drawstring.c:21: unsigned char g = datap[ch];
-	ld	l,-4 (ix)
-	ld	h,-3 (ix)
+	exx
+	push de
+	exx
+	pop hl
 	ld	b,#0x00
 	add	hl, bc
 	ld	a,(hl)
@@ -104,9 +111,10 @@ fast_emptydata:
 	ld	c,a
                         ;drawstring.c:32: s++;                    
                         ;drawstring.c:35: while (*s)
-	ld	l,-6 (ix)
-	ld	h,-5 (ix)
-	push hl
+
+	exx
+	push bc
+	exx
 charloop:
 	pop hl
 	inc	hl
@@ -120,14 +128,16 @@ charloop:
 	ld	hl,#(_propfont - 0x0020)
 	ld	d,#0x00
 	add	hl, de
-	ld	d,(hl)
+	ld	a,(hl)
                         ;drawstring.c:39: unsigned char g = datap[ch];
-	ld	a,-4 (ix)
-	add	a, e
-	ld	l,a
-	ld	a,-3 (ix)
-	adc	a, #0x00
-	ld	h,a
+	push de
+	exx
+	pop hl
+	add hl, de
+	push hl
+	exx
+	pop hl
+	ld d,a
 	ld	e,(hl)
 	ld	l,e
                         ;drawstring.c:44: pixofs += w;
@@ -194,12 +204,13 @@ withinbyte:
 endofstring:
 	pop hl
                         ;drawstring.c:63: datap += 94;
-	ld	a,-4 (ix)
-	add	a, #0x5e
-	ld	-4 (ix),a
-	ld	a,-3 (ix)
-	adc	a, #0x00
-	ld	-3 (ix),a
+
+	exx
+	ex de, hl
+	ld de, #0x5e
+	add hl, de
+	ex de, hl
+	exx
                         ;drawstring.c:64: bd += 0x0100;
 	pop de
 	inc d
@@ -207,6 +218,9 @@ endofstring:
                         ;drawstring.c:10: for (i = 0; i < 8; i++)
 	dec	-8 (ix)
 	jp	NZ,rowloop
+	exx
+	pop hl
+	exx
 	pop iy
 	ld	sp, ix
 	pop	ix
