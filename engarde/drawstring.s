@@ -48,26 +48,28 @@ _drawstringz::
 	ld h, a
 	
 	; base target pointer calculated, store:
-	ld (drawstrings_local_bd), hl
+	ld (drawstringz_local_bd + 1), hl
 	
 	ld	l,4 (ix)
 	ld	h,5 (ix)
 	; copy of the string start pointer:
-	ld (drawstrings_local_as), hl
+	ld (drawstringz_local_as + 2), hl
 
-    ; loop for 8 scanlines
+	; loop for 8 scanlines
 	ld a, #0x08
-	ld (drawstringz_local_i), a
+	ld (drawstringz_local_i + 1), a
 
 rowloop:
-                           
+						   
 	exx 
-	ld bc, (drawstrings_local_bd) ; start bc´ from destination base pointer
-    exx
+drawstringz_local_bd: ; start bc´ from destination base pointer
+	ld bc, #1234 ; stored as self-modifying code
+	exx
 	
-	ld ix, (drawstrings_local_as) ; start ix from string start
-                                                
-    ; get glyph data pattern number
+drawstringz_local_as: ; start ix from string start
+	ld ix, #0x1234  ; stored as self-modifying code
+												
+	; get glyph data pattern number
 	exx
 	push de
 	exx
@@ -78,11 +80,11 @@ rowloop:
 	ld	a,(hl)
 	ld	b,a
 
-    ; if it's the first pattern, we can skip actually drawing it because it's empty
+	; if it's the first pattern, we can skip actually drawing it because it's empty
 	or	a, a
 	jr	Z,fast_emptydata
 
-    ; get the pre-shifted ghyph data from pattern index                       
+	; get the pre-shifted ghyph data from pattern index                       
 	ld  l,a
 	ld	h,#0x00
 	add	hl, hl
@@ -92,12 +94,12 @@ rowloop:
 	ld	a,(hl)
 	
 	; this is the first thing to be plotted, no or:ing needed
-    ld  hl, (drawstrings_local_bd)
+	ld  hl, (drawstringz_local_bd + 1)
 	ld	(hl),a
 
 fast_emptydata:
 
-    ; get glyph width
+	; get glyph width
 	ld	hl,#(_propfont - 0x0020)
 	ld	c,(ix) ; c is our glyph
 	ld	b,#0x00
@@ -112,12 +114,12 @@ charloop:
 	or	a, a
 	jp	Z,endofstring
 
-    ; get glyph width
+	; get glyph width
 	ld	hl,#(_propfont - 0x0020)
 	ld	d,#0x00
 	add	hl, de
 	ld	a,(hl)
-                        
+						
 	; get the glyph pattern number
 	push de
 	exx
@@ -134,12 +136,12 @@ charloop:
 	add	a, d
 	ld	b, a ; store pixel offset in b temporarily
 
-    ; if glyph pattern is 0, skip drawing                        
+	; if glyph pattern is 0, skip drawing                        
 	ld	a, l
 	or	a, a
 	jr	Z,emptydata
 
-    ; get the actual pixel data for the pattern, pre-shifted                        
+	; get the actual pixel data for the pattern, pre-shifted                        
 	ld	h,#0x00
 	add	hl, hl
 	ex	de,hl
@@ -155,7 +157,7 @@ charloop:
 	ld	hl,#(_propfont + 0x034e)
 	add	hl,de
 
-    ; "or" the pixels to screen                        
+	; "or" the pixels to screen                        
 	ld	a,(hl)
 	or	a, c
 	exx
@@ -163,10 +165,10 @@ charloop:
 	exx
 
 	ld	c,b ; set the new pixel offset
-    ; if pixel offset goes over byte boundary, plot the second pixel too
+	; if pixel offset goes over byte boundary, plot the second pixel too
 	bit 3, b
 	jr Z, withinbyte
-                            
+							
 	exx
 	inc bc	; move forward in screen 						
 	ld	a,(bc) ; get current pixels
@@ -180,13 +182,13 @@ charloop:
 	exx
 	ld	(bc),a ; plot
 	exx
-    ; keep pixel offset within a byte                        
+	; keep pixel offset within a byte                        
 	ld	a,b
 	and	a, #0x07
 	ld	c,a
 	jr	withinbyte
 emptydata:
-    
+	
 	ld	c,b ; new pixel offset                            
 	bit 3, b  ; check if we moved to next byte
 	jr Z, withinbyte                        
@@ -202,7 +204,7 @@ withinbyte:
 
 endofstring:
 
-    ; end of string, move to the next scanline
+	; end of string, move to the next scanline
 
 	exx
 	ex de, hl
@@ -211,23 +213,18 @@ endofstring:
 	ex de, hl
 	exx
 
-    ; move destination base pointer one scanline down
-    ; (we're within 8 pixels so simple +256 is enough)
-	ld de, (drawstrings_local_bd)
-	inc d
-	ld (drawstrings_local_bd), de
-    
-    ; was this the last scanline?
-	ld a, (drawstringz_local_i)
+	; move destination base pointer one scanline down
+	; (we're within 8 pixels so simple +256 is enough)
+	ld hl, #drawstringz_local_bd + 2
+	inc (hl)
+	
+	; was this the last scanline?
+
+drawstringz_local_i:
+	ld a, #0x12 ; stored as self-modifying code
 	dec	a
-	ld (drawstringz_local_i),a
+	ld (drawstringz_local_i + 1),a
 	jp	NZ,rowloop
 	
 	pop	ix
 	ret
-drawstringz_local_i:
-	.db 0
-drawstrings_local_as:
-	.db 0, 0
-drawstrings_local_bd:
-    .db 0, 0
