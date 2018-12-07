@@ -12,7 +12,7 @@
 	;          -8(ix) = i			2     -> local memory variable
 	;          -9(ix) = pixofs		11    -> c
 	; -10(ix) -11(ix) = d			7     -> bc´
-	;         -12(ix) = w			2     -> juggled through h´
+	;         -12(ix) = w			2     -> juggled through b/c
 	; unused: iy
 		
 ; void drawstringz(unsigned char *aS, unsigned char aX, unsigned char aY)
@@ -100,25 +100,24 @@ drawstringz_local_as: ; start ix from string start
 fast_emptydata:
 
 	; get glyph width
-	ld	hl,#(_propfont - 0x0020)
-	ld	c,(ix) ; c is our glyph
-	ld	b,#0x00
+	ld	hl, #(_propfont - 0x0020) ; width table (-32 because first glyph is space)
+	ld	c,  (ix) ; c is our glyph
+	ld	b,  #0x00
 	add	hl, bc
-	ld	c,(hl)
+	ld	c,  (hl) ; c is pixel offset (this is first glyph, so first width = pix offset)
 
 charloop:
-	inc	ix              ; next char
-	ld	a,(ix)
-	ld	e,a
-	; if zero, we're at end of string
+	inc	ix               ; next char
+	ld	a, (ix)
+	ld	e, a	
 	or	a, a
-	jp	Z,endofstring
+	jp	Z, endofstring   ; if zero, we're at end of string
 
 	; get glyph width
-	ld	hl,#(_propfont - 0x0020)
-	ld	d,#0x00
+	ld	hl, #(_propfont - 0x0020)
+	ld	d,  #0x00
 	add	hl, de
-	ld	a,(hl)
+	ld	a,  (hl)
 						
 	; get the glyph pattern number
 	push de
@@ -128,12 +127,13 @@ charloop:
 	push hl
 	exx
 	pop hl
-	ld  d,a      ; d = width
-	ld	l,(hl)   ; l = index
+	;ld  d, a      ; d = width
+	ld	l, (hl)   ; l = index
 	
 	; increment pixel offset 
-	ld	a, c
-	add	a, d
+	;ld	a, c ; c is pixel offset
+	;add	a, d
+	add a, c
 	ld	b, a ; store pixel offset in b temporarily
 
 	; if glyph pattern is 0, skip drawing                        
