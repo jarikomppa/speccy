@@ -22,14 +22,10 @@ void drawstringz(unsigned char *aS, unsigned char aX, unsigned char aY)
 			if (g)
 			{
 				unsigned short si = (unsigned short)g * 2 + pixofs * 2;
-				*d |= shiftp[si];
-				pixofs += w;
+				*d = shiftp[si];
 			}
-			else
-			{
-				pixofs += w;
-			}
-            s++;                    
+			pixofs = w;
+            s++;                 
 		}
 		
         while (*s)
