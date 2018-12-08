@@ -98,6 +98,7 @@ extern void drawstringz(unsigned char *aS, unsigned char aX, unsigned char aY);
 
 extern void drawmoney(unsigned char x, unsigned char y, unsigned char v);
 extern void drawcost(unsigned char x, unsigned char y, unsigned char v);
+extern unsigned char xorshift8(void);
 extern void int2str(unsigned char val, char s[4]);
 extern void strcat(char *tgt, char *src);
 extern void scan_input();

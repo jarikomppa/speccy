@@ -46,7 +46,7 @@ void update_info(unsigned char selected, unsigned char hand[5], unsigned char po
 		if (focus)
 		{
 			strcat(temp, "focus");
-			first = 1;
+			first = 0;
 		}
 			
 		if (leap)
@@ -129,8 +129,57 @@ void update_info(unsigned char selected, unsigned char hand[5], unsigned char po
 			strcat(temp, gCardTypes[hand[pos]].mName);
 			drawstringz(temp, 2, 14);
 		}
+	}	
+}
+
+char p_deck[40];
+char p_discard[40];
+char p_decktop;
+char p_discardtop;
+
+char o_deck[40];
+char o_discard[40];
+char o_decktop;
+char o_discardtop;
+
+#define P_ADDCARD(card) p_deck[p_decktop++] = (card) 
+#define P_GETCARD() p_deck[--p_decktop]
+#define P_DISCARD(card) p_discard[p_discardtop++] = (card)
+
+#define O_ADDCARD(card) o_deck[o_decktop++] = (card) 
+#define O_GETCARD() o_deck[--o_decktop]
+#define O_DISCARD(card) o_discard[o_discardtop++] = (card)
+
+void shuffle()
+{
+	unsigned char i;
+	for (i = 0; i < p_decktop; i++)
+	{
+		char c1, c2;
+		c1 = i;
+		c2 = 200;
+		while (c2 >= p_decktop)
+			c2 = xorshift8() & 63;
+		{
+			char t = p_deck[c1];
+			p_deck[c1] = p_deck[c2];
+			p_deck[c2] = t;
+		}
 	}
-	
+
+	for (i = 0; i < o_decktop; i++)
+	{
+		char c1, c2;
+		c1 = i;
+		c2 = 200;
+		while (c2 >= o_decktop)
+			c2 = xorshift8() & 63;
+		{
+			char t = o_deck[c1];
+			o_deck[c1] = o_deck[c2];
+			o_deck[c2] = t;
+		}
+	}
 }
 
 void ingame()
@@ -145,11 +194,20 @@ void ingame()
     unsigned char commit = 0;
     unsigned char c;
     unsigned char hand[5];
-    hand[0] = 1;
-    hand[1] = 2;
-    hand[2] = 3;
-    hand[3] = CARD_ATK1DEF2;
-    hand[4] = 5;
+	p_decktop = 0;
+	p_discardtop = 0;
+	o_decktop = 0;
+	o_discardtop = 0;
+	for (c = 0; c < 20; c++)
+		P_ADDCARD(playerdeck[c]);
+	for (c = 0; c < player_hurt; c++)
+		P_ADDCARD(CARD_HURT);
+	shuffle();
+    hand[0] = P_GETCARD();
+    hand[1] = P_GETCARD();
+    hand[2] = P_GETCARD();
+    hand[3] = P_GETCARD();
+    hand[4] = P_GETCARD();
     pos = 0;
     frame = 0;
 
@@ -202,7 +260,19 @@ void ingame()
 				unsigned char oldselected = selected;
                 if (TRIGGER(KEY_RIGHT)) { triggered = 1; pos++; if (pos == 6) pos = 0; }
                 if (TRIGGER(KEY_LEFT)) { triggered = 1; pos--; if (pos == 255) pos = 5; }
-                if (TRIGGER(KEY_FIRE)) { triggered = 1; if (pos != 5) selected ^= 1 << pos; else commit = 1; }
+                if (TRIGGER(KEY_FIRE)) 
+				{ 
+					triggered = 1; 
+					if (pos != 5) 
+					{
+						if (!(gCardTypes[hand[pos]].mFlags & CARDFLAG_IDLE))
+							selected ^= 1 << pos; 
+					}
+					else 
+					{
+						commit = 1; 
+					}
+				}
                 if (triggered) 
                 {
                     key_wasdown = 0;
