@@ -138,25 +138,32 @@ void cleartextbox(unsigned char x, unsigned char y, unsigned char w, unsigned ch
 
 void cleartextbox_color(unsigned char x, unsigned char y, unsigned char w, unsigned char h, unsigned char c)
 {
-    unsigned short o, i, j;
+    unsigned short bo, o, i, j, dj;
     unsigned char oh, oy;
-    oh = h;
+	oh = h;
     oy = y;
 
     h *= 8;
     y *= 8;
-    
-    for (j = y + 1; j < y + h - 1; j++)
-    {
-        o = yofs[j] + x + 1;
-        for (i = 1; i < w-1; i++)
-        {
-            *((unsigned char*)o) = 0;
-            o++;
-        }
-    }
-    
-    colorbox(x+1,oy+1,w-2,oh-2,c);
+	j = 0;
+	dj = 8;
+	while (j < h)
+	{
+		bo = yofs[y+j] + x;
+		for (; j < dj && j < h; j++)
+		{
+			o = bo;
+			for (i = 0; i < w; i++)
+			{
+				*((unsigned char*)o) = 0;
+				o++;
+			}
+			bo += 0x100;
+		}
+		dj += 8;
+	}
+   
+    colorbox(x,oy,w,oh,c);
 }
 
 void drawtextbox(unsigned char x, unsigned char y, unsigned char w, unsigned char h)

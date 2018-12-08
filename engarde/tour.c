@@ -30,7 +30,7 @@ void update_tour(unsigned char pos)
 
 	drawmug(posmug[pos],26,5);						
 
-	cleartextbox(1,18,30,5);
+	cleartextbox(1+1,18+1,30-2,5-2);
 	switch (pos)
 	{
 		case 0:
@@ -221,7 +221,7 @@ void tour()
 					if (oldpos == 1) oldico = 5;
 					drawicon(oldico, positionsx[oldpos], positionsy[oldpos]);
 
-					cleartextbox(26,11,5,3);
+					cleartextbox(26+1,11+1,5-2,3-2);
 					update_tour(pos);
 				}
             }

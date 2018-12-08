@@ -1,6 +1,6 @@
 #include "main.h"
 
-void update_info(unsigned char selected, unsigned char hand[5], unsigned char pos)
+void update_info(unsigned char selected, unsigned char hand[5], unsigned char pos, unsigned char oldselected)
 {
     char temp[40];
     char numtemp[3];
@@ -13,13 +13,7 @@ void update_info(unsigned char selected, unsigned char hand[5], unsigned char po
     char restcount = 0;
     char first = 0;
     char i;
-    selected;
-    cleartextbox(1, 8, 19, 8);
-    drawstringz("Select cards to play.", 2, 9);
-    temp[0] = 0;
-    strcat(temp, "Selected effects: ");
-    if (selected == 0)
-        strcat(temp, "rest");
+
     for (i = 0; i < 5; i++)
     {
         if (selected & (1 << i))
@@ -33,82 +27,110 @@ void update_info(unsigned char selected, unsigned char hand[5], unsigned char po
         if (gCardTypes[hand[i]].mFlags & CARDFLAG_FATIGUE)
             restcount--;
     }
-          
-    if (focus)
-    {
-        strcat(temp, "focus");
-        first = 1;
-    }
-        
-    if (leap)
-    {
-        if (!first)
-            strcat(temp, ", ");
-        strcat(temp, "leap");        
-    }
-    if (count == 0)
-    {
-        fatigue = restcount;
-    }
-    else
-    {
-        fatigue = fatigue_for_cards[count];
-    }
-	if (*temp)
-    drawstringz(temp, 2, 11);
-    first = 0;
-    temp[0] = 0;
-    if (attack)
-    {
-        strcat(temp, "attack ");
-        numtemp[0] = attack + '0';
-        numtemp[1] = 0;
-        strcat(temp, numtemp);
-        first = 1;
-    }
-    if (defend)
-    {
-        if (first)
-            strcat(temp, ", ");
-        strcat(temp, "defend ");
-        numtemp[0] = defend + '0';
-        numtemp[1] = 0;
-        strcat(temp, numtemp);
-        first = 1;
-    }
-    if (fatigue)
-    {
-        if (first)
-            strcat(temp, ", ");
-        strcat(temp, "fatigue ");
-        if (fatigue < 0 || fatigue > 9)
-        {
-            if (fatigue < 0) { numtemp[0] = '-'; fatigue = -fatigue; }
-            if (fatigue > 9) { numtemp[0] = '1'; fatigue -= 10; }
-            numtemp[1] = fatigue + '0';
-            numtemp[2] = 0;
-        }
-        else
-        {
-            numtemp[0] = fatigue + '0';
-            numtemp[1] = 0;
-        }
-        strcat(temp, numtemp);
-        first = 1;
-    }
-	if (*temp)
-    drawstringz(temp, 2, 12);
-    if (pos == 5)
-    {
-        drawstringz(">>> Play selected cards <<<", 2, 14);
-    }
-    else
-    {
-        temp[0] = 0;    
-        strcat(temp, "Card: ");
-        strcat(temp, gCardTypes[hand[pos]].mName);
-        drawstringz(temp, 2, 14);
-    }
+
+	if (oldselected == 100)
+	{
+		cleartextbox(1+1, 8+1, 19-2, 8-2);
+		drawstringz("Select cards to play.", 2, 9);
+	}
+	
+	if (oldselected != selected || oldselected == 100)
+	{
+		cleartextbox(1+1, 10+1, 19-2, 4-2);
+	
+		temp[0] = 0;
+		strcat(temp, "Selected effects: ");
+		if (selected == 0)
+			strcat(temp, "rest");
+			  
+		if (focus)
+		{
+			strcat(temp, "focus");
+			first = 1;
+		}
+			
+		if (leap)
+		{
+			if (!first)
+				strcat(temp, ", ");
+			strcat(temp, "leap");        
+		}
+		
+		if (count == 0)
+		{
+			fatigue = restcount;
+		}
+		else
+		{
+			fatigue = fatigue_for_cards[count];
+		}
+		
+		if (*temp)
+			drawstringz(temp, 2, 11);
+		
+		first = 0;
+		temp[0] = 0;
+		if (attack)
+		{
+			strcat(temp, "attack ");
+			numtemp[0] = attack + '0';
+			numtemp[1] = 0;
+			strcat(temp, numtemp);
+			first = 1;
+		}
+		
+		if (defend)
+		{
+			if (first)
+				strcat(temp, ", ");
+			strcat(temp, "defend ");
+			numtemp[0] = defend + '0';
+			numtemp[1] = 0;
+			strcat(temp, numtemp);
+			first = 1;
+		}
+		
+		if (fatigue)
+		{
+			if (first)
+				strcat(temp, ", ");
+			strcat(temp, "fatigue ");
+			if (fatigue < 0 || fatigue > 9)
+			{
+				if (fatigue < 0) { numtemp[0] = '-'; fatigue = -fatigue; }
+				if (fatigue > 9) { numtemp[0] = '1'; fatigue -= 10; }
+				numtemp[1] = fatigue + '0';
+				numtemp[2] = 0;
+			}
+			else
+			{
+				numtemp[0] = fatigue + '0';
+				numtemp[1] = 0;
+			}
+			strcat(temp, numtemp);
+			first = 1;
+		}
+		
+		if (*temp)
+			drawstringz(temp, 2, 12);
+	}
+
+	if (selected == oldselected || oldselected == 100)
+	{
+		cleartextbox(1+1, 13+1, 19-2, 3-2);
+		if (pos == 5)
+		{
+			drawstringz(">>> Play selected cards <<<", 2, 14);
+		}
+		else
+		{
+			temp[0] = 0;    
+			strcat(temp, "Card: ");
+			strcat(temp, gCardTypes[hand[pos]].mName);
+			drawstringz(temp, 2, 14);
+		}
+	}
+	
 }
 
 void ingame()
@@ -168,7 +190,7 @@ void ingame()
         drawcard(hand[4],21,17,COLOR(0,0,0,7));
         cardfx();
         
-        update_info(0,hand,0);
+        update_info(0,hand,0, 100);
        
         while (1)
         {
@@ -177,6 +199,7 @@ void ingame()
             {
                 unsigned char triggered = 0;
                 unsigned char oldpos = pos;
+				unsigned char oldselected = selected;
                 if (TRIGGER(KEY_RIGHT)) { triggered = 1; pos++; if (pos == 6) pos = 0; }
                 if (TRIGGER(KEY_LEFT)) { triggered = 1; pos--; if (pos == 255) pos = 5; }
                 if (TRIGGER(KEY_FIRE)) { triggered = 1; if (pos != 5) selected ^= 1 << pos; else commit = 1; }
@@ -195,7 +218,7 @@ void ingame()
                     }
                     if (!commit)
                     {
-                        update_info(selected,hand,pos);
+                        update_info(selected,hand,pos,oldselected);
                     }
                 }
             }

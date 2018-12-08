@@ -90,9 +90,9 @@ void shop()
                         drawstringz("shopping", 25, 7);
                     }
                     if (oldpos > 5)
-                        drawcard(shoporder[oldpos-1], (oldpos - 6) * 4 + 1, 7, COLOR(0,1,0,7));
+                        drawcard(shoporder[oldpos], (oldpos - 6) * 4 + 1, 7, COLOR(0,1,0,7));
                 }
-                cleartextbox(6,18,25,5);
+                cleartextbox(6+1,18+1,25-2,5-2);
 
                 switch (pos)
                 {
@@ -106,6 +106,7 @@ void shop()
                         break;
                     case 2: // defend1
                         drawstringz("Basic defense.", 7, 19);
+                        drawstringz("Block without focus.", 7, 20);
                         break;
                     case 3: // attack2
                         drawstringz("Mid-range attack.", 7, 19);

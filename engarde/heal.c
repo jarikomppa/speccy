@@ -96,7 +96,7 @@ void heal()
                         drawstringz("2 hurt", 25, 3);
                     }
                 }
-                cleartextbox(6,18,25,5);
+                cleartextbox(6+1,18+1,25-2,5-2);
 
                 switch (pos)
                 {
