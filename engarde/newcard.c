@@ -9,10 +9,10 @@ void newcard(unsigned char newcardid)
     fillback();
     for (i = 0; i < 5; i++)
     {
-        drawcard(i+1, 1 + i * 4, 0, COLOR(0,1,0,7));
-        drawcard(i+2, 1 + i * 4, 6, COLOR(0,1,0,7));
-        drawcard(i+3, 1 + i * 4, 12, COLOR(0,1,0,7));
-        drawcard(i+4, 1 + i * 4, 18, COLOR(0,1,0,7));
+        drawcard(playerdeck[i   ], 1 + i * 4, 0, COLOR(0,1,0,7));
+        drawcard(playerdeck[i+ 5], 1 + i * 4, 6, COLOR(0,1,0,7));
+        drawcard(playerdeck[i+10], 1 + i * 4, 12, COLOR(0,1,0,7));
+        drawcard(playerdeck[i+15], 1 + i * 4, 18, COLOR(0,1,0,7));
     }
     drawtextbox(22,0,4,7);
     drawcard(newcardid, 22, 0, COLOR(0,1,0,7));
@@ -46,19 +46,20 @@ void newcard(unsigned char newcardid)
                 key_wasdown = 0;
                 if (commit)
                 {
-                    // Todo: replace card 
+					if (pos > 4) pos--;
+					playerdeck[pos] = newcardid;
                     return;
                 }
                 if (oldpos < 5)
-                    drawcard(oldpos+1,oldpos * 4 + 1, 0 ,COLOR(0,1,0,7));
+                    drawcard(playerdeck[oldpos],oldpos * 4 + 1, 0 ,COLOR(0,1,0,7));
                 if (oldpos == 5)
                     drawcard(newcardid, 22, 0, COLOR(0,1,0,7));
                 if (oldpos > 5 && oldpos < 11)
-                    drawcard(oldpos-4, (oldpos - 6) * 4 + 1, 6, COLOR(0,1,0,7));
+                    drawcard(playerdeck[oldpos-1], (oldpos - 6) * 4 + 1, 6, COLOR(0,1,0,7));
                 if (oldpos > 10 && oldpos < 16)
-                    drawcard(oldpos-8, (oldpos - 11) * 4 + 1, 12, COLOR(0,1,0,7));
+                    drawcard(playerdeck[oldpos-1], (oldpos - 11) * 4 + 1, 12, COLOR(0,1,0,7));
                 if (oldpos > 15)
-                    drawcard(oldpos-12, (oldpos - 16) * 4 + 1, 18, COLOR(0,1,0,7));                
+                    drawcard(playerdeck[oldpos-1], (oldpos - 16) * 4 + 1, 18, COLOR(0,1,0,7));                
             }
         }
         frame++;

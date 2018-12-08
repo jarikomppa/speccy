@@ -62,6 +62,7 @@ void cardfx()
 
 void main()
 {       
+	unsigned char i;
     y8 = 1;
     key_isdown = 0;
     key_wasdown = 0;
@@ -69,16 +70,20 @@ void main()
     player_money = 10;
     player_hurt = 12;
 	stage[0] = 1;
-	stage[1] = 0;
-	stage[2] = 0;
-	stage[3] = 0;
-	stage[4] = 0;
-	stage[5] = 0;
-	stage[6] = 0;
-	stage[7] = 0;
-	stage[8] = 0;
-	stage[9] = 0;
+	for (i = 1; i < 10; i++)
+		stage[i] = 0;
 
+	for (i = 0; i < 5; i++)
+	{
+		playerdeck[i   ] = CARD_ATK1;
+		playerdeck[i+ 5] = CARD_DEF1;
+		playerdeck[i+10] = CARD_LEAP;
+		playerdeck[i+15] = CARD_IDLE;
+	}
+	playerdeck[0] = CARD_ATK2;
+	playerdeck[9] = CARD_DEF2;
+	playerdeck[10] = CARD_FOCUS;
+	
 	game_state = 0;
 	game_stage = 0;
 

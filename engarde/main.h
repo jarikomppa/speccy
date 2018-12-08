@@ -63,6 +63,7 @@ extern unsigned char game_stage;
 
 
 extern unsigned char stage[];
+extern unsigned char playerdeck[];
 
 
 enum SIMPLEKEYS

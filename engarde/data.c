@@ -58,3 +58,4 @@ unsigned char player_hurt;
 unsigned char game_state;
 unsigned char game_stage;
 unsigned char stage[10];
+unsigned char playerdeck[20];
