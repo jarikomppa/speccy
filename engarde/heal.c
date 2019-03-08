@@ -2,8 +2,8 @@
 
 void heal()
 {
-    char i;
-    char pos = 1;
+    unsigned char i;
+    unsigned char pos = 1;
     char commit = 0;
     char frame = 0;
     fillback();

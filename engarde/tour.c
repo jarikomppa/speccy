@@ -186,7 +186,7 @@ void tour()
         scan_input();
         {
             unsigned char triggered = 0;
-            unsigned char oldpos = pos;
+            char oldpos = pos;
             if (TRIGGER(KEY_RIGHT)) { triggered = 1; pos = r[pos]; }
             if (TRIGGER(KEY_LEFT)) { triggered = 1; pos = l[pos]; }
             if (TRIGGER(KEY_UP)) { triggered = 1; pos = u[pos]; }

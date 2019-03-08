@@ -137,12 +137,12 @@ void update_info(unsigned char selected, unsigned char pos, unsigned char oldsel
 
 char p_deck[40];
 char p_discard[40];
-char p_decktop;
+unsigned char p_decktop;
 char p_discardtop;
 
 char o_deck[40];
 char o_discard[40];
-char o_decktop;
+unsigned char o_decktop;
 char o_discardtop;
 
 #define P_ADDCARD(card) p_deck[p_decktop++] = (card) 
@@ -249,7 +249,7 @@ void player_shuffle()
 
 	for (i = 0; i < p_decktop; i++)
 	{
-		char c1, c2;
+		unsigned char c1, c2;
 		c1 = i;
 		c2 = 200;
 		while (c2 >= p_decktop)
@@ -270,7 +270,7 @@ void opponent_shuffle()
 
 	for (i = 0; i < o_decktop; i++)
 	{
-		char c1, c2;
+		unsigned char c1, c2;
 		c1 = i;
 		c2 = 200;
 		while (c2 >= o_decktop)

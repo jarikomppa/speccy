@@ -1,5 +1,6 @@
+#!/usr/bin/env python3
 # Sol's Stupidly Simple Build System v.2.1
-# (c) 2018 Jari Komppa http://iki.fi/sol
+# (c) 2018-2019 Jari Komppa http://iki.fi/sol
 #
 # This software is provided 'as-is', without any express or implied
 # warranty. In no event will the authors be held liable for any damages
@@ -19,6 +20,9 @@
 
 import os
 import subprocess
+import sys
+
+assert sys.version_info >= (3, 0)
 
 # Add source files here.
 # Special names:
@@ -124,11 +128,11 @@ def agecheck(srcfile, dstfile):
 
 def build(srcfile, dstfile, method):
 	global changed
-	print "building " + dstfile
+	print("building " + dstfile)
 	if os.path.isfile(dstfile):
 		os.remove(dstfile)
 	cmd = method.replace("%SRCFILE", srcfile).replace("%DSTFILE", dstfile)
-	for key, value in objectlists.iteritems():
+	for key, value in objectlists.items():
 		cmd = cmd.replace("%"+key.upper(), value)
 	procs.append(BuildTask(subprocess.Popen(cmd, shell=True, bufsize=8192, stdout=subprocess.PIPE, stderr=subprocess.STDOUT), dstfile))
 	changed = True
@@ -142,14 +146,15 @@ def sync():
 			livecount += 1
 	# If more than one process is still running, print info.
 	if livecount > 1:
-		print "Waiting for", len(procs), "processes to finish.."
+		print("Waiting for", len(procs), "processes to finish..")
 	for x in procs:
 		(a,b) = x.proc.communicate()
+		t = a.decode('ascii')
 		# avoid printing empty lines..
-		if a != "":
-			print a
+		if t != "":
+			print(t)
 		if not os.path.isfile(x.dstfile):
-			print "Error: " + x.dstfile + " not generated."
+			print("Error: " + x.dstfile + " not generated.")
 			failboat = True
 	procs = []
 	if failboat:
@@ -168,12 +173,12 @@ for x in src:
 			os.system(x[1:])
 		else:
 			if not os.path.isfile(x):
-				print x + " does not exist."
+				print(x + " does not exist.")
 				exit()
 			fname = x[:x.rfind(".")]
 			suffix = x[x.rfind(".")+1:]
 			if suffix not in methods:
-				print "Don't know how to handle files of type " + suffix + " (in " + x + ")."
+				print("Don't know how to handle files of type " + suffix + " (in " + x + ").")
 				exit()
 			if methods[suffix][0] not in objectlists:
 				objectlists[methods[suffix][0]] = fname + "." + methods[suffix][0];
@@ -202,13 +207,13 @@ if changed:
 				fname = x[:x.rfind(".")]
 				suffix = x[x.rfind(".")+1:]
 				if suffix not in methods:
-					print "Don't know how to handle files of type " + suffix + " (in " + x + ")."
+					print("Don't know how to handle files of type " + suffix + " (in " + x + ").")
 				build(x, fname + "." + methods[suffix][0], methods[suffix][1])
 else:
-	print "Nothing to do."
+	print("Nothing to do.")
 	exit()
 
 # Final sync just to be sure
 sync()
 
-print "All done."
+print("All done.")
