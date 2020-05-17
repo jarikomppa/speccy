@@ -11,6 +11,7 @@
 
 int gOptH = 0;
 int gOptFona = 0;
+int gOptInvert = 0;
 FILE * f;
 
 int d = 0;
@@ -19,6 +20,7 @@ int count = 0;
 int bitcount = 0;
 void plop(int bit)
 {
+    if (gOptInvert) bit = !bit;
     d <<= 1;
     d |= bit;
     
@@ -48,12 +50,13 @@ int main(int parc, char ** pars)
     if (parc < 3)
     {
         printf(
-            "Usage: %s infile outfile [-h] [-fona]\n"
+            "Usage: %s infile outfile [-h] [-fona] [-i]\n"
             "where:\n"
             "infile  - input png file\n"
             "outfile - outpuf file\n"
             "-h      - optional, write c header instead of bin\n"
-            "-fona   - process as a font bitmap instead of linear\n", 
+            "-fona   - process as a font bitmap instead of linear\n"
+            "-i      - invert bits\n", 
             pars[0]);
         exit(0);
     }
@@ -61,6 +64,11 @@ int main(int parc, char ** pars)
     int i, j, k, l;
     for (i = 3; i < parc; i++)
     {
+        if (stricmp(pars[i], "-i") == 0)
+        {
+            gOptInvert = 1;
+        }
+        else
         if (stricmp(pars[i], "-h") == 0)
         {
             gOptH = 1;
