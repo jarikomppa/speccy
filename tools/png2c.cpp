@@ -4,6 +4,10 @@
  * released under the unlicense, see http://unlicense.org 
  * (practically public domain)
 */
+
+/* Make Visual Studio not consider fopen() deprecated */
+#define _CRT_SECURE_NO_DEPRECATE
+
 #include <stdio.h>
 #include <stdlib.h>
 #define STB_IMAGE_IMPLEMENTATION
