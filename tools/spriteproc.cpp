@@ -3,7 +3,12 @@
  * https://github.com/jarikomppa/speccy
  * released under the unlicense, see http://unlicense.org 
  * (practically public domain)
+ *
 */
+
+/* Make Visual Studio not consider fopen() deprecated */
+#define _CRT_SECURE_NO_DEPRECATE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
