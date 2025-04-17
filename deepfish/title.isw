@@ -1,0 +1,61 @@
+{
+    "About": {
+        "WhatIsThis": "Image Spectrumizer 4.0 workspace file",
+        "Magic": "0x50534D49",
+        "Version": 4
+    },
+    "Config": {
+        "gWindowAbout": 0,
+        "gWindowAttribBitmap": 0,
+        "gWindowHelp": 0,
+        "gWindowHistograms": 0,
+        "gWindowModifierPalette": 1,
+        "gWindowOptions": 1,
+        "gWindowZoomedOutput": 1,
+        "gWindowZoomedModified": 0,
+        "gWindowZoomedInput": 0,
+        "gOptShowOriginal": 1,
+        "gOptShowModified": 1,
+        "gOptShowResult": 1,
+        "gOptImagesDocked": 1,
+        "gOptTrackFile": 1,
+        "gDeviceId": 0
+    },
+    "Device": {
+        "Name": "ZXSpectrum",
+        "mOptAttribOrder": 0,
+        "mOptBright": 0,
+        "mOptPaper": 0,
+        "mOptCellSize": 0,
+        "mOptScreenOrder": 1,
+        "mOptWidthCells": 32,
+        "mOptHeightCells": 24,
+        "mOptConversionMode": 0,
+        "mOptPivotBias": 0.500000
+    },
+    "Stack": {
+        "Item[0]": {
+            "Name": "ErrorDiffusionDither",
+            "Type": 7,
+            "mEnabled": 1,
+            "mR_en": 1,
+            "mG_en": 1,
+            "mB_en": 1,
+            "mV": 1.190000,
+            "mModel": 6,
+            "mDirection": 0,
+            "mErrorClamp": 1
+        },
+        "Item[1]": {
+            "Name": "Contrast",
+            "Type": 8,
+            "mEnabled": 1,
+            "mR_en": 1,
+            "mG_en": 1,
+            "mB_en": 1,
+            "mC": 1.382000,
+            "mB": -0.549000,
+            "mP": 0.365000
+        }
+    }
+}
